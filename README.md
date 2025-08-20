@@ -27,7 +27,8 @@ http://localhost:3000
 🚀
 
 ## License
-This project is proprietary. Please see the [LICENSE](LICENSE) file for details.
+This project is proprietary.
+Please see the [LICENSE](LICENSE) file for details.
 
 
 
