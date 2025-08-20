@@ -24,19 +24,6 @@ pnpm install
 pnpm run dev
 
 http://localhost:3000
-
-├── src/
-
-│   ├── components/     # Reusable UI components
-
-│   ├── pages/          # Application pages
-
-│   └── ...
-
-├── public/             # Static assets
-
-├── package.json        # Project metadata and scripts
-
-└── README.md           # This file!
+🚀
 
 
