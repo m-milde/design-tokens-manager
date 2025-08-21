@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Trash2, X, Plus, Download, Minus } from "lucide-react";
+import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen } from "lucide-react";
 
 interface Token {
   id: string;
@@ -49,6 +49,7 @@ interface NodeBubbleProps {
   canvasOffset: { x: number; y: number };
   canvasScale: number;
   isPanningMode: boolean;
+  onDragEnd?: () => void;
 }
 
 const NodeBubble: React.FC<NodeBubbleProps> = ({
@@ -68,6 +69,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
   canvasOffset,
   canvasScale,
   isPanningMode,
+  onDragEnd,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -115,7 +117,8 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  }, []);
+    if (typeof onDragEnd === "function") onDragEnd();
+  }, [onDragEnd]);
 
   useEffect(() => {
     if (isDragging) {
@@ -179,9 +182,18 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
 
       {/* Node Header */}
       <div className="flex justify-between items-center mb-3">
-        <span className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
-          {token.layer}
-        </span>
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-3 h-3 rounded-full ${
+              token.layer === "base" ? "bg-blue-500" :
+              token.layer === "semantic" ? "bg-green-500" :
+              "bg-red-500"
+            }`}
+          />
+          <span className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
+            {token.layer}
+          </span>
+        </div>
       </div>
 
       {/* Node Content */}
@@ -194,7 +206,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         )}
         {token.name}
       </div>
-      <div className="text-xs text-gray-300 bg-black/20 p-2 rounded-lg break-words">
+      <div className="text-xs text-gray-300 bg-black/20 p-2 rounded-md break-words">
         {token.value}
       </div>
 
@@ -259,6 +271,7 @@ interface CanvasGroupProps {
   canvasOffset: { x: number; y: number };
   canvasScale: number;
   isPanningMode: boolean;
+  onDragGroupEnd?: () => void;
 }
 
 const CanvasGroup: React.FC<CanvasGroupProps> = ({
@@ -274,6 +287,7 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
   canvasOffset,
   canvasScale,
   isPanningMode,
+  onDragGroupEnd,
 }) => {
   const groupTokens = tokens.filter((token) =>
     group.tokenIds.includes(token.id),
@@ -347,7 +361,8 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
 
   const handleGroupMouseUp = useCallback(() => {
     setIsDragging(false);
-  }, []);
+    if (typeof onDragGroupEnd === "function") onDragGroupEnd();
+  }, [onDragGroupEnd]);
 
   useEffect(() => {
     if (isDragging) {
@@ -378,7 +393,7 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
       onMouseDown={handleGroupMouseDown}
     >
       {/* Group Header */}
-      <div className="absolute -top-8 left-0 bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-2">
+      <div className="absolute -top-8 left-0 bg-green-500 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -408,7 +423,7 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
 
       {/* Collapsed Content */}
       {isCollapsed && (
-        <div className="p-4 bg-green-400/10 rounded-lg h-full flex flex-col justify-center items-center">
+        <div className="p-4 bg-green-400/10 rounded-md h-full flex flex-col justify-center items-center">
           <div className="text-green-400 font-semibold text-sm mb-2">
             {group.name}
           </div>
@@ -497,7 +512,7 @@ export default function Index() {
   const [groupForm, setGroupForm] = useState({ name: "" });
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
-  // Layer collapse state
+  // Layer collapse state (must be before history helpers that capture it)
   const [collapsedLayers, setCollapsedLayers] = useState<{
     [key: string]: boolean;
   }>({
@@ -505,6 +520,127 @@ export default function Index() {
     semantic: false,
     specific: false,
   });
+
+  // History (Undo/Redo)
+  type SetupState = {
+    tokens: { [key: string]: Token[] };
+    nodePositions: { [key: string]: { x: number; y: number } };
+    connections: Connection[];
+    tokenGroups: TokenGroup[];
+    collapsedLayers: { [key: string]: boolean };
+  };
+  const [history, setHistory] = useState<SetupState[]>([]);
+  const [future, setFuture] = useState<SetupState[]>([]);
+  const [pendingHistoryMark, setPendingHistoryMark] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [currentSetupName, setCurrentSetupName] = useState<string | null>(null);
+  const lastSavedHashRef = useRef<string | null>(null);
+
+  // New state for editing functionality
+  const [editingToken, setEditingToken] = useState<{
+    id: string;
+    name: string;
+    value: string;
+    type: Token["type"];
+    layer: Token["layer"];
+  } | null>(null);
+  const [editingGroup, setEditingGroup] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importData, setImportData] = useState("");
+  const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg">("style-dictionary");
+
+  const captureSetup = useCallback((): SetupState => ({
+    tokens,
+    nodePositions,
+    connections,
+    tokenGroups,
+    collapsedLayers,
+  }), [tokens, nodePositions, connections, tokenGroups, collapsedLayers]);
+
+  const applySnapshot = useCallback((snap: SetupState) => {
+    setTokens(snap.tokens);
+    setNodePositions(snap.nodePositions);
+    setConnections(snap.connections);
+    setTokenGroups(snap.tokenGroups);
+    setCollapsedLayers(snap.collapsedLayers);
+  }, []);
+
+  const markHistory = useCallback(() => {
+    setPendingHistoryMark(`${Date.now()}_${Math.random()}`);
+  }, []);
+
+  useEffect(() => {
+    if (pendingHistoryMark) {
+      // Push current snapshot to history and clear redo stack
+      setHistory((prev) => {
+        const next = [...prev, captureSetup()];
+        // Ensure max 20 entries
+        while (next.length > 20) next.shift();
+        return next;
+      });
+      setFuture([]);
+      setIsDirty(true);
+      setPendingHistoryMark(null);
+    }
+  }, [pendingHistoryMark, captureSetup]);
+
+  const handleUndo = useCallback(() => {
+    setHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const newPrev = [...prev];
+      const last = newPrev.pop()!;
+      const current = captureSetup();
+      setFuture((f) => [current, ...f]);
+      applySnapshot(last);
+      return newPrev;
+    });
+  }, [captureSetup, applySnapshot]);
+
+  const handleRedo = useCallback(() => {
+    setFuture((prev) => {
+      if (prev.length === 0) return prev;
+      const [nextSnap, ...rest] = prev;
+      setHistory((h) => {
+        const next = [...h, captureSetup()];
+        while (next.length > 20) next.shift();
+        return next;
+      });
+      applySnapshot(nextSnap);
+      return rest;
+    });
+  }, [captureSetup, applySnapshot]);
+
+  // Saved setups (localStorage)
+  type StoredSetups = { [name: string]: SetupState & { _meta?: { savedAt: string } } };
+  const STORAGE_KEY = "dtm_setups";
+  const loadAllSetups = (): StoredSetups => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+  const saveAllSetups = (data: StoredSetups) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  };
+  const computeHash = (snap: SetupState) => JSON.stringify(snap);
+  const saveCurrentSetup = (name: string) => {
+    const all = loadAllSetups();
+    const snap = captureSetup();
+    all[name] = { ...snap, _meta: { savedAt: new Date().toISOString() } };
+    saveAllSetups(all);
+    setCurrentSetupName(name);
+    const hash = computeHash(snap);
+    lastSavedHashRef.current = hash;
+    setIsDirty(false);
+  };
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
   // Sample data
   useEffect(() => {
@@ -635,6 +771,16 @@ export default function Index() {
         e.preventDefault();
         resetZoom();
       }
+      // Undo / Redo
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        handleUndo();
+      }
+      if (((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "z") ||
+          ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y")) {
+        e.preventDefault();
+        handleRedo();
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") {
@@ -660,7 +806,18 @@ export default function Index() {
       document.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("resize", handleResize);
     };
-  }, [handleCanvasMouseMove, handleCanvasMouseUp]);
+  }, [handleCanvasMouseMove, handleCanvasMouseUp, handleUndo, handleRedo]);
+
+  // Before unload prompt if dirty
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   // Token operations
   const addToken = () => {
@@ -674,6 +831,7 @@ export default function Index() {
       layer: currentLayer,
     };
 
+    markHistory();
     setTokens((prev) => ({
       ...prev,
       [currentLayer]: [...prev[currentLayer], newToken],
@@ -700,6 +858,7 @@ export default function Index() {
         const y =
           (e.clientY - rect.top) / canvasScale - canvasOffset.y;
 
+        markHistory();
         setNodePositions((prev) => ({
           ...prev,
           [token.id]: { x, y },
@@ -763,6 +922,7 @@ export default function Index() {
         toPort: portType,
       };
 
+      markHistory();
       setConnections((prev) => [...prev, newConnection]);
 
       // Update the target token's value to reference the source
@@ -792,6 +952,7 @@ export default function Index() {
 
   const deleteToken = (tokenId: string) => {
     // Remove token from tokens state
+    markHistory();
     setTokens((prevTokens) => {
       const newTokens = { ...prevTokens };
       Object.keys(newTokens).forEach((layer) => {
@@ -822,6 +983,7 @@ export default function Index() {
 
   const deleteNode = (nodeId: string) => {
     // Remove node from canvas
+    markHistory();
     setNodePositions((prev) => {
       const newPositions = { ...prev };
       delete newPositions[nodeId];
@@ -841,6 +1003,7 @@ export default function Index() {
 
   const disconnectNode = (nodeId: string) => {
     // Remove all connections to/from this node but keep the node on canvas
+    markHistory();
     setConnections((prev) =>
       prev.filter((conn) => conn.from !== nodeId && conn.to !== nodeId),
     );
@@ -896,6 +1059,7 @@ export default function Index() {
       position: groupPosition,
     };
 
+    markHistory();
     setTokenGroups((prev) => [...prev, newGroup]);
     setSelectedTokens(new Set());
     setIsGroupModalOpen(false);
@@ -903,6 +1067,7 @@ export default function Index() {
   };
 
   const toggleCanvasGroupCollapse = (groupId: string) => {
+    markHistory();
     setTokenGroups((prev) =>
       prev.map((group) =>
         group.id === groupId
@@ -913,6 +1078,7 @@ export default function Index() {
   };
 
   const ungroupTokens = (groupId: string) => {
+    markHistory();
     setTokenGroups((prev) => prev.filter((group) => group.id !== groupId));
     setSelectedGroup(null);
   };
@@ -920,6 +1086,7 @@ export default function Index() {
   const deleteGroup = (groupId: string) => {
     const group = tokenGroups.find((g) => g.id === groupId);
     if (group) {
+      markHistory();
       // Remove all nodes from canvas that belong to this group
       group.tokenIds.forEach((tokenId) => {
         setNodePositions((prev) => {
@@ -941,7 +1108,228 @@ export default function Index() {
     setSelectedGroup(null);
   };
 
+  // Edit token function
+  const editToken = (token: Token) => {
+    setEditingToken({
+      id: token.id,
+      name: token.name,
+      value: token.value,
+      type: token.type,
+      layer: token.layer,
+    });
+  };
+
+  // Update token function
+  const updateToken = () => {
+    if (!editingToken) return;
+    
+    markHistory();
+    setTokens((prevTokens) => {
+      const newTokens = { ...prevTokens };
+      newTokens[editingToken.layer] = newTokens[editingToken.layer].map((token) =>
+        token.id === editingToken.id
+          ? {
+              ...token,
+              name: editingToken.name,
+              value: editingToken.value,
+              type: editingToken.type,
+            }
+          : token,
+      );
+      return newTokens;
+    });
+    
+    setEditingToken(null);
+  };
+
+  // Edit group function
+  const editGroup = (group: TokenGroup) => {
+    setEditingGroup({
+      id: group.id,
+      name: group.name,
+    });
+  };
+
+  // Update group function
+  const updateGroup = () => {
+    if (!editingGroup) return;
+    
+    markHistory();
+    setTokenGroups((prev) =>
+      prev.map((group) =>
+        group.id === editingGroup.id
+          ? { ...group, name: editingGroup.name }
+          : group,
+      ),
+    );
+    
+    setEditingGroup(null);
+  };
+
+  // Import functions
+  const importFromStyleDictionary = (data: any) => {
+    const newTokens: { [key: string]: Token[] } = { base: [], semantic: [], specific: [] };
+    const newConnections: Connection[] = [];
+    let nextTokenId = Date.now();
+    
+    // Process each layer
+    Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
+      if (layer === "_meta") return;
+      
+      // Map layer names to our system
+      let targetLayer: "base" | "semantic" | "specific" = "base";
+      if (layer === "semantic" || layer === "semantic-tokens") targetLayer = "semantic";
+      if (layer === "specific" || layer === "specific-tokens") targetLayer = "specific";
+      
+      Object.entries(layerData).forEach(([type, typeData]: [string, any]) => {
+        Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
+          const token: Token = {
+            id: `token_${nextTokenId++}`,
+            name,
+            value: (tokenData as any).value || "",
+            type: type as Token["type"],
+            layer: targetLayer,
+          };
+          
+          newTokens[targetLayer].push(token);
+          
+          // Check for references and create connections
+          if (typeof token.value === "string" && token.value.includes(".")) {
+            // This might be a reference, we'll handle connections later
+          }
+        });
+      });
+    });
+    
+    // Now process connections based on references
+    Object.values(newTokens).flat().forEach((token) => {
+      if (typeof token.value === "string" && token.value.includes(".")) {
+        const parts = token.value.split(".");
+        if (parts.length >= 2) {
+          const refLayer = parts[0] as "base" | "semantic" | "specific";
+          const refName = parts.slice(1).join(".");
+          
+          const sourceToken = newTokens[refLayer]?.find(t => t.name === refName);
+          if (sourceToken) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      }
+    });
+    
+    return { newTokens, newConnections };
+  };
+
+  const importFromDTCG = (data: any) => {
+    const newTokens: { [key: string]: Token[] } = { base: [], semantic: [], specific: [] };
+    const newConnections: Connection[] = [];
+    let nextTokenId = Date.now();
+    
+    // Process each layer
+    Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
+      if (layer === "_meta") return;
+      
+      // Map layer names to our system
+      let targetLayer: "base" | "semantic" | "specific" = "base";
+      if (layer === "semantic" || layer === "semantic-tokens") targetLayer = "semantic";
+      if (layer === "specific" || layer === "specific-tokens") targetLayer = "specific";
+      
+      Object.entries(layerData).forEach(([type, typeData]: [string, any]) => {
+        Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
+          const token: Token = {
+            id: `token_${nextTokenId++}`,
+            name,
+            value: (tokenData as any).$value || "",
+            type: type as Token["type"],
+            layer: targetLayer,
+          };
+          
+          newTokens[targetLayer].push(token);
+        });
+      });
+    });
+    
+    // Process connections for DTCG format
+    Object.values(newTokens).flat().forEach((token) => {
+      if (typeof token.value === "string" && token.value.includes(".")) {
+        const parts = token.value.split(".");
+        if (parts.length >= 3) { // DTCG format: layer.type.name
+          const refLayer = parts[0] as "base" | "semantic" | "specific";
+          const refName = parts[2];
+          
+          const sourceToken = newTokens[refLayer]?.find(t => t.name === refName);
+          if (sourceToken) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      }
+    });
+    
+    return { newTokens, newConnections };
+  };
+
+  const handleImport = () => {
+    try {
+      let parsedData;
+      try {
+        parsedData = JSON.parse(importData);
+      } catch (e) {
+        alert("Invalid JSON format");
+        return;
+      }
+      
+      let result;
+      if (importFormat === "style-dictionary") {
+        result = importFromStyleDictionary(parsedData);
+      } else {
+        result = importFromDTCG(parsedData);
+      }
+      
+      // Clear existing data and apply imported data
+      markHistory();
+      setTokens(result.newTokens);
+      setConnections(result.newConnections);
+      setNodePositions({});
+      setTokenGroups([]);
+      
+      // Auto-position tokens on canvas
+      const allTokens = Object.values(result.newTokens).flat();
+      const newPositions: { [key: string]: { x: number; y: number } } = {};
+      
+      allTokens.forEach((token: Token, index) => {
+        const row = Math.floor(index / 3);
+        const col = index % 3;
+        newPositions[token.id] = {
+          x: col * 250 + 100,
+          y: row * 150 + 100,
+        };
+      });
+      
+      setNodePositions(newPositions);
+      setIsImportModalOpen(false);
+      setImportData("");
+      
+    } catch (error) {
+      alert("Error importing data: " + error);
+    }
+  };
+
   const toggleGroupCollapse = (groupId: string) => {
+    markHistory();
     setTokenGroups((prev) =>
       prev.map((group) =>
         group.id === groupId
@@ -952,6 +1340,7 @@ export default function Index() {
   };
 
   const toggleLayerCollapse = (layer: string) => {
+    markHistory();
     setCollapsedLayers((prev) => ({
       ...prev,
       [layer]: !prev[layer],
@@ -1053,6 +1442,40 @@ export default function Index() {
     link.click();
   };
 
+  const exportTokensDTCG = () => {
+    const dtcg: any = {};
+    const mapType = (t: Token["type"]) => {
+      if (t === "color") return "color";
+      if (t === "text" || t === "spacing") return "dimension";
+      if (t === "boolean") return "boolean";
+      if (t === "string") return "string";
+      if (t === "number") return "number";
+      return t;
+    };
+    Object.keys(tokens).forEach((layer) => {
+      if (!dtcg[layer]) dtcg[layer] = {};
+      tokens[layer].forEach((token) => {
+        if (!dtcg[layer][token.type]) dtcg[layer][token.type] = {};
+        let value: string = token.value;
+        if (value.startsWith("{") && value.endsWith("}")) {
+          const ref = value.slice(1, -1);
+          const [refLayer, refName] = ref.split(".");
+          value = `${refLayer}.${token.type}.${refName}`;
+        }
+        dtcg[layer][token.type][token.name] = {
+          $value: value,
+          $type: mapType(token.type),
+        };
+      });
+    });
+    const dataStr = JSON.stringify(dtcg, null, 2);
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+    const link = document.createElement("a");
+    link.setAttribute("href", dataUri);
+    link.setAttribute("download", "design-tokens-dtcg.json");
+    link.click();
+  };
+
   const colorPalette = [
     "#FF6B6B",
     "#4ECDC4",
@@ -1095,7 +1518,7 @@ export default function Index() {
               ).map((type) => (
                 <button
                   key={type}
-                  className={`p-3 text-xs rounded-lg border transition-all ${
+                  className={`p-2 text-xs rounded-md border transition-all ${
                     currentTokenType === type
                       ? "bg-blue-500/30 border-blue-400 text-white"
                       : "bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-blue-500/20 hover:border-blue-400"
@@ -1138,7 +1561,7 @@ export default function Index() {
                   className="bg-slate-700/30 border border-slate-600 rounded-xl overflow-hidden"
                 >
                   {/* Layer Header */}
-                  <div className="p-4 bg-slate-700/50 border-b border-slate-600 flex justify-between items-center">
+                  <div className="p-2 bg-slate-700/50 border-b border-slate-600 flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <button
                         className="text-slate-400 hover:text-white transition-colors p-1 rounded"
@@ -1147,9 +1570,18 @@ export default function Index() {
                       >
                         {collapsedLayers[layer] ? "▶" : "▼"}
                       </button>
-                      <span className="font-semibold text-sm capitalize">
-                        {layer} Tokens
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            layer === "base" ? "bg-blue-500" :
+                            layer === "semantic" ? "bg-green-500" :
+                            "bg-red-500"
+                          }`}
+                        />
+                        <span className="font-semibold text-sm capitalize">
+                          {layer} Tokens
+                        </span>
+                      </div>
                       <span className="text-xs text-slate-500">
                         ({tokens[layer]?.length || 0})
                       </span>
@@ -1168,11 +1600,11 @@ export default function Index() {
 
                   {/* Layer Tokens */}
                   {!collapsedLayers[layer] && (
-                    <div className="p-3 space-y-2">
+                    <div className="p-2 space-y-2">
                       {tokens[layer]?.map((token) => (
                         <div
                           key={token.id}
-                          className="bg-slate-600/50 border border-slate-500 rounded-lg p-3 hover:bg-slate-600/70 transition-all group"
+                          className="bg-slate-600/50 border border-slate-500 rounded-md p-2 hover:bg-slate-600/70 transition-all group"
                         >
                           <div className="flex items-center justify-between">
                             <div
@@ -1180,11 +1612,18 @@ export default function Index() {
                               draggable
                               onDragStart={(e) => onDragFromPanel(token, e)}
                             >
-                              <div className="font-medium text-sm flex items-center">
+                              <div className="font-medium text-sm flex items-center gap-2">
+                                <div
+                                  className={`w-3 h-3 rounded-full ${
+                                    token.layer === "base" ? "bg-blue-500" :
+                                    token.layer === "semantic" ? "bg-green-500" :
+                                    "bg-red-500"
+                                  }`}
+                                />
                                 {token.type === "color" &&
                                   token.value.startsWith("#") && (
                                     <div
-                                      className="w-3 h-3 rounded border border-white/20 mr-2"
+                                      className="w-3 h-3 rounded border border-white/20"
                                       style={{ backgroundColor: token.value }}
                                     />
                                   )}
@@ -1194,19 +1633,28 @@ export default function Index() {
                                 {token.value}
                               </div>
                             </div>
-                            {/* Delete Token Button */}
-                            <button
-                              className="opacity-0 group-hover:opacity-100 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center transition-all ml-2"
-                              onClick={() =>
-                                setDeleteConfirmation({
-                                  tokenId: token.id,
-                                  tokenName: token.name,
-                                })
-                              }
-                              title="Delete token completely"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                              <button
+                                className="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center transition-all"
+                                onClick={() => editToken(token)}
+                                title="Edit token"
+                              >
+                                <span className="text-xs">✏️</span>
+                              </button>
+                              <button
+                                className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center transition-all"
+                                onClick={() =>
+                                  setDeleteConfirmation({
+                                    tokenId: token.id,
+                                    tokenName: token.name,
+                                  })
+                                }
+                                title="Delete token completely"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1258,6 +1706,13 @@ export default function Index() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
+                          <button
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors"
+                            onClick={() => editGroup(group)}
+                            title="Edit group name"
+                          >
+                            ✏️
+                          </button>
                           {selectedGroup === group.id && (
                             <button
                               className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs transition-colors"
@@ -1280,7 +1735,7 @@ export default function Index() {
 
                     {/* Group Tokens */}
                     {!group.collapsed && (
-                      <div className="p-3 space-y-2">
+                      <div className="p-2 space-y-2">
                         {group.tokenIds.map((tokenId) => {
                           const token = Object.values(tokens)
                             .flat()
@@ -1290,7 +1745,7 @@ export default function Index() {
                           return (
                             <div
                               key={tokenId}
-                              className="bg-slate-600/30 border border-slate-500/50 rounded-lg p-2 text-sm"
+                              className="bg-slate-600/30 border border-slate-500/50 rounded-md p-2 text-sm"
                             >
                               <div className="flex items-center">
                                 {token.type === "color" &&
@@ -1300,12 +1755,18 @@ export default function Index() {
                                       style={{ backgroundColor: token.value }}
                                     />
                                   )}
-                                <span className="font-medium">
-                                  {token.name}
-                                </span>
-                                <span className="text-slate-500 ml-2">
-                                  ({token.layer})
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${
+                                      token.layer === "base" ? "bg-blue-500" :
+                                      token.layer === "semantic" ? "bg-green-500" :
+                                      "bg-red-500"
+                                    }`}
+                                  />
+                                  <span className="font-medium">
+                                    {token.name}
+                                  </span>
+                                </div>
                               </div>
                               <div className="text-xs text-slate-400 mt-1">
                                 {token.value}
@@ -1326,21 +1787,21 @@ export default function Index() {
       {/* Canvas Area */}
       <div className="flex-1 relative overflow-hidden">
         {/* Top Bar */}
-        <div className="absolute top-0 right-0 p-5 z-50 flex gap-3">
+        <div className="absolute top-0 right-0 p-5 z-50 flex gap-2 items-center">
           {/* Multi-selection Menu */}
           {selectedTokens.size >= 2 && (
-            <div className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-lg p-3 flex items-center gap-3">
+            <div className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-md p-2 flex items-center gap-3">
               <span className="text-sm text-slate-300">
                 {selectedTokens.size} tokens selected
               </span>
               <button
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md text-xs transition-colors"
                 onClick={() => setIsGroupModalOpen(true)}
               >
                 Group Tokens
               </button>
               <button
-                className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                className="bg-slate-600 hover:bg-slate-700 text-white px-2 py-1 rounded-md text-xs transition-colors"
                 onClick={() => setSelectedTokens(new Set())}
               >
                 Clear Selection
@@ -1350,21 +1811,78 @@ export default function Index() {
 
           {/* Help text for single token selection */}
           {selectedTokens.size === 1 && (
-            <div className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-lg p-3">
+            <div className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-md p-2">
               <span className="text-xs text-slate-400">
                 Hold Ctrl and click more tokens to group them
               </span>
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 text-xs">
+            {/* Undo / Redo */}
             <button
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 rounded-lg font-semibold shadow-lg transition-all flex items-center gap-2"
+              className={`bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-md transition-all flex items-center gap-2 border border-slate-600 ${history.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              onClick={handleUndo}
+              disabled={history.length === 0}
+              title="Undo"
+            >
+              <RotateCcw size={16} />
+            </button>
+            {future.length > 0 && (
+              <button
+                className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-md transition-all flex items-center gap-2 border border-slate-600"
+                onClick={handleRedo}
+                title="Redo"
+              >
+                <RotateCw size={16} />
+              </button>
+            )}
+
+            {/* Save / Manage */}
+            <button
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              onClick={() => {
+                setSaveName(currentSetupName ?? "");
+                setIsSaveModalOpen(true);
+              }}
+              title="Save current setup"
+            >
+              <SaveIcon size={16} />
+              {currentSetupName ? `Save (${currentSetupName})` : "Save"}
+              {isDirty && <span className="ml-1 text-xs opacity-80">*</span>}
+            </button>
+            <button
+              className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-1 rounded-md transition-all flex items-center gap-2 border border-slate-600"
+              onClick={() => setIsManageModalOpen(true)}
+              title="Manage saved setups"
+            >
+              <FolderOpen size={16} />
+              Saved Setups
+            </button>
+
+            <button
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={exportTokens}
               title="Export in Style Dictionary format"
             >
               <Download size={16} />
               Export for Style Dictionary
+            </button>
+            <button
+              className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              onClick={exportTokensDTCG}
+              title="Export in Design Token Community Group format"
+            >
+              <Download size={16} />
+              Export DTCG JSON
+            </button>
+            <button
+              className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              onClick={() => setIsImportModalOpen(true)}
+              title="Import JSON file from Style Dictionary or DTCG format"
+            >
+              <FolderOpen size={16} />
+              Import JSON
             </button>
           </div>
         </div>
@@ -1469,6 +1987,7 @@ export default function Index() {
                 canvasOffset={canvasOffset}
                 canvasScale={canvasScale}
                 isPanningMode={isSpacePressed || isDraggingCanvas}
+                onDragGroupEnd={markHistory}
               />
             ))}
 
@@ -1508,6 +2027,7 @@ export default function Index() {
                     canvasOffset={canvasOffset}
                     canvasScale={canvasScale}
                     isPanningMode={isSpacePressed || isDraggingCanvas}
+                    onDragEnd={markHistory}
                   />
                 );
               })}
@@ -1516,7 +2036,7 @@ export default function Index() {
           {/* Bottom-right Controls & Minimap */}
           <div className="absolute bottom-4 right-4 z-50 flex items-end gap-3">
             {/* Zoom Controls */}
-            <div className="bg-slate-800/90 backdrop-blur-sm border border-slate-600 rounded-lg p-2 flex items-center gap-2 shadow-lg">
+            <div className="bg-slate-800/90 backdrop-blur-sm border border-slate-600 rounded-md p-1 flex items-center gap-1 shadow-lg">
               <button
                 className="w-8 h-8 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 flex items-center justify-center"
                 onClick={() => zoomAtAnchor(1 / 1.1)}
@@ -1576,7 +2096,7 @@ export default function Index() {
               const viewW = (viewMaxX - viewMinX) * miniScale;
               const viewH = (viewMaxY - viewMinY) * miniScale;
               return (
-                <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg p-2 shadow-lg">
+                <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-md p-1 shadow-lg">
                   <svg width={miniW} height={miniH} className="block">
                     <rect x={0} y={0} width={miniW} height={miniH} fill="#0f172a" rx={8} />
                     {/* Content bounds */}
@@ -1623,7 +2143,7 @@ export default function Index() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-slate-800 p-8 rounded-xl max-w-md w-full mx-4 border border-slate-700">
+          <div className="bg-slate-800 p-4 rounded-lg max-w-md w-full mx-4 border border-slate-700">
             <h2 className="text-xl font-semibold mb-6">Add New Token</h2>
 
             <div className="space-y-4">
@@ -1633,7 +2153,7 @@ export default function Index() {
                 </label>
                 <input
                   type="text"
-                  className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-400 focus:outline-none"
+                  className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
                   value={tokenForm.name}
                   onChange={(e) =>
                     setTokenForm((prev) => ({ ...prev, name: e.target.value }))
@@ -1648,7 +2168,7 @@ export default function Index() {
                 </label>
                 <input
                   type="text"
-                  className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-400 focus:outline-none"
+                  className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
                   value={tokenForm.value}
                   onChange={(e) =>
                     setTokenForm((prev) => ({ ...prev, value: e.target.value }))
@@ -1660,11 +2180,11 @@ export default function Index() {
 
                 {/* Color Palette for color tokens */}
                 {currentTokenType === "color" && (
-                  <div className="mt-4 p-4 bg-slate-700/50 rounded-lg">
+                  <div className="mt-4 p-2 bg-slate-700/50 rounded-md">
                     <div className="text-sm text-slate-400 mb-3">
                       Choose a color:
                     </div>
-                    <div className="grid grid-cols-8 gap-2 mb-3">
+                    <div className="grid grid-cols-10 gap-1 mb-3">
                       {colorPalette.map((color) => (
                         <button
                           key={color}
@@ -1693,7 +2213,7 @@ export default function Index() {
 
             <div className="flex gap-3 mt-6">
               <button
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-2 py-2 rounded-md transition-colors"
                 onClick={() => {
                   setIsModalOpen(false);
                   setTokenForm({ name: "", value: "" });
@@ -1702,7 +2222,7 @@ export default function Index() {
                 Cancel
               </button>
               <button
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded-md transition-colors"
                 onClick={addToken}
               >
                 Save
@@ -1715,25 +2235,23 @@ export default function Index() {
       {/* Delete Confirmation Dialog */}
       {deleteConfirmation && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-slate-800 p-6 rounded-xl max-w-md w-full mx-4 border border-slate-700">
+          <div className="bg-slate-800 p-4 rounded-lg max-w-md w-full mx-4 border border-slate-700">
             <h2 className="text-lg font-semibold mb-4 text-red-400">
               Confirm Deletion
             </h2>
             <p className="text-slate-300 mb-6">
-              Are you sure you want to delete the token "
-              <strong>{deleteConfirmation.tokenName}</strong>"? This will remove
-              it completely from both the sidebar and canvas, along with all its
-              connections.
+              Token "
+              <strong className="text-red-400">{deleteConfirmation.tokenName}</strong>" will be completely deleted!
             </p>
             <div className="flex gap-3">
               <button
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors"
                 onClick={() => setDeleteConfirmation(null)}
               >
                 Cancel
               </button>
               <button
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
                 onClick={() => {
                   deleteToken(deleteConfirmation.tokenId);
                   setDeleteConfirmation(null);
@@ -1749,14 +2267,14 @@ export default function Index() {
       {/* Group Creation Modal */}
       {isGroupModalOpen && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-slate-800 p-8 rounded-xl max-w-md w-full mx-4 border border-slate-700">
+          <div className="bg-slate-800 p-4 rounded-lg max-w-md w-full mx-4 border border-slate-700">
             <h2 className="text-xl font-semibold mb-6">Create Token Group</h2>
 
             <div className="mb-4">
               <p className="text-slate-300 text-sm mb-4">
                 Create a group with {selectedTokens.size} selected tokens:
               </p>
-              <div className="bg-slate-700/50 p-3 rounded-lg mb-4 max-h-32 overflow-y-auto">
+              <div className="bg-slate-700/50 p-2 rounded-md mb-4 max-h-32 overflow-y-auto">
                 {Array.from(selectedTokens).map((tokenId) => {
                   const token = Object.values(tokens)
                     .flat()
@@ -1764,16 +2282,23 @@ export default function Index() {
                   return token ? (
                     <div
                       key={tokenId}
-                      className="text-sm text-slate-400 flex items-center mb-1"
+                      className="text-sm text-slate-400 flex items-center gap-2 mb-1"
                     >
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          token.layer === "base" ? "bg-blue-500" :
+                          token.layer === "semantic" ? "bg-green-500" :
+                          "bg-red-500"
+                        }`}
+                      />
                       {token.type === "color" &&
                         token.value.startsWith("#") && (
                           <div
-                            className="w-3 h-3 rounded border border-white/20 mr-2"
+                            className="w-3 h-3 rounded border border-white/20"
                             style={{ backgroundColor: token.value }}
                           />
                         )}
-                      {token.name} ({token.layer})
+                      {token.name}
                     </div>
                   ) : null;
                 })}
@@ -1787,7 +2312,7 @@ export default function Index() {
                 </label>
                 <input
                   type="text"
-                  className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-400 focus:outline-none"
+                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
                   value={groupForm.name}
                   onChange={(e) => setGroupForm({ name: e.target.value })}
                   placeholder="e.g., Brand Colors"
@@ -1798,7 +2323,7 @@ export default function Index() {
 
             <div className="flex gap-3 mt-6">
               <button
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors"
                 onClick={() => {
                   setIsGroupModalOpen(false);
                   setGroupForm({ name: "" });
@@ -1807,11 +2332,290 @@ export default function Index() {
                 Cancel
               </button>
               <button
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={createGroup}
                 disabled={!groupForm.name.trim()}
               >
                 Create Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Setup Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-slate-800 p-4 rounded-lg max-w-md w-full mx-4 border border-slate-700">
+            <h2 className="text-lg font-semibold mb-4">Save Current Setup</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Name</label>
+                <input
+                  type="text"
+                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  placeholder="e.g., My Setup"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors"
+                onClick={() => {
+                  setIsSaveModalOpen(false);
+                  setSaveName("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!saveName.trim()}
+                onClick={() => {
+                  saveCurrentSetup(saveName.trim());
+                  setIsSaveModalOpen(false);
+                }}
+              >
+                {loadAllSetups()[saveName.trim()] ? "Overwrite" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Saved Setups Modal */}
+      {isManageModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-slate-800 p-4 rounded-lg max-w-lg w-full mx-4 border border-slate-700">
+            <h2 className="text-xl font-semibold mb-6">Saved Setups</h2>
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-700 border border-slate-700 rounded-lg">
+              {Object.entries(loadAllSetups()).length === 0 && (
+                <div className="p-4 text-slate-400 text-sm">No saved setups yet.</div>
+              )}
+              {Object.entries(loadAllSetups()).map(([name, data]) => (
+                <div key={name} className="p-4 flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{name}</div>
+                    <div className="text-xs text-slate-400">Saved {data._meta?.savedAt ? new Date(data._meta.savedAt).toLocaleString() : ""}</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-sm"
+                      onClick={() => {
+                        applySnapshot(data);
+                        setCurrentSetupName(name);
+                        lastSavedHashRef.current = computeHash({ tokens: data.tokens, nodePositions: data.nodePositions, connections: data.connections, tokenGroups: data.tokenGroups, collapsedLayers: data.collapsedLayers });
+                        setIsDirty(false);
+                        setHistory([]);
+                        setFuture([]);
+                        setIsManageModalOpen(false);
+                      }}
+                    >
+                      Load
+                    </button>
+                    <button
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                      onClick={() => {
+                        const all = loadAllSetups();
+                        delete all[name];
+                        saveAllSetups(all);
+                        // force re-render by toggling state
+                        setIsManageModalOpen(false);
+                        setTimeout(() => setIsManageModalOpen(true), 0);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors"
+                onClick={() => setIsManageModalOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Token Modal */}
+      {editingToken && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-slate-800 p-6 rounded-lg max-w-md w-full mx-4 border border-slate-700">
+            <h2 className="text-xl font-semibold mb-6">Edit Token</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Name</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                  value={editingToken.name}
+                  onChange={(e) => setEditingToken({ ...editingToken, name: e.target.value })}
+                  placeholder="Token name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Value</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                  value={editingToken.value}
+                  onChange={(e) => setEditingToken({ ...editingToken, value: e.target.value })}
+                  placeholder="Token value"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Type</label>
+                <select
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                  value={editingToken.type}
+                  onChange={(e) => setEditingToken({ ...editingToken, type: e.target.value as Token["type"] })}
+                >
+                  <option value="color">Color</option>
+                  <option value="text">Text</option>
+                  <option value="spacing">Spacing</option>
+                  <option value="boolean">Boolean</option>
+                  <option value="string">String</option>
+                  <option value="number">Number</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Layer</label>
+                <select
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                  value={editingToken.layer}
+                  onChange={(e) => setEditingToken({ ...editingToken, layer: e.target.value as Token["layer"] })}
+                >
+                  <option value="base">Base</option>
+                  <option value="semantic">Semantic</option>
+                  <option value="specific">Specific</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors"
+                onClick={() => setEditingToken(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!editingToken.name.trim() || !editingToken.value.trim()}
+                onClick={updateToken}
+              >
+                Update Token
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Group Modal */}
+      {editingGroup && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-slate-800 p-6 rounded-lg max-w-md w-full mx-4 border border-slate-700">
+            <h2 className="text-xl font-semibold mb-6">Edit Group</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Group Name</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                  value={editingGroup.name}
+                  onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })}
+                  placeholder="Group name"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors"
+                onClick={() => setEditingGroup(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!editingGroup.name.trim()}
+                onClick={updateGroup}
+              >
+                Update Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import JSON Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-slate-800 p-6 rounded-lg max-w-2xl w-full mx-4 border border-slate-700">
+            <h2 className="text-xl font-semibold mb-6">Import JSON</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Import Format</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="importFormat"
+                      value="style-dictionary"
+                      checked={importFormat === "style-dictionary"}
+                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg")}
+                      className="text-blue-500"
+                    />
+                    <span>Style Dictionary</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="importFormat"
+                      value="dtcg"
+                      checked={importFormat === "dtcg"}
+                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg")}
+                      className="text-blue-500"
+                    />
+                    <span>DTCG</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">JSON Data</label>
+                <textarea
+                  className="w-full h-64 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none font-mono text-sm"
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  placeholder="Paste your JSON data here..."
+                />
+              </div>
+              <div className="text-xs text-slate-400">
+                <p><strong>Style Dictionary format:</strong> Tokens organized by layer and type</p>
+                <p><strong>DTCG format:</strong> Design Token Community Group standard format</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setImportData("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!importData.trim()}
+                onClick={handleImport}
+              >
+                Import Tokens
               </button>
             </div>
           </div>
