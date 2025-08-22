@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen, Upload, Pencil } from "lucide-react";
+import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen, Upload, Pencil, Ungroup } from "lucide-react";
 
 interface Token {
   id: string;
@@ -1689,15 +1689,15 @@ export default function Index() {
                 <div className="flex gap-1">
                   <button
                     className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors"
-                    onClick={() => setCollapsedLayers({ base: true, semantic: true, specific: true })}
-                    title="Collapse all layers"
+                    onClick={() => setCollapsedLayers({ base: false, semantic: false, specific: false })}
+                    title="Expand all layers"
                   >
                     ▼
                   </button>
                   <button
                     className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors"
-                    onClick={() => setCollapsedLayers({ base: false, semantic: false, specific: false })}
-                    title="Expand all layers"
+                    onClick={() => setCollapsedLayers({ base: true, semantic: true, specific: true })}
+                    title="Collapse all layers"
                   >
                     ▲
                   </button>
@@ -1706,7 +1706,7 @@ export default function Index() {
                     onClick={clearAllCanvas}
                     title="Remove all tokens from canvas"
                   >
-                    🗑️
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
@@ -1744,7 +1744,7 @@ export default function Index() {
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        className="dtm-btn-primary dtm-text-primary-75 w-6 h-6 rounded-md text-xs flex items-center justify-center transition-colors"
+                        className="dtm-btn-secondary w-6 h-6 rounded-md text-xs flex items-center justify-center transition-colors"
                         onClick={() => {
                           setCurrentLayer(layer);
                           setIsModalOpen(true);
@@ -1755,7 +1755,7 @@ export default function Index() {
                       </button>
                       {tokens[layer]?.length > 0 && (
                         <button
-                          className="dtm-btn-destructive dtm-text-primary-75 w-6 h-6 rounded-md text-xs flex items-center justify-center transition-colors"
+                          className="dtm-btn-secondary w-6 h-6 rounded-md text-xs flex items-center justify-center transition-colors"
                           onClick={() => deleteAllTokensByType(layer)}
                           title={`Delete all ${layer} tokens`}
                         >
@@ -1803,14 +1803,14 @@ export default function Index() {
                             {/* Action Buttons */}
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                               <button
-                                className="w-6 h-6 dtm-btn-primary dtm-text-primary-75 rounded flex items-center justify-center transition-all"
+                                className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
                                 onClick={() => editToken(token)}
                                 title="Edit token"
                               >
                                 <Pencil size={12}/>
                               </button>
                               <button
-                                className="w-6 h-6 dtm-btn-destructive dtm-text-primary-75 rounded flex items-center justify-center transition-all"
+                                className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
                                 onClick={() =>
                                   setDeleteConfirmation({
                                     tokenId: token.id,
@@ -1867,7 +1867,7 @@ export default function Index() {
                     className="dtm-bg-tertiary/30 border dtm-border-primary rounded-xl overflow-hidden"
                   >
                     {/* Group Header */}
-                    <div className="p-4 dtm-bg-tertiary/50 border-b dtm-border-primary">
+                    <div className="p-2 dtm-bg-tertiary/50 border-b dtm-border-primary">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <button
@@ -1891,33 +1891,33 @@ export default function Index() {
                             {group.name}
                           </button>
                           <span className="text-xs dtm-text-muted">
-                            ({group.tokenIds.length} tokens)
+                            ({group.tokenIds.length})
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
-                            className="dtm-btn-primary px-2 py-1 rounded text-xs transition-colors"
+                            className="dtm-btn-secondary px-2 py-1 rounded text-xs transition-colors dtm-text-primary-75"
                             onClick={() => editGroup(group)}
                             title="Edit group name"
                           >
-                            ✏️
+                            <Pencil size={12}/>
                           </button>
-                          {selectedGroup === group.id && (
-                            <button
-                              className="dtm-btn-secondary px-2 py-1 rounded text-xs transition-colors"
-                              onClick={() => ungroupTokens(group.id)}
-                              title="Ungroup tokens"
-                            >
-                              Ungroup
-                            </button>
-                          )}
                           <button
-                            className="dtm-btn-destructive px-2 py-1 rounded text-xs transition-colors"
+                            className="dtm-btn-secondary px-2 py-1 rounded text-xs transition-colors dtm-text-primary-75"
                             onClick={() => deleteGroup(group.id)}
                             title="Delete group"
                           >
                             <Trash2 size={12} />
                           </button>
+                          {selectedGroup === group.id && (
+                            <button
+                              className="dtm-btn-secondary px-2 py-1 rounded text-xs transition-colors dtm-text-primary-75"
+                              onClick={() => ungroupTokens(group.id)}
+                              title="Ungroup tokens"
+                            >
+                              <Ungroup size={12}/>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
