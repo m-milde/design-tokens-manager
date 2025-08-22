@@ -24,6 +24,9 @@ interface TokenGroup {
   collapsed: boolean;
   canvasCollapsed?: boolean;
   position?: { x: number; y: number };
+  parentGroupId?: string;
+  childGroups: string[];
+  level: number;
 }
 
 interface NodePosition {
@@ -180,6 +183,52 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         }}
       />
 
+      {/* Left Input Port */}
+      <div
+        className="absolute top-1/2 -left-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair hover:scale-125"
+        onMouseUp={(e) => {
+          e.stopPropagation();
+          if (isConnecting) {
+            onCompleteConnection(token.id, "input");
+          }
+        }}
+        onMouseEnter={(e) => {
+          if (isConnecting) {
+            e.currentTarget.style.transform = "translateY(-50%) scale(1.5)";
+            e.currentTarget.style.background = "#22c55e";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (isConnecting) {
+            e.currentTarget.style.transform = "translateY(-50%)";
+            e.currentTarget.style.background = "#3b82f6";
+          }
+        }}
+      />
+
+      {/* Right Input Port */}
+      <div
+        className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair hover:scale-125"
+        onMouseUp={(e) => {
+          e.stopPropagation();
+          if (isConnecting) {
+            onCompleteConnection(token.id, "input");
+          }
+        }}
+        onMouseEnter={(e) => {
+          if (isConnecting) {
+            e.currentTarget.style.transform = "translateY(-50%) scale(1.5)";
+            e.currentTarget.style.background = "#22c55e";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (isConnecting) {
+            e.currentTarget.style.transform = "translateY(-50%)";
+            e.currentTarget.style.background = "#3b82f6";
+          }
+        }}
+      />
+
       {/* Color Dot - On Border */}
       <div
         className={`absolute -top-2 -left-2 w-4 h-4 rounded-full border-2 ${
@@ -242,6 +291,24 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
       {/* Output Port */}
       <div
         className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onStartConnection(token.id, "output");
+        }}
+      />
+
+      {/* Left Output Port */}
+      <div
+        className="absolute top-1/2 -left-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onStartConnection(token.id, "output");
+        }}
+      />
+
+      {/* Right Output Port */}
+      <div
+        className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
         onMouseDown={(e) => {
           e.stopPropagation();
           onStartConnection(token.id, "output");
@@ -543,7 +610,7 @@ export default function Index() {
   } | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importData, setImportData] = useState("");
-  const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg">("style-dictionary");
+  const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg" | "generic">("style-dictionary");
 
   // New state for UI features
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -722,10 +789,13 @@ export default function Index() {
   const handleCanvasMouseMove = useCallback(
     (e: MouseEvent) => {
       if (isDraggingCanvas) {
-        setCanvasOffset((prev) => ({
-          x: prev.x + e.movementX,
-          y: prev.y + e.movementY,
-        }));
+        // Use requestAnimationFrame for smoother panning
+        requestAnimationFrame(() => {
+          setCanvasOffset((prev) => ({
+            x: prev.x + e.movementX,
+            y: prev.y + e.movementY,
+          }));
+        });
       }
 
       if (isConnecting && connectionStart) {
@@ -1071,6 +1141,9 @@ export default function Index() {
       collapsed: false,
       canvasCollapsed: false,
       position: groupPosition,
+      parentGroupId: undefined,
+      childGroups: [],
+      level: 0,
     };
 
     markHistory();
@@ -1078,6 +1151,78 @@ export default function Index() {
     setSelectedTokens(new Set());
     setIsGroupModalOpen(false);
     setGroupForm({ name: "" });
+  };
+
+  // Create a nested group inside an existing group
+  const createNestedGroup = (parentGroupId: string) => {
+    if (selectedTokens.size < 2 || !groupForm.name.trim()) return;
+
+    const parentGroup = tokenGroups.find(g => g.id === parentGroupId);
+    if (!parentGroup) return;
+
+    // Calculate group position relative to parent
+    const selectedPositions = Array.from(selectedTokens)
+      .map((tokenId) => nodePositions[tokenId])
+      .filter(Boolean);
+
+    let groupPosition;
+    if (selectedPositions.length > 0) {
+      const avgX =
+        selectedPositions.reduce((sum, pos) => sum + pos.x, 0) /
+        selectedPositions.length;
+      const avgY =
+        selectedPositions.reduce((sum, pos) => sum + pos.y, 0) /
+        selectedPositions.length;
+      groupPosition = { x: avgX, y: avgY };
+    }
+
+    const newGroup: TokenGroup = {
+      id: `group_${Date.now()}`,
+      name: groupForm.name.trim(),
+      tokenIds: Array.from(selectedTokens),
+      collapsed: false,
+      canvasCollapsed: false,
+      position: groupPosition,
+      parentGroupId: parentGroupId,
+      childGroups: [],
+      level: parentGroup.level + 1,
+    };
+
+    markHistory();
+    setTokenGroups((prev) => {
+      const updatedGroups = [...prev, newGroup];
+      // Update parent group to include this child
+      return updatedGroups.map(g => 
+        g.id === parentGroupId 
+          ? { ...g, childGroups: [...g.childGroups, newGroup.id] }
+          : g
+      );
+    });
+    setSelectedTokens(new Set());
+    setIsGroupModalOpen(false);
+    setGroupForm({ name: "" });
+  };
+
+  // Move group to a different parent
+  const moveGroupToParent = (groupId: string, newParentId: string | undefined) => {
+    markHistory();
+    setTokenGroups((prev) => {
+      const updatedGroups = prev.map(g => {
+        if (g.id === groupId) {
+          return { ...g, parentGroupId: newParentId, level: newParentId ? (prev.find(p => p.id === newParentId)?.level || 0) + 1 : 0 };
+        }
+        // Remove from old parent's childGroups
+        if (g.childGroups.includes(groupId)) {
+          return { ...g, childGroups: g.childGroups.filter(id => id !== groupId) };
+        }
+        // Add to new parent's childGroups
+        if (g.id === newParentId) {
+          return { ...g, childGroups: [...g.childGroups, groupId] };
+        }
+        return g;
+      });
+      return updatedGroups;
+    });
   };
 
   const toggleCanvasGroupCollapse = (groupId: string) => {
@@ -1255,7 +1400,7 @@ export default function Index() {
     
     // Process each layer
     Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
-      if (layer === "_meta") return;
+      if (layer === "_meta" || layer === "$metadata") return;
       
       // Map layer names to our system
       let targetLayer: "base" | "semantic" | "specific" = "base";
@@ -1263,19 +1408,26 @@ export default function Index() {
       if (layer === "specific" || layer === "specific-tokens") targetLayer = "specific";
       
       Object.entries(layerData).forEach(([type, typeData]: [string, any]) => {
-        Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
-          const token: Token = {
-            id: `token_${nextTokenId++}`,
-            name,
-            value: (tokenData as any).value || "",
-            type: type as Token["type"],
-            layer: targetLayer,
-          };
-          
-          newTokens[targetLayer].push(token);
-          // Store token with its original name for connection building
-          tokenMap.set(`${targetLayer}.${name}`, token);
-        });
+        if (typeof typeData === 'object' && typeData !== null) {
+          Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
+            // Skip if tokenData is not an object or doesn't have a value
+            if (typeof tokenData === 'object' && tokenData !== null && (tokenData as any).value !== undefined) {
+              const token: Token = {
+                id: `token_${nextTokenId++}`,
+                name,
+                value: (tokenData as any).value || "",
+                type: type as Token["type"],
+                layer: targetLayer,
+              };
+              
+              newTokens[targetLayer].push(token);
+              // Store token with multiple reference formats for connection building
+              tokenMap.set(`${targetLayer}.${name}`, token);
+              tokenMap.set(`${targetLayer}.${type}.${name}`, token);
+              tokenMap.set(name, token);
+            }
+          });
+        }
       });
     });
     
@@ -1297,7 +1449,7 @@ export default function Index() {
           }
         }
         
-        if (sourceToken) {
+        if (sourceToken && sourceToken.id !== token.id) {
           const connection: Connection = {
             id: `conn_${nextTokenId++}`,
             from: sourceToken.id,
@@ -1323,7 +1475,7 @@ export default function Index() {
     
     // Process each layer
     Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
-      if (layer === "_meta") return;
+      if (layer === "_meta" || layer === "$metadata") return;
       
       // Map layer names to our system
       let targetLayer: "base" | "semantic" | "specific" = "base";
@@ -1331,19 +1483,26 @@ export default function Index() {
       if (layer === "specific" || layer === "specific-tokens") targetLayer = "specific";
       
       Object.entries(layerData).forEach(([type, typeData]: [string, any]) => {
-        Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
-          const token: Token = {
-            id: `token_${nextTokenId++}`,
-            name,
-            value: (tokenData as any).$value || "",
-            type: type as Token["type"],
-            layer: targetLayer,
-          };
-          
-          newTokens[targetLayer].push(token);
-          // Store token with its original name for connection building
-          tokenMap.set(`${targetLayer}.${type}.${name}`, token);
-        });
+        if (typeof typeData === 'object' && typeData !== null) {
+          Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
+            // Skip if tokenData is not an object or doesn't have a $value
+            if (typeof tokenData === 'object' && tokenData !== null && (tokenData as any).$value !== undefined) {
+              const token: Token = {
+                id: `token_${nextTokenId++}`,
+                name,
+                value: (tokenData as any).$value || "",
+                type: type as Token["type"],
+                layer: targetLayer,
+              };
+              
+              newTokens[targetLayer].push(token);
+              // Store token with multiple reference formats for connection building
+              tokenMap.set(`${targetLayer}.${type}.${name}`, token);
+              tokenMap.set(`${targetLayer}.${name}`, token);
+              tokenMap.set(name, token);
+            }
+          });
+        }
       });
     });
     
@@ -1376,7 +1535,90 @@ export default function Index() {
           }
         }
         
-        if (sourceToken) {
+        if (sourceToken && sourceToken.id !== token.id) {
+          const connection: Connection = {
+            id: `conn_conn_${nextTokenId++}`,
+            from: sourceToken.id,
+            to: token.id,
+            fromPort: "output",
+            toPort: "input",
+          };
+          newConnections.push(connection);
+        }
+      }
+    });
+    
+    return { newTokens, newConnections };
+  };
+
+  // Generic import function that can handle various JSON formats
+  const importGenericFormat = (data: any) => {
+    const newTokens: { [key: string]: Token[] } = { base: [], semantic: [], specific: [] };
+    const newConnections: Connection[] = [];
+    let nextTokenId = Date.now();
+    
+    // Create a map to track tokens by their original names for connection building
+    const tokenMap = new Map<string, Token>();
+    
+    // Function to recursively process nested objects
+    const processNestedObject = (obj: any, path: string[] = [], layer: "base" | "semantic" | "specific" = "base") => {
+      if (typeof obj !== 'object' || obj === null) return;
+      
+      // Check if this object looks like a token
+      if (obj.value !== undefined || obj.$value !== undefined || obj.color !== undefined || obj.size !== undefined) {
+        const tokenName = path[path.length - 1] || `token_${nextTokenId}`;
+        const tokenValue = obj.value || obj.$value || obj.color || obj.size || "";
+        const tokenType = this.determineTokenType(obj, path);
+        
+        const token: Token = {
+          id: `token_${nextTokenId++}`,
+          name: tokenName,
+          value: tokenValue.toString(),
+          type: tokenType,
+          layer: layer,
+        };
+        
+        newTokens[layer].push(token);
+        
+        // Store token with multiple reference formats
+        tokenMap.set(tokenName, token);
+        tokenMap.set(`${layer}.${tokenName}`, token);
+        tokenMap.set(`${layer}.${tokenType}.${tokenName}`, token);
+        
+        return;
+      }
+      
+      // Recursively process nested objects
+      Object.entries(obj).forEach(([key, value]) => {
+        if (key === "_meta" || key === "$metadata" || key === "metadata") return;
+        
+        let targetLayer = layer;
+        if (key === "semantic" || key === "semantic-tokens") targetLayer = "semantic";
+        if (key === "specific" || key === "specific-tokens") targetLayer = "specific";
+        
+        if (typeof value === 'object' && value !== null) {
+          processNestedObject(value, [...path, key], targetLayer);
+        }
+      });
+    };
+    
+    // Start processing from the root
+    processNestedObject(data);
+    
+    // Process connections based on references
+    Object.values(newTokens).flat().forEach((token) => {
+      if (typeof token.value === "string" && token.value.includes(".")) {
+        const refValue = token.value.replace(/[{}]/g, '');
+        let sourceToken = tokenMap.get(refValue);
+        
+        if (!sourceToken) {
+          const nameOnly = refValue.split('.').pop();
+          if (nameOnly) {
+            sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
+          }
+        }
+        
+        if (sourceToken && sourceToken.id !== token.id) {
           const connection: Connection = {
             id: `conn_${nextTokenId++}`,
             from: sourceToken.id,
@@ -1392,6 +1634,24 @@ export default function Index() {
     return { newTokens, newConnections };
   };
 
+  // Helper function to determine token type
+  const determineTokenType = (obj: any, path: string[]): Token["type"] => {
+    if (obj.color !== undefined || obj.value?.startsWith('#')) return "color";
+    if (obj.size !== undefined || obj.value?.includes('px') || obj.value?.includes('rem')) return "spacing";
+    if (obj.fontSize !== undefined || obj.value?.includes('font')) return "text";
+    if (typeof obj.value === 'boolean') return "boolean";
+    if (typeof obj.value === 'number') return "number";
+    if (typeof obj.value === 'string') return "string";
+    
+    // Try to determine from path
+    const lastPath = path[path.length - 1]?.toLowerCase();
+    if (lastPath?.includes('color')) return "color";
+    if (lastPath?.includes('size') || lastPath?.includes('spacing')) return "spacing";
+    if (lastPath?.includes('font') || lastPath?.includes('text')) return "text";
+    
+    return "string";
+  };
+
   const handleImport = () => {
     try {
       let parsedData;
@@ -1405,8 +1665,10 @@ export default function Index() {
       let result;
       if (importFormat === "style-dictionary") {
         result = importFromStyleDictionary(parsedData);
-      } else {
+      } else if (importFormat === "dtcg") {
         result = importFromDTCG(parsedData);
+      } else {
+        result = importGenericFormat(parsedData);
       }
       
       // Clear existing data and apply imported data
@@ -2130,7 +2392,7 @@ export default function Index() {
               const toPos = nodePositions[connection.to];
               if (!fromPos || !toPos) return null;
 
-              // Check if either token is in a collapsed group
+              // Check if both tokens are in the same collapsed group
               const fromTokenGroup = tokenGroups.find((group) =>
                 group.tokenIds.includes(connection.from)
               );
@@ -2138,8 +2400,10 @@ export default function Index() {
                 group.tokenIds.includes(connection.to)
               );
               
-              // Hide connection if either token is in a collapsed group
-              if (fromTokenGroup?.canvasCollapsed || toTokenGroup?.canvasCollapsed) {
+              // Only hide connection if BOTH tokens are in the SAME collapsed group
+              if (fromTokenGroup && toTokenGroup && 
+                  fromTokenGroup.id === toTokenGroup.id && 
+                  fromTokenGroup.canvasCollapsed) {
                 return null;
               }
 
@@ -2315,9 +2579,48 @@ export default function Index() {
               const viewY = (viewMinY - minY) * miniScale + miniOffsetY;
               const viewW = (viewMaxX - viewMinX) * miniScale;
               const viewH = (viewMaxY - viewMinY) * miniScale;
+              const handleMinimapClick = (e: React.MouseEvent) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                
+                // Convert minimap coordinates to canvas coordinates
+                const canvasX = (clickX - miniOffsetX) / miniScale + minX;
+                const canvasY = (clickY - miniOffsetY) / miniScale + minY;
+                
+                // Center the view on the clicked position
+                const newOffsetX = -(canvasX - viewportSize.width / 2 / canvasScale);
+                const newOffsetY = -(canvasY - viewportSize.height / 2 / canvasScale);
+                
+                setCanvasOffset({ x: newOffsetX, y: newOffsetY });
+              };
+
+              const handleMinimapDrag = (e: React.MouseEvent) => {
+                e.preventDefault();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const dragX = e.clientX - rect.left;
+                const dragY = e.clientY - rect.top;
+                
+                // Convert minimap coordinates to canvas coordinates
+                const canvasX = (dragX - miniOffsetX) / miniScale + minX;
+                const canvasY = (dragY - miniOffsetY) / miniScale + minY;
+                
+                // Update canvas offset to center on dragged position
+                const newOffsetX = -(canvasX - viewportSize.width / 2 / canvasScale);
+                const newOffsetY = -(canvasY - viewportSize.height / 2 / canvasScale);
+                
+                setCanvasOffset({ x: newOffsetX, y: newOffsetY });
+              };
+
               return (
                 <div className="dtm-bg-primary/80 backdrop-blur-sm border dtm-border-primary rounded-md p-1 shadow-lg">
-                  <svg width={miniW} height={miniH} className="block">
+                  <svg 
+                    width={miniW} 
+                    height={miniH} 
+                    className="block cursor-pointer"
+                    onClick={handleMinimapClick}
+                    onMouseDown={handleMinimapDrag}
+                  >
                     <rect x={0} y={0} width={miniW} height={miniH} fill="hsl(var(--dtm-bg-primary))" rx={8} />
                     {/* Content bounds */}
                     <rect
@@ -2335,11 +2638,10 @@ export default function Index() {
                         key={t.id}
                         x={(p!.x - minX) * miniScale + miniOffsetX}
                         y={(p!.y - minY) * miniScale + miniOffsetY}
-                        width={200 * miniScale}
-                        height={120 * miniScale}
-                        fill="#3b82f6"
-                        opacity={0.3}
-                        rx={3}
+                        width={Math.max(4, 150 * miniScale)}
+                        height={Math.max(4, 100 * miniScale)}
+                        fill="hsl(var(--dtm-primary))"
+                        rx={2}
                       />
                     ))}
                     {/* Viewport */}
@@ -2349,8 +2651,9 @@ export default function Index() {
                       width={viewW}
                       height={viewH}
                       fill="none"
-                      stroke="#93c5fd"
-                      strokeWidth={2}
+                      stroke="hsl(var(--dtm-border-accent))"
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
                     />
                   </svg>
                 </div>

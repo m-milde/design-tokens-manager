@@ -85,6 +85,8 @@
     --dtm-token-base: 217 91% 60%;
     --dtm-token-semantic: 142 76% 36%;
     --dtm-token-specific: 50 84% 60%;
+    
+    --dtm-bg-white: 0 0% 100%;
   }
 
   .dark {
@@ -173,6 +175,7 @@
   .dtm-bg-tertiary { background-color: hsl(var(--dtm-bg-tertiary)); }
   .dtm-bg-overlay { background-color: hsl(var(--dtm-bg-overlay)); }
   .dtm-bg-white { background-color: hsl(var(--dtm-bg-white)); }
+  .dtm-text-primary-75 { color: hsl(var(--dtm-text-primary)/75%) !important; }
   
   .dtm-text-primary { color: hsl(var(--dtm-text-primary)); }
   .dtm-text-primary-75 { color: hsl(var(--dtm-text-primary)/75%) !important; }
