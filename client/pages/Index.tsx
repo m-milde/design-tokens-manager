@@ -144,7 +144,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
           ? "dtm-border-accent shadow-blue-400/30"
           : isMultiSelected
             ? "dtm-border-accent shadow-green-400/30"
-            : "dtm-border-primary/20 hover:dtm-border-accent/60"
+            : "dtm-border-primary hover:dtm-border-accent"
       }`}
       style={{
         left: position.x,
@@ -1976,9 +1976,9 @@ export default function Index() {
       {/* Canvas Area */}
       <div className="flex-1 relative overflow-hidden">
         {/* Top Bar */}
-        <div className={`absolute top-0 right-0 p-5 z-40 flex gap-2 items-center transition-all duration-500 ease-in-out ${isTopBarCollapsed ? 'translate-x-full' : ''}`}>
+        <div className={`absolute top-0 right-5 p-5 px-8 z-40 flex gap-2 items-center transition-all duration-500 ease-in-out ${isTopBarCollapsed ? 'translate-x-full' : ''}`}>
           {/* Collapse/Expand button */}
-          <div className="absolute top-0 right-0">
+          <div className="absolute top-4 right-0">
             <button
               className="dtm-text-muted hover:dtm-text-primary p-2 rounded transition-colors dtm-bg-secondary/95 backdrop-blur-sm border dtm-border-primary"
               onClick={() => setIsTopBarCollapsed(!isTopBarCollapsed)}
@@ -2020,7 +2020,7 @@ export default function Index() {
           <div className="flex gap-2 text-xs">
             {/* Undo / Redo */}
             <button
-              className={`dtm-btn-secondary p-2 rounded-md transition-all flex items-center gap-2 border dtm-border-primary ${history.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`dtm-btn-secondary p-2 rounded-md transition-all flex items-center gap-2 ${history.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={handleUndo}
               disabled={history.length === 0}
               title="Undo"
@@ -2051,7 +2051,7 @@ export default function Index() {
               {isDirty && <span className="ml-1 text-xs opacity-80">*</span>}
             </button>
             <button
-              className="dtm-btn-secondary px-4 py-1 rounded-md transition-all flex items-center gap-2 border dtm-border-primary"
+              className="dtm-btn-secondary px-4 py-1 rounded-md transition-all flex items-center gap-2"
               onClick={() => setIsManageModalOpen(true)}
               title="Manage saved setups"
             >
