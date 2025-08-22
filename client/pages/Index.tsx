@@ -138,7 +138,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
     <div
       ref={nodeRef}
       className={`absolute min-w-[150px] max-w-[200px] dtm-bg-secondary/10 backdrop-blur-xl border-2 rounded-2xl p-4 cursor-move select-none shadow-lg hover:shadow-xl z-20 ${
-        isDragging ? "transition-none" : "transition-all duration-300"
+        isDragging ? "transition-none" : ""
       } ${
         isSelected
           ? "dtm-border-accent shadow-blue-400/30"
@@ -159,7 +159,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
     >
       {/* Input Port */}
       <div
-        className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 border-white rounded-full cursor-crosshair transition-all hover:scale-125"
+        className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 rounded-full cursor-crosshair hover:scale-125"
         onMouseUp={(e) => {
           e.stopPropagation();
           if (isConnecting) {
@@ -182,7 +182,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
 
       {/* Color Dot - On Border */}
       <div
-        className={`absolute -top-1.5 -left-1.5 w-3 h-3 rounded-full border-2 border-white ${
+        className={`absolute -top-2 -left-2 w-4 h-4 rounded-full border-2 ${
           token.layer === "base" ? "dtm-token-base" :
           token.layer === "semantic" ? "dtm-token-semantic" :
           "dtm-token-specific"
@@ -241,7 +241,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
 
       {/* Output Port */}
       <div
-        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 border-white rounded-full cursor-crosshair transition-all hover:scale-125"
+        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
         onMouseDown={(e) => {
           e.stopPropagation();
           onStartConnection(token.id, "output");
@@ -371,7 +371,7 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
   return (
     <div
       ref={groupRef}
-      className={`absolute border-2 border-dashed rounded-xl p-2 transition-all cursor-move ${
+      className={`absolute border-2 border-dashed rounded-xl p-2 cursor-move ${
         isSelected
           ? "border-green-400 bg-green-400/10"
           : "border-green-300/50 bg-green-300/5"
@@ -386,7 +386,7 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
       onMouseDown={handleGroupMouseDown}
     >
       {/* Group Header */}
-      <div className="absolute -top-8 left-0 bg-green-500 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center gap-2">
+      <div className="absolute -top-8 left-0 dtm-bg-tertiary text-white px-2 py-1 rounded-md text-sm  flex items-center gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -2154,8 +2154,8 @@ export default function Index() {
                 <path
                   key={connection.id}
                   d={path}
-                  stroke="#3b82f6"
-                  strokeWidth="4"
+                  stroke="#ffffff"
+                  strokeWidth="2"
                   fill="none"
                   className="drop-shadow-sm"
                 />
@@ -2172,7 +2172,7 @@ export default function Index() {
                   tempConnection.y2,
                 )}
                 stroke="#3b82f6"
-                strokeWidth="4"
+                strokeWidth="2"
                 strokeDasharray="8,4"
                 fill="none"
                 opacity="0.8"
