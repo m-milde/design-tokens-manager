@@ -373,8 +373,8 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
       ref={groupRef}
       className={`absolute border-2 border-dashed rounded-md p-2 cursor-move ${
         isSelected
-          ? "border-green-400 bg-green-400/10"
-          : "border-green-300/50 bg-green-300/5"
+          ? "dtm-border-primary bg-green-400/10"
+          : "dtm-border-primary bg-green-300/5"
       }`}
       style={{
         left: minX - 10,
@@ -1714,7 +1714,7 @@ export default function Index() {
               {(["base", "semantic", "specific"] as const).map((layer) => (
                 <div
                   key={layer}
-                  className="dtm-bg-tertiary/30 border dtm-border-primary rounded-xl overflow-hidden"
+                  className="dtm-bg-tertiary/30 border dtm-border-primary rounded-md overflow-hidden"
                 >
                   {/* Layer Header */}
                   <div className="p-2 dtm-bg-tertiary/50 border-b dtm-border-primary flex justify-between items-center">
