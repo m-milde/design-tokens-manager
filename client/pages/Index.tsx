@@ -1652,7 +1652,7 @@ export default function Index() {
               </div>
             </div>
           ) : (
-            <div className="mb-8">
+            <div className="mb-8 d-none">
               <div className="grid grid-cols-1 gap-2">
                 {(
                   [
@@ -1681,7 +1681,7 @@ export default function Index() {
 
           {/* Token Layers */}
           {!isSidebarCollapsed ? (
-            <div className="dtm-token-layers">
+            <div className="dtm-token-layers mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold dtm-text-muted uppercase tracking-wide">
                   Token Layers
