@@ -159,7 +159,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
     >
       {/* Input Port */}
       <div
-        className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 rounded-full cursor-crosshair hover:scale-125"
+        className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair hover:scale-125"
         onMouseUp={(e) => {
           e.stopPropagation();
           if (isConnecting) {
@@ -241,7 +241,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
 
       {/* Output Port */}
       <div
-        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
+        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
         onMouseDown={(e) => {
           e.stopPropagation();
           onStartConnection(token.id, "output");
@@ -371,7 +371,7 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
   return (
     <div
       ref={groupRef}
-      className={`absolute border-2 border-dashed rounded-xl p-2 cursor-move ${
+      className={`absolute border-2 border-dashed rounded-md p-2 cursor-move ${
         isSelected
           ? "border-green-400 bg-green-400/10"
           : "border-green-300/50 bg-green-300/5"
@@ -416,7 +416,7 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
 
       {/* Collapsed Content */}
       {isCollapsed && (
-        <div className="p-4 bg-green-400/10 rounded-md h-full flex flex-col justify-center items-center">
+        <div className="p-2 dtm-btn-secondary rounded-md h-full flex flex-col justify-center items-center">
           <div className="text-green-400 font-semibold text-sm mb-2">
             {group.name}
           </div>
@@ -2056,7 +2056,7 @@ export default function Index() {
               title="Manage saved setups"
             >
               <FolderOpen size={16} />
-              Saved Setups
+              Load
             </button>
 
             <button
@@ -2065,7 +2065,7 @@ export default function Index() {
               title="Export in Style Dictionary format"
             >
               <Upload size={16} />
-              Export for Style Dictionary
+              Export SD JSON
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
@@ -2089,7 +2089,7 @@ export default function Index() {
               title={`Switch to ${isDarkTheme ? 'light' : 'dark'} theme`}
             >
               <span className="text-lg">{isDarkTheme ? "☼" : "☾"}</span>
-              {isDarkTheme ? "Light" : "Dark"}
+              {isDarkTheme ? "" : ""}
             </button>
           </div>
         </div>

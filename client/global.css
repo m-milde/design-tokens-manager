@@ -91,6 +91,8 @@
     --background: 224 71% 4%;
     --foreground: 213 31% 91%;
 
+    --dtm-bg-white: 0 0 100%;
+
     --card: 224 71% 4%;
     --card-foreground: 213 31% 91%;
 
@@ -170,6 +172,7 @@
   .dtm-bg-secondary { background-color: hsl(var(--dtm-bg-secondary)); }
   .dtm-bg-tertiary { background-color: hsl(var(--dtm-bg-tertiary)); }
   .dtm-bg-overlay { background-color: hsl(var(--dtm-bg-overlay)); }
+  .dtm-bg-white { background-color: hsl(var(--dtm-bg-white)); }
   
   .dtm-text-primary { color: hsl(var(--dtm-text-primary)); }
   .dtm-text-primary-75 { color: hsl(var(--dtm-text-primary)/75%) !important; }
