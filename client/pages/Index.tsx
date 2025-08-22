@@ -137,7 +137,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
   return (
     <div
       ref={nodeRef}
-      className={`absolute min-w-[150px] max-w-[200px] dtm-bg-secondary/10 backdrop-blur-xl border-2 rounded-2xl p-4 cursor-move select-none shadow-lg hover:shadow-xl z-20 ${
+      className={`absolute min-w-[150px] max-w-[200px] dtm-bg-secondary/10 backdrop-blur-xl border-2 rounded-md p-2 cursor-move select-none shadow-lg hover:shadow-xl z-20 ${
         isDragging ? "transition-none" : ""
       } ${
         isSelected
@@ -657,56 +657,56 @@ export default function Index() {
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
   // Sample data
-  useEffect(() => {
-    const sampleTokens = [
-      {
-        id: "token_1",
-        name: "primary-blue",
-        value: "#4a90e2",
-        type: "color" as const,
-        layer: "base" as const,
-      },
-      {
-        id: "token_2",
-        name: "secondary-purple",
-        value: "#805ad5",
-        type: "color" as const,
-        layer: "base" as const,
-      },
-      {
-        id: "token_3",
-        name: "font-size-base",
-        value: "16px",
-        type: "text" as const,
-        layer: "base" as const,
-      },
-      {
-        id: "token_4",
-        name: "color-brand",
-        value: "{base.primary-blue}",
-        type: "color" as const,
-        layer: "semantic" as const,
-      },
-      {
-        id: "token_5",
-        name: "button-bg",
-        value: "{semantic.color-brand}",
-        type: "color" as const,
-        layer: "specific" as const,
-      },
-    ];
+  // useEffect(() => {
+  //   const sampleTokens = [
+  //     {
+  //       id: "token_1",
+  //       name: "primary-blue",
+  //       value: "#4a90e2",
+  //       type: "color" as const,
+  //       layer: "base" as const,
+  //     },
+  //     {
+  //       id: "token_2",
+  //       name: "secondary-purple",
+  //       value: "#805ad5",
+  //       type: "color" as const,
+  //       layer: "base" as const,
+  //     },
+  //     {
+  //       id: "token_3",
+  //       name: "font-size-base",
+  //       value: "16px",
+  //       type: "text" as const,
+  //       layer: "base" as const,
+  //     },
+  //     {
+  //       id: "token_4",
+  //       name: "color-brand",
+  //       value: "{base.primary-blue}",
+  //       type: "color" as const,
+  //       layer: "semantic" as const,
+  //     },
+  //     {
+  //       id: "token_5",
+  //       name: "button-bg",
+  //       value: "{semantic.color-brand}",
+  //       type: "color" as const,
+  //       layer: "specific" as const,
+  //     },
+  //   ];
 
-    const tokenGroups = sampleTokens.reduce(
-      (acc, token) => {
-        acc[token.layer] = acc[token.layer] || [];
-        acc[token.layer].push(token);
-        return acc;
-      },
-      {} as { [key: string]: Token[] },
-    );
+  //   const tokenGroups = sampleTokens.reduce(
+  //     (acc, token) => {
+  //       acc[token.layer] = acc[token.layer] || [];
+  //       acc[token.layer].push(token);
+  //       return acc;
+  //     },
+  //     {} as { [key: string]: Token[] },
+  //   );
 
-    setTokens(tokenGroups);
-  }, []);
+  //   setTokens(tokenGroups);
+  // }, []);
 
   // Canvas dragging
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
@@ -1864,7 +1864,7 @@ export default function Index() {
                 {tokenGroups.map((group) => (
                   <div
                     key={group.id}
-                    className="dtm-bg-tertiary/30 border dtm-border-primary rounded-xl overflow-hidden"
+                    className="dtm-bg-tertiary/30 border dtm-border-primary rounded-md overflow-hidden"
                   >
                     {/* Group Header */}
                     <div className="p-2 dtm-bg-tertiary/50 border-b dtm-border-primary">
