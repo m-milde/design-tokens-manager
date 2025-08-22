@@ -1617,12 +1617,12 @@ export default function Index() {
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              <span className="text-lg">{isSidebarCollapsed ? "⋯" : "→"}</span>
+              <span className="text-lg">{isSidebarCollapsed ? "→" : "←"}</span>
             </button>
           </div>
           {/* Token Types */}
           {!isSidebarCollapsed ? (
-            <div className="mb-8">
+            <div className="mb-8 dtm-tokens-types">
               <h3 className="text-sm font-semibold dtm-text-muted uppercase tracking-wide mb-4">
                 Token Types
               </h3>
@@ -1639,10 +1639,10 @@ export default function Index() {
                 ).map((type) => (
                   <button
                     key={type}
-                    className={`p-2 text-xs dtm-text-primary-75 rounded-md border transition-all ${
+                    className={`p-2 text-xs rounded-md border transition-all ${
                       currentTokenType === type
-                        ? "dtm-btn-primary dtm-text-primary border-dtm-border-accent"
-                        : "dtm-bg-secondary dtm-border-secondary hover:dtm-text-primary hover:dtm-border-accent hover:dtm-bg-tertiary"
+                        ? "dtm-btn-primary dtm-text-primary"
+                        : "dtm-btn-secondary hover:dtm-text-primary hover:dtm-border-accent hover:dtm-bg-tertiary"
                     }`}
                     onClick={() => setCurrentTokenType(type)}
                   >
@@ -1681,7 +1681,7 @@ export default function Index() {
 
           {/* Token Layers */}
           {!isSidebarCollapsed ? (
-            <div>
+            <div className="dtm-token-layers">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold dtm-text-muted uppercase tracking-wide">
                   Token Layers
@@ -1856,7 +1856,7 @@ export default function Index() {
 
           {/* Token Groups Section */}
           {tokenGroups.length > 0 && (
-            <div>
+            <div className="dtm-tokens-groups">
               <h3 className="text-sm font-semibold dtm-text-muted uppercase tracking-wide mb-4">
                 Token Groups
               </h3>
