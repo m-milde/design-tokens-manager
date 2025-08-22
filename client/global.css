@@ -47,6 +47,44 @@
     --sidebar-accent-foreground: 220 9% 9%;
     --sidebar-border: 220 13% 88%;
     --sidebar-ring: 217 91% 60%;
+
+    /* Design Token Manager Theme Variables */
+    --dtm-primary: 217 91% 60%;
+    --dtm-primary-hover: 217 91% 50%;
+    --dtm-secondary: 220 13% 91%;
+    --dtm-secondary-hover: 220 13% 81%;
+    --dtm-accent: 217 91% 95%;
+    --dtm-accent-hover: 217 91% 85%;
+    --dtm-destructive: 0 84% 60%;
+    --dtm-destructive-hover: 0 84% 50%;
+    --dtm-success: 142 76% 36%;
+    --dtm-success-hover: 142 76% 26%;
+    --dtm-warning: 38 92% 50%;
+    --dtm-warning-hover: 38 92% 40%;
+    --dtm-info: 199 89% 48%;
+    --dtm-info-hover: 199 89% 38%;
+    
+    /* Background colors */
+    --dtm-bg-primary: 220 14% 96%;
+    --dtm-bg-secondary: 220 13% 91%;
+    --dtm-bg-tertiary: 220 13% 88%;
+    --dtm-bg-overlay: 220 14% 96% / 0.95;
+    
+    /* Text colors */
+    --dtm-text-primary: 220 9% 9%;
+    --dtm-text-secondary: 220 9% 26%;
+    --dtm-text-muted: 220 9% 46%;
+    --dtm-text-inverse: 0 0% 100%;
+    
+    /* Border colors */
+    --dtm-border-primary: 220 13% 88%;
+    --dtm-border-secondary: 220 13% 81%;
+    --dtm-border-accent: 217 91% 60%;
+    
+    /* Token type colors */
+    --dtm-token-base: 217 91% 60%;
+    --dtm-token-semantic: 142 76% 36%;
+    --dtm-token-specific: 0 84% 60%;
   }
 
   .dark {
@@ -86,8 +124,96 @@
     --sidebar-accent-foreground: 213 31% 91%;
     --sidebar-border: 215 27% 17%;
     --sidebar-ring: 217 91% 60%;
+
+    /* Design Token Manager Theme Variables - Dark */
+    --dtm-primary: 217 91% 60%;
+    --dtm-primary-hover: 217 91% 70%;
+    --dtm-secondary: 215 27% 17%;
+    --dtm-secondary-hover: 215 27% 27%;
+    --dtm-accent: 215 27% 17%;
+    --dtm-accent-hover: 215 27% 27%;
+    --dtm-destructive: 0 63% 31%;
+    --dtm-destructive-hover: 0 63% 41%;
+    --dtm-success: 142 76% 36%;
+    --dtm-success-hover: 142 76% 46%;
+    --dtm-warning: 38 92% 50%;
+    --dtm-warning-hover: 38 92% 60%;
+    --dtm-info: 199 89% 48%;
+    --dtm-info-hover: 199 89% 58%;
+    
+    /* Background colors - Dark */
+    --dtm-bg-primary: 224 71% 4%;
+    --dtm-bg-secondary: 220 35% 25%;
+    --dtm-bg-tertiary: 215 27% 12%;
+    --dtm-bg-overlay: 224 71% 4% / 0.95;
+    
+    /* Text colors - Dark */
+    --dtm-text-primary: 213 31% 91%;
+    --dtm-text-secondary: 217 10% 65%;
+    --dtm-text-muted: 217 10% 45%;
+    --dtm-text-inverse: 224 71% 4%;
+    
+    /* Border colors - Dark */
+    --dtm-border-primary: 220 30% 30%;
+    --dtm-border-secondary: 215 27% 22%;
+    --dtm-border-accent: 217 91% 60%;
+    
+    /* Token type colors - Dark */
+    --dtm-token-base: 217 91% 60%;
+    --dtm-token-semantic: 142 76% 36%;
+    --dtm-token-specific: 0 63% 31%;
   }
 }
+
+  /* Design Token Manager Theme Utility Classes */
+  .dtm-bg-primary { background-color: hsl(var(--dtm-bg-primary)); }
+  .dtm-bg-secondary { background-color: hsl(var(--dtm-bg-secondary)); }
+  .dtm-bg-tertiary { background-color: hsl(var(--dtm-bg-tertiary)); }
+  .dtm-bg-overlay { background-color: hsl(var(--dtm-bg-overlay)); }
+  
+  .dtm-text-primary { color: hsl(var(--dtm-text-primary)); }
+  .dtm-text-primary-75 { color: hsl(var(--dtm-text-primary)/75%) !important; }
+  .dtm-text-secondary { color: hsl(var(--dtm-text-secondary)/50%) !important; }
+  .dtm-text-muted { color: hsl(var(--dtm-text-muted)) !important; }
+  .dtm-text-inverse { color: hsl(var(--dtm-text-inverse)); }
+  
+  .dtm-border-primary { border-color: hsl(var(--dtm-border-primary)); }
+  .dtm-border-secondary { border-color: hsl(var(--dtm-border-secondary)); }
+  .dtm-border-accent { border-color: hsl(var(--dtm-border-accent)); }
+  
+  .dtm-btn-primary { 
+    background-color: hsl(var(--dtm-primary)); 
+    color: hsl(var(--dtm-text-inverse));
+  }
+  .dtm-btn-primary:hover { background-color: hsl(var(--dtm-primary-hover)); }
+  
+  .dtm-btn-secondary { 
+    background-color: hsl(var(--dtm-secondary)); 
+    color: hsl(var(--dtm-text-primary));
+  }
+  .dtm-btn-secondary:hover { background-color: hsl(var(--dtm-secondary-hover)); }
+  
+  .dtm-btn-destructive { 
+    background-color: hsl(var(--dtm-destructive)); 
+    color: hsl(var(--dtm-text-inverse));
+  }
+  .dtm-btn-destructive:hover { background-color: hsl(var(--dtm-destructive-hover)); }
+  
+  .dtm-btn-success { 
+    background-color: hsl(var(--dtm-success)); 
+    color: hsl(var(--dtm-text-inverse));
+  }
+  .dtm-btn-success:hover { background-color: hsl(var(--dtm-success-hover)); }
+  
+  .dtm-btn-info { 
+    background-color: hsl(var(--dtm-info)); 
+    color: hsl(var(--dtm-text-inverse));
+  }
+  .dtm-btn-info:hover { background-color: hsl(var(--dtm-info-hover)); }
+  
+  .dtm-token-base { background-color: hsl(var(--dtm-token-base)); }
+  .dtm-token-semantic { background-color: hsl(var(--dtm-token-semantic)); }
+  .dtm-token-specific { background-color: hsl(var(--dtm-token-specific)); }
 
 @layer base {
   * {
@@ -205,4 +331,11 @@
       height: 50%;
     }
   }
+}
+
+/* Custom classes */
+
+.text-white {
+	--tw-text-opacity: 1;
+	color: rgb(255 255 255 / var(--tw-text-opacity, 1)) !important;
 }

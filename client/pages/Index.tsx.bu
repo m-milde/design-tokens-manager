@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen, Upload, Pencil } from "lucide-react";
+import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen } from "lucide-react";
 
 interface Token {
   id: string;
@@ -137,14 +137,14 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
   return (
     <div
       ref={nodeRef}
-      className={`absolute min-w-[150px] max-w-[200px] dtm-bg-secondary/10 backdrop-blur-xl border-2 rounded-2xl p-4 cursor-move select-none shadow-lg hover:shadow-xl z-20 ${
+      className={`absolute min-w-[150px] max-w-[200px] bg-white/10 backdrop-blur-xl border-2 rounded-2xl p-4 cursor-move select-none shadow-lg hover:shadow-xl z-20 ${
         isDragging ? "transition-none" : "transition-all duration-300"
       } ${
         isSelected
-          ? "dtm-border-accent shadow-blue-400/30"
+          ? "border-blue-400 shadow-blue-400/30"
           : isMultiSelected
-            ? "dtm-border-accent shadow-green-400/30"
-            : "dtm-border-primary/20 hover:dtm-border-accent/60"
+            ? "border-green-400 shadow-green-400/30"
+            : "border-white/20 hover:border-blue-400/60"
       }`}
       style={{
         left: position.x,
@@ -159,7 +159,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
     >
       {/* Input Port */}
       <div
-        className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 border-white rounded-full cursor-crosshair transition-all hover:scale-125"
+        className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-blue-500 border-2 border-white rounded-full cursor-crosshair transition-all hover:scale-125 hover:bg-blue-400"
         onMouseUp={(e) => {
           e.stopPropagation();
           if (isConnecting) {
@@ -183,14 +183,14 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
       {/* Color Dot - On Border */}
       <div
         className={`absolute -top-1.5 -left-1.5 w-3 h-3 rounded-full border-2 border-white ${
-          token.layer === "base" ? "dtm-token-base" :
-          token.layer === "semantic" ? "dtm-token-semantic" :
-          "dtm-token-specific"
+          token.layer === "base" ? "bg-blue-500" :
+          token.layer === "semantic" ? "bg-green-500" :
+          "bg-red-500"
         }`}
       />
 
       {/* Node Content */}
-      <div className="mb-2 font-semibold text-sm dtm-text-primary">
+      <div className="mb-2 font-semibold text-sm text-white">
         {token.type === "color" && token.value.startsWith("#") && (
           <div
             className="inline-block w-3 h-3 rounded border border-white/20 mr-2"
@@ -199,7 +199,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         )}
         {token.name}
       </div>
-      <div className="text-xs dtm-text-muted dtm-bg-primary/20 p-2 rounded-md break-words">
+      <div className="text-xs text-gray-300 bg-black/20 p-2 rounded-md break-words">
         {token.value}
       </div>
 
@@ -207,7 +207,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
       {isSelected && (
         <div className="flex gap-1 mt-2 justify-center">
           <button
-            className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs"
+            className="w-6 h-6 bg-orange-500 hover:bg-orange-600 text-white rounded flex items-center justify-center transition-all text-xs"
             onClick={(e) => {
               e.stopPropagation();
               onDisconnectNode(token.id);
@@ -217,7 +217,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
             <X size={10} />
           </button>
           <button
-            className="w-6 h-6 dtm-btn-primary rounded flex items-center justify-center transition-all text-xs"
+            className="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center transition-all text-xs"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteNode(token.id);
@@ -227,7 +227,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
             <X size={10} />
           </button>
           <button
-            className="w-6 h-6 dtm-btn-destructive text-white rounded flex items-center justify-center transition-all text-xs"
+            className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center transition-all text-xs"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteToken(token.id);
@@ -241,7 +241,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
 
       {/* Output Port */}
       <div
-        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-btn-primary border-2 border-white rounded-full cursor-crosshair transition-all hover:scale-125"
+        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-blue-500 border-2 border-white rounded-full cursor-crosshair transition-all hover:scale-125 hover:bg-blue-400"
         onMouseDown={(e) => {
           e.stopPropagation();
           onStartConnection(token.id, "output");
@@ -545,26 +545,9 @@ export default function Index() {
   const [importData, setImportData] = useState("");
   const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg">("style-dictionary");
 
-  // New state for UI features
+  // Panel collapse state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isTopBarCollapsed, setIsTopBarCollapsed] = useState(false);
-  const [isDarkTheme, setIsDarkTheme] = useState(true);
-
-  // Initialize theme on mount
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setIsDarkTheme(isDark);
-  }, []);
-
-  // Theme toggle function
-  const toggleTheme = () => {
-    setIsDarkTheme(!isDarkTheme);
-    if (isDarkTheme) {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-    }
-  };
 
   const captureSetup = useCallback((): SetupState => ({
     tokens,
@@ -1122,70 +1105,6 @@ export default function Index() {
     setSelectedGroup(null);
   };
 
-  // Clear all tokens from canvas
-  const clearAllCanvas = () => {
-    if (window.confirm("Are you sure you want to remove all tokens from the canvas? This will not delete the tokens from the sidebar.")) {
-      markHistory();
-      setNodePositions({});
-      setConnections([]);
-      setSelectedNode(null);
-      setSelectedTokens(new Set());
-      setSelectedGroup(null);
-    }
-  };
-
-  // Delete all tokens by type
-  const deleteAllTokensByType = (layer: "base" | "semantic" | "specific") => {
-    const tokenCount = tokens[layer]?.length || 0;
-    if (tokenCount === 0) return;
-    
-    if (window.confirm(`Are you sure you want to delete all ${layer} tokens? This will remove ${tokenCount} tokens permanently.`)) {
-      markHistory();
-      
-      // Get all token IDs to remove
-      const tokenIdsToRemove = tokens[layer].map(token => token.id);
-      
-      // Remove tokens from state
-      setTokens(prev => ({
-        ...prev,
-        [layer]: []
-      }));
-      
-      // Remove from canvas positions
-      setNodePositions(prev => {
-        const newPositions = { ...prev };
-        tokenIdsToRemove.forEach(id => delete newPositions[id]);
-        return newPositions;
-      });
-      
-      // Remove connections
-      setConnections(prev => 
-        prev.filter(conn => 
-          !tokenIdsToRemove.includes(conn.from) && 
-          !tokenIdsToRemove.includes(conn.to)
-        )
-      );
-      
-      // Clear selection if any of these tokens were selected
-      if (selectedNode && tokenIdsToRemove.includes(selectedNode)) {
-        setSelectedNode(null);
-      }
-      setSelectedTokens(prev => {
-        const newSelection = new Set(prev);
-        tokenIdsToRemove.forEach(id => newSelection.delete(id));
-        return newSelection;
-      });
-      
-      // Remove from groups
-      setTokenGroups(prev => 
-        prev.map(group => ({
-          ...group,
-          tokenIds: group.tokenIds.filter(id => !tokenIdsToRemove.includes(id))
-        })).filter(group => group.tokenIds.length > 0)
-      );
-    }
-  };
-
   // Edit token function
   const editToken = (token: Token) => {
     setEditingToken({
@@ -1405,8 +1324,11 @@ export default function Index() {
       let result;
       if (importFormat === "style-dictionary") {
         result = importFromStyleDictionary(parsedData);
-      } else {
+      } else if (importFormat === "dtcg") {
         result = importFromDTCG(parsedData);
+      } else {
+        // Generic import for other formats
+        result = importGenericFormat(parsedData);
       }
       
       // Clear existing data and apply imported data
@@ -1435,6 +1357,149 @@ export default function Index() {
       
     } catch (error) {
       alert("Error importing data: " + error);
+    }
+  };
+
+  // Generic import function for various JSON formats
+  const importGenericFormat = (data: any) => {
+    const newTokens: { [key: string]: Token[] } = { base: [], semantic: [], specific: [] };
+    const newConnections: Connection[] = [];
+    let nextTokenId = Date.now();
+    
+    // Create a map to track tokens by their original names for connection building
+    const tokenMap = new Map<string, Token>();
+    
+    // Try to detect the structure and process accordingly
+    const processTokens = (obj: any, path: string[] = []) => {
+      if (typeof obj !== 'object' || obj === null) return;
+      
+      // If this looks like a token object
+      if (obj.value !== undefined || obj.$value !== undefined) {
+        const tokenName = path[path.length - 1] || `token_${nextTokenId}`;
+        const tokenValue = obj.value || obj.$value || "";
+        const tokenType = obj.type || obj.$type || "string";
+        const tokenLayer = path[0] || "base";
+        
+        // Map layer names
+        let targetLayer: "base" | "semantic" | "specific" = "base";
+        if (tokenLayer === "semantic" || tokenLayer === "semantic-tokens") targetLayer = "semantic";
+        if (tokenLayer === "specific" || tokenLayer === "specific-tokens") targetLayer = "specific";
+        
+        const token: Token = {
+          id: `token_${nextTokenId++}`,
+          name: tokenName,
+          value: tokenValue,
+          type: tokenType as Token["type"],
+          layer: targetLayer,
+        };
+        
+        newTokens[targetLayer].push(token);
+        tokenMap.set(path.join('.'), token);
+        return;
+      }
+      
+      // Recursively process nested objects
+      Object.entries(obj).forEach(([key, value]) => {
+        if (key === "_meta") return;
+        processTokens(value, [...path, key]);
+      });
+    };
+    
+    processTokens(data);
+    
+    // Process connections based on references
+    Object.values(newTokens).flat().forEach((token) => {
+      if (typeof token.value === "string" && token.value.includes(".")) {
+        const refValue = token.value.replace(/[{}]/g, '');
+        
+        // Try to find the referenced token
+        let sourceToken = tokenMap.get(refValue);
+        
+        // If not found, try alternative formats
+        if (!sourceToken) {
+          const nameOnly = refValue.split('.').pop();
+          if (nameOnly) {
+            sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
+          }
+        }
+        
+        if (sourceToken) {
+          const connection: Connection = {
+            id: `conn_${nextTokenId++}`,
+            from: sourceToken.id,
+            to: token.id,
+            fromPort: "output",
+            toPort: "input",
+          };
+          newConnections.push(connection);
+        }
+      }
+    });
+    
+    return { newTokens, newConnections };
+  };
+
+  // Clear all tokens from canvas
+  const clearAllCanvas = () => {
+    if (window.confirm("Are you sure you want to remove all tokens from the canvas? This will not delete the tokens from the sidebar.")) {
+      markHistory();
+      setNodePositions({});
+      setConnections([]);
+      setSelectedNode(null);
+      setSelectedTokens(new Set());
+      setSelectedGroup(null);
+    }
+  };
+
+  // Delete all tokens by type
+  const deleteAllTokensByType = (layer: "base" | "semantic" | "specific") => {
+    const tokenCount = tokens[layer]?.length || 0;
+    if (tokenCount === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete all ${layer} tokens? This will remove ${tokenCount} tokens permanently.`)) {
+      markHistory();
+      
+      // Get all token IDs to remove
+      const tokenIdsToRemove = tokens[layer].map(token => token.id);
+      
+      // Remove tokens from state
+      setTokens(prev => ({
+        ...prev,
+        [layer]: []
+      }));
+      
+      // Remove from canvas positions
+      setNodePositions(prev => {
+        const newPositions = { ...prev };
+        tokenIdsToRemove.forEach(id => delete newPositions[id]);
+        return newPositions;
+      });
+      
+      // Remove connections
+      setConnections(prev => 
+        prev.filter(conn => 
+          !tokenIdsToRemove.includes(conn.from) && 
+          !tokenIdsToRemove.includes(conn.to)
+        )
+      );
+      
+      // Clear selection if any of these tokens were selected
+      if (selectedNode && tokenIdsToRemove.includes(selectedNode)) {
+        setSelectedNode(null);
+      }
+      setSelectedTokens(prev => {
+        const newSelection = new Set(prev);
+        tokenIdsToRemove.forEach(id => newSelection.delete(id));
+        return newSelection;
+      });
+      
+      // Remove from groups
+      setTokenGroups(prev => 
+        prev.map(group => ({
+          ...group,
+          tokenIds: group.tokenIds.filter(id => !tokenIdsToRemove.includes(id))
+        })).filter(group => group.tokenIds.length > 0)
+      );
     }
   };
 
@@ -1608,22 +1673,24 @@ export default function Index() {
   return (
     <div className="h-screen flex bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
       {/* Left Panel */}
-      <div className={`${isSidebarCollapsed ? 'w-16' : 'w-80'} dtm-bg-secondary/95 backdrop-blur-sm border-r dtm-border-primary overflow-y-auto transition-all duration-500 ease-in-out`}>
+      <div className={`${isSidebarCollapsed ? 'w-16' : 'w-80'} bg-slate-800/95 backdrop-blur-sm border-r border-slate-700 overflow-y-auto transition-all duration-500 ease-in-out`}>
         <div className={`${isSidebarCollapsed ? 'p-2' : 'p-5'} relative`}>
-          {/* Collapse/Expand button */}
-          <div className="absolute top-2 right-2">
-            <button
-              className="dtm-text-muted hover:dtm-text-primary p-1 rounded transition-colors"
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <span className="text-lg">{isSidebarCollapsed ? "⋯" : "→"}</span>
-            </button>
-          </div>
+          {/* Arrow button to collapse sidebar */}
+          {!isSidebarCollapsed && (
+            <div className="absolute top-2 right-2">
+              <button
+                className="text-slate-400 hover:text-white p-1 rounded transition-colors"
+                onClick={() => setIsSidebarCollapsed(true)}
+                title="Collapse sidebar"
+              >
+                <span className="text-lg">→</span>
+              </button>
+            </div>
+          )}
           {/* Token Types */}
           {!isSidebarCollapsed ? (
             <div className="mb-8">
-              <h3 className="text-sm font-semibold dtm-text-muted uppercase tracking-wide mb-4">
+              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">
                 Token Types
               </h3>
               <div className="grid grid-cols-2 gap-2">
@@ -1639,10 +1706,10 @@ export default function Index() {
                 ).map((type) => (
                   <button
                     key={type}
-                    className={`p-2 text-xs dtm-text-primary-75 rounded-md border transition-all ${
+                    className={`p-2 text-xs rounded-md border transition-all ${
                       currentTokenType === type
-                        ? "dtm-btn-primary dtm-text-primary border-dtm-border-accent"
-                        : "dtm-bg-secondary dtm-border-secondary hover:dtm-text-primary hover:dtm-border-accent hover:dtm-bg-tertiary"
+                        ? "bg-blue-500/30 border-blue-400 text-white"
+                        : "bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-blue-500/20 hover:border-blue-400"
                     }`}
                     onClick={() => setCurrentTokenType(type)}
                   >
@@ -1666,10 +1733,10 @@ export default function Index() {
                 ).map((type) => (
                   <button
                     key={type}
-                    className={`w-8 h-8 dtm-text-primary-75 rounded-md border transition-all ${
+                    className={`w-8 h-8 rounded-md border transition-all ${
                       currentTokenType === type
-                        ? "dtm-btn-primary dtm-border-accent"
-                        : "dtm-bg-secondary dtm-border-primary dtm-text-primary hover:dtm-btn-primary hover:dtm-border-accent"
+                        ? "bg-blue-500/30 border-blue-400"
+                        : "bg-slate-700/50 border-slate-600 hover:bg-blue-500/20 hover:border-blue-400"
                     }`}
                     onClick={() => setCurrentTokenType(type)}
                     title={type.charAt(0).toUpperCase() + type.slice(1)}
@@ -1683,26 +1750,26 @@ export default function Index() {
           {!isSidebarCollapsed ? (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold dtm-text-muted uppercase tracking-wide">
+                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
                   Token Layers
                 </h3>
                 <div className="flex gap-1">
                   <button
-                    className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors"
+                    className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded border border-slate-600 hover:border-slate-500 transition-colors"
                     onClick={() => setCollapsedLayers({ base: true, semantic: true, specific: true })}
                     title="Collapse all layers"
                   >
                     ▼
                   </button>
                   <button
-                    className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors"
+                    className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded border border-slate-600 hover:border-slate-500 transition-colors"
                     onClick={() => setCollapsedLayers({ base: false, semantic: false, specific: false })}
                     title="Expand all layers"
                   >
                     ▲
                   </button>
                   <button
-                    className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors"
+                    className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded border border-red-600 hover:border-red-500 transition-colors"
                     onClick={clearAllCanvas}
                     title="Remove all tokens from canvas"
                   >
@@ -1714,13 +1781,13 @@ export default function Index() {
               {(["base", "semantic", "specific"] as const).map((layer) => (
                 <div
                   key={layer}
-                  className="dtm-bg-tertiary/30 border dtm-border-primary rounded-xl overflow-hidden"
+                  className="bg-slate-700/30 border border-slate-600 rounded-xl overflow-hidden"
                 >
                   {/* Layer Header */}
-                  <div className="p-2 dtm-bg-tertiary/50 border-b dtm-border-primary flex justify-between items-center">
+                  <div className="p-2 bg-slate-700/50 border-b border-slate-600 flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <button
-                        className="dtm-text-muted hover:dtm-text-primary transition-colors p-1 rounded"
+                        className="text-slate-400 hover:text-white transition-colors p-1 rounded"
                         onClick={() => toggleLayerCollapse(layer)}
                         title={collapsedLayers[layer] ? "Expand layer" : "Collapse layer"}
                       >
@@ -1729,37 +1796,36 @@ export default function Index() {
                       <div className="flex items-center gap-2">
                         <div
                           className={`w-3 h-3 rounded-full ${
-                            layer === "base" ? "dtm-token-base" :
-                            layer === "semantic" ? "dtm-token-semantic" :
-                            "dtm-token-specific"
+                            layer === "base" ? "bg-blue-500" :
+                            layer === "semantic" ? "bg-green-500" :
+                            "bg-red-500"
                           }`}
                         />
-                        <span className="font-semibold text-sm capitalize dtm-text-primary">
+                        <span className="font-semibold text-sm capitalize">
                           {layer} Tokens
                         </span>
                       </div>
-                      <span className="text-xs dtm-text-muted">
+                      <span className="text-xs text-slate-500">
                         ({tokens[layer]?.length || 0})
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        className="dtm-btn-primary dtm-text-primary-75 w-6 h-6 rounded-md text-xs flex items-center justify-center transition-colors"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs flex items-center gap-1 transition-colors"
                         onClick={() => {
                           setCurrentLayer(layer);
                           setIsModalOpen(true);
                         }}
-                        title="Add new token"
                       >
                         <Plus size={12} />
                       </button>
                       {tokens[layer]?.length > 0 && (
                         <button
-                          className="dtm-btn-destructive dtm-text-primary-75 w-6 h-6 rounded-md text-xs flex items-center justify-center transition-colors"
+                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-md text-xs transition-colors"
                           onClick={() => deleteAllTokensByType(layer)}
                           title={`Delete all ${layer} tokens`}
                         >
-                          <Trash2 size={14} />
+                          🗑️
                         </button>
                       )}
                     </div>
@@ -1771,7 +1837,7 @@ export default function Index() {
                       {tokens[layer]?.map((token) => (
                         <div
                           key={token.id}
-                          className="dtm-bg-secondary border dtm-border-secondary rounded-md p-2 hover:dtm-bg-secondary/70 transition-all group"
+                          className="bg-slate-600/50 border border-slate-500 rounded-md p-2 hover:bg-slate-600/70 transition-all group"
                         >
                           <div className="flex items-center justify-between">
                             <div
@@ -1779,12 +1845,12 @@ export default function Index() {
                               draggable
                               onDragStart={(e) => onDragFromPanel(token, e)}
                             >
-                              <div className="font-medium text-sm flex items-center gap-2 dtm-text-primary">
+                              <div className="font-medium text-sm flex items-center gap-2">
                                 <div
                                   className={`w-3 h-3 rounded-full ${
-                                    token.layer === "base" ? "dtm-token-base" :
-                                    token.layer === "semantic" ? "dtm-token-semantic" :
-                                    "dtm-token-specific"
+                                    token.layer === "base" ? "bg-blue-500" :
+                                    token.layer === "semantic" ? "bg-green-500" :
+                                    "bg-red-500"
                                   }`}
                                 />
                                 {token.type === "color" &&
@@ -1796,21 +1862,21 @@ export default function Index() {
                                   )}
                                 {token.name}
                               </div>
-                              <div className="text-xs dtm-text-muted break-all">
+                              <div className="text-xs text-slate-400 break-all">
                                 {token.value}
                               </div>
                             </div>
                             {/* Action Buttons */}
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                               <button
-                                className="w-6 h-6 dtm-btn-primary dtm-text-primary-75 rounded flex items-center justify-center transition-all"
+                                className="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center transition-all"
                                 onClick={() => editToken(token)}
                                 title="Edit token"
                               >
-                                <Pencil size={12}/>
+                                <span className="text-xs">✏️</span>
                               </button>
                               <button
-                                className="w-6 h-6 dtm-btn-destructive dtm-text-primary-75 rounded flex items-center justify-center transition-all"
+                                className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center transition-all"
                                 onClick={() =>
                                   setDeleteConfirmation({
                                     tokenId: token.id,
@@ -1832,46 +1898,32 @@ export default function Index() {
             </div>
           </div>
           ) : (
-            <div className="mb-8">
-              <div className="space-y-4">
-                {(["base", "semantic", "specific"] as const).map((layer) => (
-                  <div key={layer} className="flex items-center justify-center">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          layer === "base" ? "dtm-token-base" :
-                          layer === "semantic" ? "dtm-token-semantic" :
-                          "dtm-token-specific"
-                        }`}
-                      />
-                      <span className="text-xs dtm-text-muted">
-                        {tokens[layer]?.length || 0}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+            <div className="text-center">
+              <div className="text-xs text-slate-400 mb-2">
+                {Object.values(tokens).flat().length} tokens
               </div>
             </div>
           )}
 
           {/* Token Groups Section */}
-          {tokenGroups.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold dtm-text-muted uppercase tracking-wide mb-4">
-                Token Groups
-              </h3>
+          {!isSidebarCollapsed ? (
+            tokenGroups.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">
+                  Token Groups
+                </h3>
               <div className="space-y-3">
                 {tokenGroups.map((group) => (
                   <div
                     key={group.id}
-                    className="dtm-bg-tertiary/30 border dtm-border-primary rounded-xl overflow-hidden"
+                    className="bg-slate-700/30 border border-slate-600 rounded-xl overflow-hidden"
                   >
                     {/* Group Header */}
-                    <div className="p-4 dtm-bg-tertiary/50 border-b dtm-border-primary">
+                    <div className="p-4 bg-slate-700/50 border-b border-slate-600">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <button
-                            className="dtm-text-muted hover:dtm-text-primary transition-colors"
+                            className="text-slate-400 hover:text-white transition-colors"
                             onClick={() => toggleGroupCollapse(group.id)}
                           >
                             {group.collapsed ? "▶" : "▼"}
@@ -1879,8 +1931,8 @@ export default function Index() {
                           <button
                             className={`font-semibold text-sm transition-colors ${
                               selectedGroup === group.id
-                                ? "dtm-text-primary"
-                                : "dtm-text-secondary hover:dtm-text-primary"
+                                ? "text-green-300"
+                                : "text-green-400 hover:text-green-300"
                             }`}
                             onClick={() =>
                               setSelectedGroup(
@@ -1890,13 +1942,13 @@ export default function Index() {
                           >
                             {group.name}
                           </button>
-                          <span className="text-xs dtm-text-muted">
+                          <span className="text-xs text-slate-500">
                             ({group.tokenIds.length} tokens)
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
-                            className="dtm-btn-primary px-2 py-1 rounded text-xs transition-colors"
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors"
                             onClick={() => editGroup(group)}
                             title="Edit group name"
                           >
@@ -1904,7 +1956,7 @@ export default function Index() {
                           </button>
                           {selectedGroup === group.id && (
                             <button
-                              className="dtm-btn-secondary px-2 py-1 rounded text-xs transition-colors"
+                              className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs transition-colors"
                               onClick={() => ungroupTokens(group.id)}
                               title="Ungroup tokens"
                             >
@@ -1912,7 +1964,7 @@ export default function Index() {
                             </button>
                           )}
                           <button
-                            className="dtm-btn-destructive px-2 py-1 rounded text-xs transition-colors"
+                            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors"
                             onClick={() => deleteGroup(group.id)}
                             title="Delete group"
                           >
@@ -1934,7 +1986,7 @@ export default function Index() {
                           return (
                             <div
                               key={tokenId}
-                              className="dtm-bg-secondary/30 border dtm-border-secondary/50 rounded-md p-2 text-sm"
+                              className="bg-slate-600/30 border border-slate-500/50 rounded-md p-2 text-sm"
                             >
                               <div className="flex items-center">
                                 {token.type === "color" &&
@@ -1947,17 +1999,17 @@ export default function Index() {
                                 <div className="flex items-center gap-2">
                                   <div
                                     className={`w-3 h-3 rounded-full ${
-                                      token.layer === "base" ? "dtm-token-base" :
-                                      token.layer === "semantic" ? "dtm-token-semantic" :
-                                      "dtm-token-specific"
+                                      token.layer === "base" ? "bg-blue-500" :
+                                      token.layer === "semantic" ? "bg-green-500" :
+                                      "bg-red-500"
                                     }`}
                                   />
-                                  <span className="font-medium dtm-text-primary">
+                                  <span className="font-medium">
                                     {token.name}
                                   </span>
                                 </div>
                               </div>
-                              <div className="text-xs dtm-text-muted mt-1">
+                              <div className="text-xs text-slate-400 mt-1">
                                 {token.value}
                               </div>
                             </div>
@@ -1969,58 +2021,87 @@ export default function Index() {
                 ))}
               </div>
             </div>
+          )
+          ) : (
+            tokenGroups.length > 0 && (
+              <div className="text-center">
+                <div className="text-xs text-slate-400 mb-2">
+                  {tokenGroups.length} groups
+                </div>
+                <div className="w-4 h-4 bg-green-500 rounded-full mx-auto"></div>
+              </div>
+            )
           )}
         </div>
       </div>
 
+      {/* Three dots button to show sidebar when collapsed */}
+      {isSidebarCollapsed && (
+        <div className="absolute top-2 left-2 z-50">
+          <button
+            className="text-slate-400 hover:text-white p-1 rounded transition-colors bg-slate-800/80 backdrop-blur-sm"
+            onClick={() => setIsSidebarCollapsed(false)}
+            title="Expand sidebar"
+          >
+            <span className="text-lg">⋯</span>
+          </button>
+        </div>
+      )}
+
       {/* Canvas Area */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Top Bar */}
-        <div className={`absolute top-0 right-0 p-5 z-40 flex gap-2 items-center transition-all duration-500 ease-in-out ${isTopBarCollapsed ? 'translate-x-full' : ''}`}>
-          {/* Collapse/Expand button */}
-          <div className="absolute top-0 right-0">
-            <button
-              className="dtm-text-muted hover:dtm-text-primary p-2 rounded transition-colors dtm-bg-secondary/95 backdrop-blur-sm border dtm-border-primary"
-              onClick={() => setIsTopBarCollapsed(!isTopBarCollapsed)}
-              title={isTopBarCollapsed ? "Show menu" : "Hide menu"}
-            >
-              <span className="text-lg">{isTopBarCollapsed ? "⋯" : "→"}</span>
-            </button>
-          </div>
-          {/* Multi-selection Menu */}
-          {selectedTokens.size >= 2 && (
-            <div className="dtm-bg-secondary/95 backdrop-blur-sm border dtm-border-primary rounded-md p-2 flex items-center gap-3">
-              <span className="text-sm dtm-text-primary">
-                {selectedTokens.size} tokens selected
-              </span>
+                {/* Top Bar */}
+        <div className={`absolute top-0 right-0 z-40 transition-all duration-500 ease-in-out ${
+          isTopBarCollapsed 
+            ? 'translate-x-full' 
+            : 'translate-x-0'
+        }`}>
+          <div className="p-5 flex gap-2 items-center">
+            {/* Arrow button to collapse top bar */}
+            <div className="absolute top-2 left-2">
               <button
-                className="dtm-btn-success px-2 py-1 rounded-md text-xs transition-colors"
-                onClick={() => setIsGroupModalOpen(true)}
+                className="text-slate-400 hover:text-white p-1 rounded transition-colors bg-slate-800/80 backdrop-blur-sm"
+                onClick={() => setIsTopBarCollapsed(true)}
+                title="Hide top bar"
               >
-                Group Tokens
-              </button>
-              <button
-                className="dtm-btn-secondary px-2 py-1 rounded-md text-xs transition-colors"
-                onClick={() => setSelectedTokens(new Set())}
-              >
-                Clear Selection
+                <span className="text-lg">→</span>
               </button>
             </div>
-          )}
+            
+            {/* Multi-selection Menu */}
+            {selectedTokens.size >= 2 && (
+              <div className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-md p-2 flex items-center gap-3">
+                <span className="text-sm text-slate-300">
+                  {selectedTokens.size} tokens selected
+                </span>
+                <button
+                  className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md text-xs transition-colors"
+                  onClick={() => setIsGroupModalOpen(true)}
+                >
+                  Group Tokens
+                </button>
+                <button
+                  className="bg-slate-600 hover:bg-slate-700 text-white px-2 py-1 rounded-md text-xs transition-colors"
+                  onClick={() => setSelectedTokens(new Set())}
+                >
+                  Clear Selection
+                </button>
+              </div>
+            )}
 
-          {/* Help text for single token selection */}
-          {selectedTokens.size === 1 && (
-            <div className="dtm-bg-secondary/95 backdrop-blur-sm border dtm-border-primary rounded-md p-2">
-              <span className="text-xs dtm-text-muted">
-                Hold Ctrl and click more tokens to group them
-              </span>
-            </div>
-          )}
+            {/* Help text for single token selection */}
+            {selectedTokens.size === 1 && (
+              <div className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-md p-2">
+                <span className="text-xs text-slate-400">
+                  Hold Ctrl and click more tokens to group them
+                </span>
+              </div>
+            )}
 
-          <div className="flex gap-2 text-xs">
+            <div className="flex gap-2 text-xs">
             {/* Undo / Redo */}
             <button
-              className={`dtm-btn-secondary p-2 rounded-md transition-all flex items-center gap-2 border dtm-border-primary ${history.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-md transition-all flex items-center gap-2 border border-slate-600 ${history.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={handleUndo}
               disabled={history.length === 0}
               title="Undo"
@@ -2029,7 +2110,7 @@ export default function Index() {
             </button>
             {future.length > 0 && (
               <button
-                className="dtm-btn-secondary px-3 py-1 rounded-md transition-all flex items-center gap-2 border dtm-border-primary"
+                className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-md transition-all flex items-center gap-2 border border-slate-600"
                 onClick={handleRedo}
                 title="Redo"
               >
@@ -2039,7 +2120,7 @@ export default function Index() {
 
             {/* Save / Manage */}
             <button
-              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={() => {
                 setSaveName(currentSetupName ?? "");
                 setIsSaveModalOpen(true);
@@ -2051,7 +2132,7 @@ export default function Index() {
               {isDirty && <span className="ml-1 text-xs opacity-80">*</span>}
             </button>
             <button
-              className="dtm-btn-secondary px-4 py-1 rounded-md transition-all flex items-center gap-2 border dtm-border-primary"
+              className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-1 rounded-md transition-all flex items-center gap-2 border border-slate-600"
               onClick={() => setIsManageModalOpen(true)}
               title="Manage saved setups"
             >
@@ -2060,47 +2141,39 @@ export default function Index() {
             </button>
 
             <button
-              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={exportTokens}
               title="Export in Style Dictionary format"
             >
-              <Upload size={16} />
+              <Download size={16} />
               Export for Style Dictionary
             </button>
             <button
-              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={exportTokensDTCG}
               title="Export in Design Token Community Group format"
             >
-              <Upload size={16} />
+              <Download size={16} />
               Export DTCG JSON
             </button>
             <button
-              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={() => setIsImportModalOpen(true)}
               title="Import JSON file from Style Dictionary or DTCG format"
             >
-              <Download size={16} />
+              <FolderOpen size={16} />
               Import JSON
-            </button>
-            <button
-              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
-              onClick={toggleTheme}
-              title={`Switch to ${isDarkTheme ? 'light' : 'dark'} theme`}
-            >
-              <span className="text-lg">{isDarkTheme ? "☼" : "☾"}</span>
-              {isDarkTheme ? "Light" : "Dark"}
             </button>
           </div>
         </div>
 
-        {/* Three dots button when top bar is collapsed */}
+        {/* Three dots button to show top bar when collapsed */}
         {isTopBarCollapsed && (
-          <div className="absolute top-5 right-5 z-40">
+          <div className="absolute top-2 left-2 z-50">
             <button
-              className="dtm-text-muted hover:dtm-text-primary p-2 rounded transition-colors dtm-bg-secondary/95 backdrop-blur-sm border dtm-border-primary"
+              className="text-slate-400 hover:text-white p-1 rounded transition-colors bg-slate-800/80 backdrop-blur-sm"
               onClick={() => setIsTopBarCollapsed(false)}
-              title="Show menu"
+              title="Show top bar"
             >
               <span className="text-lg">⋯</span>
             </button>
@@ -2256,26 +2329,26 @@ export default function Index() {
           {/* Bottom-right Controls & Minimap */}
           <div className="absolute bottom-4 right-4 z-50 flex items-end gap-3">
             {/* Zoom Controls */}
-            <div className="dtm-bg-secondary/90 backdrop-blur-sm border dtm-border-primary rounded-md p-1 flex items-center gap-1 shadow-lg">
+            <div className="bg-slate-800/90 backdrop-blur-sm border border-slate-600 rounded-md p-1 flex items-center gap-1 shadow-lg">
               <button
-                className="w-8 h-8 rounded dtm-bg-tertiary hover:dtm-bg-secondary border dtm-border-primary flex items-center justify-center dtm-text-primary"
+                className="w-8 h-8 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 flex items-center justify-center"
                 onClick={() => zoomAtAnchor(1 / 1.1)}
                 title="Zoom Out"
               >
                 <Minus size={16} />
               </button>
-              <div className="text-xs dtm-text-primary w-14 text-center select-none">
+              <div className="text-xs text-slate-300 w-14 text-center select-none">
                 {Math.round(canvasScale * 100)}%
               </div>
               <button
-                className="w-8 h-8 rounded dtm-bg-tertiary hover:dtm-bg-secondary border dtm-border-primary flex items-center justify-center dtm-text-primary"
+                className="w-8 h-8 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 flex items-center justify-center"
                 onClick={() => zoomAtAnchor(1.1)}
                 title="Zoom In"
               >
                 <Plus size={16} />
               </button>
               <button
-                className="ml-1 px-2 h-8 rounded dtm-bg-tertiary hover:dtm-bg-secondary border dtm-border-primary text-xs dtm-text-primary"
+                className="ml-1 px-2 h-8 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 text-xs text-slate-200"
                 onClick={resetZoom}
                 title="Reset Zoom"
               >
@@ -2316,17 +2389,17 @@ export default function Index() {
               const viewW = (viewMaxX - viewMinX) * miniScale;
               const viewH = (viewMaxY - viewMinY) * miniScale;
               return (
-                <div className="dtm-bg-primary/80 backdrop-blur-sm border dtm-border-primary rounded-md p-1 shadow-lg">
+                <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-md p-1 shadow-lg">
                   <svg width={miniW} height={miniH} className="block">
-                    <rect x={0} y={0} width={miniW} height={miniH} fill="hsl(var(--dtm-bg-primary))" rx={8} />
+                    <rect x={0} y={0} width={miniW} height={miniH} fill="#0f172a" rx={8} />
                     {/* Content bounds */}
                     <rect
                       x={miniOffsetX}
                       y={miniOffsetY}
                       width={boundsWidth * miniScale}
                       height={boundsHeight * miniScale}
-                      fill="hsl(var(--dtm-bg-secondary))"
-                      stroke="hsl(var(--dtm-border-primary))"
+                      fill="#1f2937"
+                      stroke="#334155"
                       rx={6}
                     />
                     {/* Nodes */}
@@ -2842,5 +2915,6 @@ export default function Index() {
         </div>
       )}
     </div>
+  </div>
   );
 }
