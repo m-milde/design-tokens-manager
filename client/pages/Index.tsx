@@ -1,5 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen, ArrowUp, Edit, Users } from "lucide-react";
+import { 
+  Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, 
+  Save as SaveIcon, FolderOpen, ArrowUp, Edit, Users,
+  // New icons for future use
+  Unlink, Link, Copy, Scissors, Layers, Palette, Settings,
+  Eye, EyeOff, Lock, Unlock, Star, Heart, Zap, Target,
+  Grid, List, Calendar, Clock, Search, Filter, SortAsc, SortDesc
+} from "lucide-react";
 
 interface Token {
   id: string;
@@ -173,10 +180,10 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
     >
       {/* Top Socket - Bidirectional */}
       <div
-        className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair hover:scale-125 transition-all ${
+        className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 border-2 dtm-bg-graphite rounded-full cursor-crosshair hover:scale-125 transition-all ${
           isSocketConnected("top") 
             ? "bg-white border-white" 
-            : "border-white"
+            : "border-white dtm-bg-graphite"
         }`}
         onMouseDown={(e) => {
           e.stopPropagation();
@@ -209,7 +216,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         className={`absolute top-1/2 -left-3 transform -translate-y-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair hover:scale-125 transition-all ${
           isSocketConnected("left") 
             ? "bg-white border-white" 
-            : "border-white"
+            : "border-white dtm-bg-graphite"
         }`}
         onMouseDown={(e) => {
           e.stopPropagation();
@@ -242,7 +249,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         className={`absolute top-1/2 -right-3 transform -translate-y-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair hover:scale-125 transition-all ${
           isSocketConnected("right") 
             ? "bg-white border-white" 
-            : "border-white"
+            : "border-white dtm-bg-graphite"
         }`}
         onMouseDown={(e) => {
           e.stopPropagation();
@@ -304,10 +311,10 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
             }}
             title="Disconnect connections"
           >
-            <X size={10} />
+            <Unlink size={10}/>
           </button>
           <button
-            className="w-6 h-6 dtm-btn-primary rounded flex items-center justify-center transition-all text-xs"
+            className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteNode(token.id);
@@ -334,7 +341,7 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair transition-all hover:scale-125 ${
           isSocketConnected("bottom") 
             ? "bg-white border-white" 
-            : "border-white"
+            : "border-white dtm-bg-graphite"
         }`}
         onMouseDown={(e) => {
           e.stopPropagation();
@@ -2176,7 +2183,7 @@ export default function Index() {
   ];
 
   return (
-    <div className="h-screen flex bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+    <div className="h-screen flex dtm-bg-graphite from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
       {/* Left Panel */}
       <div className={`${isSidebarCollapsed ? 'w-16' : 'w-80'} dtm-bg-secondary/95 backdrop-blur-sm border-r dtm-border-primary overflow-y-auto transition-all duration-500 ease-in-out`}>
         <div className={`${isSidebarCollapsed ? 'p-2' : 'p-5'} relative`}>
@@ -2209,13 +2216,19 @@ export default function Index() {
                 ).map((type) => (
                   <button
                     key={type}
-                    className={`p-2 text-xs rounded-md border transition-all ${
+                    className={`p-2 text-xs rounded-md border transition-all flex items-center gap-2 justify-center ${
                       currentTokenType === type
                         ? "dtm-btn-primary dtm-text-primary"
                         : "dtm-btn-secondary hover:dtm-text-primary hover:dtm-border-accent hover:dtm-bg-tertiary"
                     }`}
                     onClick={() => setCurrentTokenType(type)}
                   >
+                    {type === "color" && <Palette size={12} />}
+                    {type === "text" && <Edit size={12} />}
+                    {type === "spacing" && <Grid size={12} />}
+                    {type === "boolean" && <Target size={12} />}
+                    {type === "string" && <Copy size={12} />}
+                    {type === "number" && <Zap size={12} />}
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </button>
                 ))}
@@ -2236,14 +2249,21 @@ export default function Index() {
                 ).map((type) => (
                   <button
                     key={type}
-                    className={`w-8 h-8 dtm-text-primary-75 rounded-md border transition-all ${
+                    className={`w-8 h-8 dtm-text-primary-75 rounded-md border transition-all flex items-center justify-center ${
                       currentTokenType === type
                         ? "dtm-btn-primary dtm-border-accent"
                         : "dtm-bg-secondary dtm-border-primary dtm-text-primary hover:dtm-btn-primary hover:dtm-border-accent"
                     }`}
                     onClick={() => setCurrentTokenType(type)}
                     title={type.charAt(0).toUpperCase() + type.slice(1)}
-                  />
+                  >
+                    {type === "color" && <Palette size={14} />}
+                    {type === "text" && <Edit size={14} />}
+                    {type === "spacing" && <Grid size={14} />}
+                    {type === "boolean" && <Target size={14} />}
+                    {type === "string" && <Copy size={14} />}
+                    {type === "number" && <Zap size={14} />}
+                  </button>
                 ))}
               </div>
             </div>
@@ -2258,17 +2278,19 @@ export default function Index() {
                 </h3>
                 <div className="flex gap-1">
                   <button
-                    className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors"
+                    className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors flex items-center gap-1"
                     onClick={() => setCollapsedLayers({ base: false, semantic: false, specific: false })}
                     title="Expand all layers"
                   >
+                    <Eye size={12} />
                     ▼
                   </button>
                   <button
-                    className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors"
+                    className="text-xs dtm-text-muted hover:dtm-text-primary px-2 py-1 rounded border dtm-border-secondary hover:dtm-border-primary transition-colors flex items-center gap-1"
                     onClick={() => setCollapsedLayers({ base: true, semantic: true, specific: true })}
                     title="Collapse all layers"
                   >
+                    <EyeOff size={12} />
                     ▲
                   </button>
                   <button
@@ -2485,7 +2507,7 @@ export default function Index() {
                               onClick={() => ungroupTokens(group.id)}
                               title="Ungroup tokens"
                             >
-                                                             <Users size={12}/>
+                                                             <Unlink size={12}/>
                             </button>
                           )}
                         </div>
@@ -2564,15 +2586,17 @@ export default function Index() {
                 {selectedTokens.size} tokens selected
               </span>
               <button
-                className="dtm-btn-success px-2 py-1 rounded-md text-xs transition-colors"
+                className="dtm-btn-success px-2 py-1 rounded-md text-xs transition-colors flex items-center gap-1"
                 onClick={() => setIsGroupModalOpen(true)}
               >
+                <Layers size={12} />
                 Group Tokens
               </button>
               <button
-                className="dtm-btn-secondary px-2 py-1 rounded-md text-xs transition-colors"
+                className="dtm-btn-secondary px-2 py-1 rounded-md text-xs transition-colors flex items-center gap-1"
                 onClick={() => setSelectedTokens(new Set())}
               >
+                <X size={12} />
                 Clear Selection
               </button>
             </div>
@@ -2634,23 +2658,23 @@ export default function Index() {
               onClick={exportTokens}
               title="Export in Style Dictionary format"
             >
-                             <ArrowUp size={16} />
-               Export SD JSON
+              <Download size={16} />
+              Export SD JSON
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={exportTokensDTCG}
               title="Export in Design Token Community Group format"
             >
-                             <ArrowUp size={16} />
-               Export DTCG JSON
+              <Download size={16} />
+              Export DTCG JSON
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={() => setIsImportModalOpen(true)}
               title="Import JSON file from Style Dictionary or DTCG format"
             >
-              <Download size={16} />
+              <Search size={16} />
               Import JSON
             </button>
             <button
@@ -2658,8 +2682,8 @@ export default function Index() {
               onClick={toggleTheme}
               title={`Switch to ${isDarkTheme ? 'light' : 'dark'} theme`}
             >
-              <span className="text-lg">{isDarkTheme ? "☼" : "☾"}</span>
-              {isDarkTheme ? "" : ""}
+              <Settings size={16} />
+              {isDarkTheme ? "Light" : "Dark"}
             </button>
           </div>
         </div>
