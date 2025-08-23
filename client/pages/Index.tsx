@@ -562,6 +562,13 @@ export default function Index() {
     semantic: [],
     specific: [],
   });
+  
+  // Token ordering state for drag and drop reordering
+  const [tokenOrder, setTokenOrder] = useState<{ [key: string]: string[] }>({
+    base: [],
+    semantic: [],
+    specific: [],
+  });
 
   const [nodePositions, setNodePositions] = useState<{
     [key: string]: { x: number; y: number };
@@ -588,6 +595,11 @@ export default function Index() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  
+  // Performance optimization state
+  const [visibleTokens, setVisibleTokens] = useState<Set<string>>(new Set());
+  const [renderQuality, setRenderQuality] = useState<'high' | 'medium' | 'low'>('high');
+  const canvasOptimizationRef = useRef<number | null>(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -596,7 +608,10 @@ export default function Index() {
   >("base");
   const [currentTokenType, setCurrentTokenType] =
     useState<Token["type"]>("color");
-  const [tokenForm, setTokenForm] = useState({ name: "", value: "" });
+  const [tokenForm, setTokenForm] = useState({ 
+    name: "", 
+    value: ""
+  });
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     tokenId: string;
     tokenName: string;
@@ -815,7 +830,8 @@ export default function Index() {
   // Canvas dragging
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     const isMiddleOrRight = e.button === 1 || e.button === 2;
-    if (isMiddleOrRight || isSpacePressed || e.target === e.currentTarget) {
+    // Allow dragging with middle mouse button, right mouse button, or when clicking on empty canvas
+    if (isMiddleOrRight || e.target === e.currentTarget) {
       setIsDraggingCanvas(true);
       setSelectedNode(null);
       setSelectedTokens(new Set());
@@ -823,61 +839,7 @@ export default function Index() {
     }
   };
 
-  const handleCanvasMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (isDraggingCanvas) {
-        // Use requestAnimationFrame for smoother panning
-        requestAnimationFrame(() => {
-          setCanvasOffset((prev) => ({
-            x: prev.x + e.movementX,
-            y: prev.y + e.movementY,
-          }));
-        });
-      }
 
-      if (isConnecting && connectionStart) {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const rect = canvas.getBoundingClientRect();
-          const startPos = nodePositions[connectionStart.nodeId];
-          if (startPos) {
-            // Calculate start position based on socket position
-            let x1 = startPos.x + 75; // Default to center
-            let y1 = startPos.y + 100; // Default to bottom
-            
-            if (connectionStart.socketPosition === "top") {
-              y1 = startPos.y - 2;
-            } else if (connectionStart.socketPosition === "bottom") {
-              y1 = startPos.y + 100 + 2;
-            } else if (connectionStart.socketPosition === "left") {
-              x1 = startPos.x - 3;
-              y1 = startPos.y + 50; // Center vertically
-            } else if (connectionStart.socketPosition === "right") {
-              x1 = startPos.x + 150 + 3;
-              y1 = startPos.y + 50; // Center vertically
-            }
-            
-            setTempConnection({
-              x1,
-              y1,
-              x2:
-                (e.clientX - rect.left) / canvasScale - canvasOffset.x,
-              y2:
-                (e.clientY - rect.top) / canvasScale - canvasOffset.y,
-            });
-          }
-        }
-      }
-    },
-    [
-      isDraggingCanvas,
-      isConnecting,
-      connectionStart,
-      nodePositions,
-      canvasOffset,
-      canvasScale,
-    ],
-  );
 
   const handleCanvasMouseUp = useCallback(() => {
     setIsDraggingCanvas(false);
@@ -887,6 +849,123 @@ export default function Index() {
       setTempConnection(null);
     }
   }, [isConnecting]);
+
+  // Performance optimization functions
+  const calculateVisibleTokens = useCallback(() => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const viewportWidth = rect.width;
+    const viewportHeight = rect.height;
+    
+    // Calculate visible area with some padding
+    const padding = 200; // pixels
+    const visibleArea = {
+      left: -canvasOffset.x / canvasScale - padding,
+      right: (-canvasOffset.x + viewportWidth) / canvasScale + padding,
+      top: -canvasOffset.y / canvasScale - padding,
+      bottom: (-canvasOffset.y + viewportHeight) / canvasScale + padding,
+    };
+    
+    const visible = new Set<string>();
+    
+    Object.entries(nodePositions).forEach(([tokenId, position]) => {
+      if (position.x >= visibleArea.left && 
+          position.x <= visibleArea.right && 
+          position.y >= visibleArea.top && 
+          position.y <= visibleArea.bottom) {
+        visible.add(tokenId);
+      }
+    });
+    
+    setVisibleTokens(visible);
+  }, [canvasOffset, canvasScale, nodePositions]);
+
+  // Enhanced canvas performance for large systems
+  const handleLargeCanvasOptimization = useCallback(() => {
+    const totalTokens = Object.keys(nodePositions).length;
+    const totalConnections = connections.length;
+    
+    // Auto-adjust performance settings based on system size
+    if (totalTokens > 200 || totalConnections > 300) {
+      setRenderQuality('low');
+      // Increase padding for better culling
+      const newPadding = Math.min(400, 200 + Math.floor(totalTokens / 50));
+      // Could implement virtual scrolling here for very large systems
+    } else if (totalTokens > 100 || totalConnections > 150) {
+      setRenderQuality('medium');
+    } else {
+      setRenderQuality('high');
+    }
+  }, [nodePositions, connections]);
+
+  // Debounced canvas optimization
+  const optimizeCanvas = useCallback(() => {
+    if (canvasOptimizationRef.current) {
+      cancelAnimationFrame(canvasOptimizationRef.current);
+    }
+    
+    canvasOptimizationRef.current = requestAnimationFrame(() => {
+      calculateVisibleTokens();
+      handleLargeCanvasOptimization();
+    });
+  }, [calculateVisibleTokens, handleLargeCanvasOptimization]);
+
+  // Enhanced canvas panning with performance optimization
+  const handleCanvasMouseMove = useCallback((e: MouseEvent | React.MouseEvent) => {
+    // Handle canvas dragging (middle mouse, right mouse, or space + left mouse)
+    if (isDraggingCanvas) {
+      e.preventDefault();
+      
+      if (canvasOptimizationRef.current) {
+        cancelAnimationFrame(canvasOptimizationRef.current);
+      }
+      
+      canvasOptimizationRef.current = requestAnimationFrame(() => {
+        setCanvasOffset((prev) => ({
+          x: prev.x + (e as MouseEvent).movementX,
+          y: prev.y + (e as MouseEvent).movementY,
+        }));
+        
+        // Optimize canvas during panning
+        optimizeCanvas();
+      });
+    }
+
+    // Handle connection drawing
+    if (isConnecting && connectionStart) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const startPos = nodePositions[connectionStart.nodeId];
+        if (startPos) {
+          // Calculate start position based on socket position
+          let x1 = startPos.x + 75; // Default to center
+          let y1 = startPos.y + 100; // Default to bottom
+          
+          if (connectionStart.socketPosition === "top") {
+            y1 = startPos.y - 2;
+          } else if (connectionStart.socketPosition === "bottom") {
+            y1 = startPos.y + 100 + 2;
+          } else if (connectionStart.socketPosition === "left") {
+            x1 = startPos.x - 3;
+            y1 = startPos.y + 50; // Center vertically
+          } else if (connectionStart.socketPosition === "right") {
+            x1 = startPos.x + 150 + 3;
+            y1 = startPos.y + 50; // Center vertically
+          }
+          
+          setTempConnection({
+            x1,
+            y1,
+            x2: ((e as MouseEvent).clientX - rect.left) / canvasScale - canvasOffset.x,
+            y2: ((e as MouseEvent).clientY - rect.top) / canvasScale - canvasOffset.y,
+          });
+        }
+      }
+    }
+  }, [isDraggingCanvas, isSpacePressed, isConnecting, connectionStart, nodePositions, canvasScale, canvasOffset]);
 
   useEffect(() => {
     document.addEventListener("mousemove", handleCanvasMouseMove);
@@ -958,7 +1037,10 @@ export default function Index() {
 
   // Token operations
   const addToken = () => {
-    if (!tokenForm.name || !tokenForm.value) return;
+    if (!tokenForm.name || !tokenForm.value) {
+      alert("Please enter both token name and value");
+      return;
+    }
 
     const newToken: Token = {
       id: `token_${Date.now()}`,
@@ -974,12 +1056,49 @@ export default function Index() {
       [currentLayer]: [...prev[currentLayer], newToken],
     }));
 
+    // Trigger performance optimization for large systems
+    setTimeout(() => handleLargeCanvasOptimization(), 100);
+
+    // Don't auto-position tokens on canvas - let users drag them from sidebar
+    // This allows users to control where tokens are placed
+
+    // Create automatic connection if value references an existing token
+    if ((currentLayer === "semantic" || currentLayer === "specific")) {
+      // Find the token that this new token references
+      let referencedToken: Token | undefined;
+      
+      if (currentLayer === "semantic") {
+        referencedToken = tokens.base.find(t => t.name === tokenForm.value);
+      } else if (currentLayer === "specific") {
+        referencedToken = [
+          ...tokens.semantic,
+          ...tokens.base
+        ].find(t => t.name === tokenForm.value);
+      }
+      
+      if (referencedToken) {
+        const newConnection: Connection = {
+          id: `conn_${Date.now()}`,
+          from: referencedToken.id,
+          to: newToken.id,
+          fromPort: "output",
+          toPort: "input",
+          fromSocket: "bottom",
+          toSocket: "top",
+        };
+        
+        setConnections((prev) => [...prev, newConnection]);
+      }
+    }
+
     setTokenForm({ name: "", value: "" });
     setIsModalOpen(false);
   };
 
   const onDragFromPanel = (token: Token, e: React.DragEvent) => {
+    console.log(`Starting drag of token "${token.name}" from sidebar`);
     e.dataTransfer.setData("token", JSON.stringify(token));
+    e.dataTransfer.effectAllowed = "copy";
   };
 
   const onDropToCanvas = (e: React.DragEvent) => {
@@ -996,10 +1115,14 @@ export default function Index() {
           (e.clientY - rect.top) / canvasScale - canvasOffset.y;
 
         markHistory();
+        
+        // Check if token is already on canvas and update position
         setNodePositions((prev) => ({
           ...prev,
           [token.id]: { x, y },
         }));
+        
+        console.log(`Token "${token.name}" dropped on canvas at position (${x}, ${y})`);
       }
     }
   };
@@ -1089,6 +1212,185 @@ export default function Index() {
     setIsConnecting(false);
     setConnectionStart(null);
     setTempConnection(null);
+  };
+
+  // Drag and drop reordering functions
+  const [draggedTokenId, setDraggedTokenId] = useState<string | null>(null);
+  
+  const handleTokenDragStart = (e: React.DragEvent, token: Token) => {
+    e.dataTransfer.setData('text/plain', token.id);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedTokenId(token.id);
+  };
+
+  const handleTokenDragEnd = () => {
+    setDraggedTokenId(null);
+  };
+
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  
+  const handleTokenDragOver = (e: React.DragEvent, token: Token) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetId(token.id);
+  };
+
+  const handleTokenDragLeave = () => {
+    setDropTargetId(null);
+  };
+
+  // Group drag and drop reordering functions
+  const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);
+  const [dropTargetGroupId, setDropTargetGroupId] = useState<string | null>(null);
+  
+  const handleGroupDragStart = (e: React.DragEvent, group: TokenGroup) => {
+    e.dataTransfer.setData('text/plain', `group:${group.id}`);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedGroupId(group.id);
+  };
+
+  const handleGroupDragOver = (e: React.DragEvent, group: TokenGroup) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetGroupId(group.id);
+  };
+
+  const handleGroupDragLeave = () => {
+    setDropTargetGroupId(null);
+  };
+
+  const handleGroupDragEnd = () => {
+    setDraggedGroupId(null);
+    setDropTargetGroupId(null);
+  };
+
+  const handleGroupDrop = (e: React.DragEvent, targetGroup: TokenGroup) => {
+    e.preventDefault();
+    const draggedData = e.dataTransfer.getData('text/plain');
+    
+    if (draggedData.startsWith('group:')) {
+      const draggedGroupId = draggedData.replace('group:', '');
+      if (draggedGroupId === targetGroup.id) return;
+      
+      markHistory();
+      
+      setTokenGroups((prevGroups) => {
+        const newGroups = [...prevGroups];
+        const draggedIndex = newGroups.findIndex(g => g.id === draggedGroupId);
+        const targetIndex = newGroups.findIndex(g => g.id === targetGroup.id);
+        
+        if (draggedIndex === -1) return newGroups;
+        
+        const [draggedGroup] = newGroups.splice(draggedIndex, 1);
+        newGroups.splice(targetIndex, 0, draggedGroup);
+        
+        return newGroups;
+      });
+    }
+  };
+
+
+
+
+
+
+
+  // Save complete application state to local file
+  const saveToLocalFile = () => {
+    const completeState = {
+      tokens,
+      nodePositions,
+      connections,
+      tokenGroups,
+      collapsedLayers,
+      currentLayer,
+      currentTokenType,
+      canvasOffset,
+      canvasScale,
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    };
+
+    const dataStr = JSON.stringify(completeState, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `design-tokens-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(link.href);
+  };
+
+  // Load complete application state from local file
+  const loadFromLocalFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const loadedState = JSON.parse(content);
+        
+        // Validate the loaded state
+        if (loadedState.tokens && loadedState.nodePositions && loadedState.connections) {
+          markHistory();
+          
+          setTokens(loadedState.tokens || { base: [], semantic: [], specific: [] });
+          setNodePositions(loadedState.nodePositions || {});
+          setConnections(loadedState.connections || []);
+          setTokenGroups(loadedState.tokenGroups || []);
+          setCollapsedLayers(loadedState.collapsedLayers || { base: false, semantic: false, specific: false });
+          setCurrentLayer(loadedState.currentLayer || "base");
+          setCurrentTokenType(loadedState.currentTokenType || "color");
+          
+          if (loadedState.canvasOffset) {
+            setCanvasOffset(loadedState.canvasOffset);
+          }
+          if (loadedState.canvasScale) {
+            setCanvasScale(loadedState.canvasScale);
+          }
+          
+          // Clear file input
+          event.target.value = '';
+        } else {
+          alert('Invalid file format. Please select a valid design tokens file.');
+        }
+      } catch (error) {
+        console.error('Error loading file:', error);
+        alert('Error loading file. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleTokenDrop = (e: React.DragEvent, targetToken: Token) => {
+    e.preventDefault();
+    const draggedTokenId = e.dataTransfer.getData('text/plain');
+    
+    if (draggedTokenId === targetToken.id) return;
+    
+    markHistory();
+    
+    setTokens((prevTokens) => {
+      const newTokens = { ...prevTokens };
+      const layer = targetToken.layer;
+      
+      // Find the dragged and target tokens
+      const draggedToken = newTokens[layer].find(t => t.id === draggedTokenId);
+      const targetIndex = newTokens[layer].findIndex(t => t.id === targetToken.id);
+      
+      if (!draggedToken) return newTokens;
+      
+      // Remove dragged token from its current position
+      newTokens[layer] = newTokens[layer].filter(t => t.id !== draggedTokenId);
+      
+      // Insert dragged token at target position
+      newTokens[layer].splice(targetIndex, 0, draggedToken);
+      
+      return newTokens;
+    });
   };
 
   const deleteToken = (tokenId: string) => {
@@ -2363,33 +2665,58 @@ export default function Index() {
                       {tokens[layer]?.map((token) => (
                         <div
                           key={token.id}
-                          className="dtm-bg-secondary border dtm-border-secondary rounded-md p-2 hover:dtm-bg-secondary/70 transition-all group"
+                          className={`dtm-bg-secondary border dtm-border-secondary rounded-md p-2 hover:dtm-bg-secondary/70 transition-all group ${
+                            draggedTokenId === token.id ? 'opacity-50 scale-95' : ''
+                          } ${
+                            dropTargetId === token.id && draggedTokenId !== token.id ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
+                          }`}
                         >
                           <div className="flex items-center justify-between">
-                            <div
-                              className="flex-1 cursor-grab"
-                              draggable
-                              onDragStart={(e) => onDragFromPanel(token, e)}
-                            >
-                              <div className="font-medium text-sm flex items-center gap-2 dtm-text-primary">
-                                <div
-                                  className={`w-3 h-3 rounded-full ${
-                                    token.layer === "base" ? "dtm-token-base" :
-                                    token.layer === "semantic" ? "dtm-token-semantic" :
-                                    "dtm-token-specific"
-                                  }`}
-                                />
-                                {token.type === "color" &&
-                                  token.value.startsWith("#") && (
-                                    <div
-                                      className="w-3 h-3 rounded border border-white/20"
-                                      style={{ backgroundColor: token.value }}
-                                    />
-                                  )}
-                                {token.name}
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="cursor-grab text-xs dtm-text-muted opacity-60 hover:opacity-100"
+                                draggable
+                                onDragStart={(e) => handleTokenDragStart(e, token)}
+                                onDragOver={(e) => handleTokenDragOver(e, token)}
+                                onDragLeave={handleTokenDragLeave}
+                                onDragEnd={handleTokenDragEnd}
+                                onDrop={(e) => handleTokenDrop(e, token)}
+                              >
+                                ⋮⋮
                               </div>
-                              <div className="text-xs dtm-text-muted break-all">
-                                {token.value}
+                              <div
+                                className="flex-1 cursor-grab"
+                                draggable
+                                onDragStart={(e) => onDragFromPanel(token, e)}
+                              >
+                                <div className="font-medium text-sm flex items-center gap-2 dtm-text-primary">
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${
+                                      token.layer === "base" ? "dtm-token-base" :
+                                      token.layer === "semantic" ? "dtm-token-semantic" :
+                                      "dtm-token-specific"
+                                    }`}
+                                  />
+                                  {token.type === "color" &&
+                                    token.value.startsWith("#") && (
+                                      <div
+                                        className="w-3 h-3 rounded border border-white/20"
+                                        style={{ backgroundColor: token.value }}
+                                      />
+                                    )}
+                                  {token.name}
+                                </div>
+                                <div className="text-xs dtm-text-muted break-all">
+                                  {token.value}
+                                </div>
+                                {/* Canvas indicator */}
+                                <div className="text-xs mt-1">
+                                  {nodePositions[token.id] ? (
+                                    <span className="text-green-400">✓ On Canvas</span>
+                                  ) : (
+                                    <span className="text-orange-400">📋 In Sidebar</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             {/* Action Buttons */}
@@ -2456,7 +2783,17 @@ export default function Index() {
                 {tokenGroups.map((group) => (
                   <div
                     key={group.id}
-                    className="dtm-bg-tertiary/30 border dtm-border-primary rounded-md overflow-hidden"
+                    className={`dtm-bg-tertiary/30 border dtm-border-primary rounded-md overflow-hidden ${
+                      draggedGroupId === group.id ? 'opacity-50 scale-95' : ''
+                    } ${
+                      dropTargetGroupId === group.id && draggedGroupId !== group.id ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
+                    }`}
+                    draggable
+                    onDragStart={(e) => handleGroupDragStart(e, group)}
+                    onDragOver={(e) => handleGroupDragOver(e, group)}
+                    onDragLeave={handleGroupDragLeave}
+                    onDragEnd={handleGroupDragEnd}
+                    onDrop={(e) => handleGroupDrop(e, group)}
                   >
                     {/* Group Header */}
                     <div className="p-2 dtm-bg-tertiary/50 border-b dtm-border-primary">
@@ -2468,6 +2805,9 @@ export default function Index() {
                           >
                             {group.collapsed ? "▶" : "▼"}
                           </button>
+                          <div className="cursor-grab text-xs dtm-text-muted opacity-60 hover:opacity-100">
+                            ⋮⋮
+                          </div>
                           <button
                             className={`font-semibold text-sm transition-colors ${
                               selectedGroup === group.id
@@ -2679,12 +3019,47 @@ export default function Index() {
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              onClick={saveToLocalFile}
+              title="Save complete project to local file"
+            >
+              <SaveIcon size={16} />
+              Save Project
+            </button>
+            <button
+              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              onClick={() => document.getElementById('load-project-input')?.click()}
+              title="Load project from local file"
+            >
+              <FolderOpen size={16} />
+              Load Project
+            </button>
+            <input
+              id="load-project-input"
+              type="file"
+              accept=".json"
+              onChange={loadFromLocalFile}
+              style={{ display: 'none' }}
+            />
+            <button
+              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={toggleTheme}
               title={`Switch to ${isDarkTheme ? 'light' : 'dark'} theme`}
             >
               <Settings size={16} />
               {isDarkTheme ? "Light" : "Dark"}
             </button>
+            
+            {/* Performance Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1 dtm-bg-secondary/50 rounded-md border dtm-border-primary">
+              <div className={`w-2 h-2 rounded-full ${
+                renderQuality === 'high' ? 'bg-green-400' : 
+                renderQuality === 'medium' ? 'bg-yellow-400' : 'bg-red-400'
+              }`} />
+              <span className="text-xs dtm-text-muted">
+                {renderQuality === 'high' ? 'High' : 
+                 renderQuality === 'medium' ? 'Medium' : 'Low'} Quality
+              </span>
+            </div>
           </div>
         </div>
 
@@ -2704,12 +3079,24 @@ export default function Index() {
         {/* Canvas */}
         <div
           ref={canvasRef}
-          className={`w-full h-full ${isSpacePressed ? "cursor-grab active:cursor-grabbing" : "cursor-grab active:cursor-grabbing"}`}
+          className={`w-full h-full ${isDraggingCanvas ? "cursor-grabbing" : "cursor-grab"}`}
           onMouseDown={handleCanvasMouseDown}
+          onMouseMove={(e) => {
+            if (isDraggingCanvas) {
+              e.preventDefault();
+              setCanvasOffset((prev) => ({
+                x: prev.x + e.movementX,
+                y: prev.y + e.movementY,
+              }));
+              // Optimize canvas during dragging
+              optimizeCanvas();
+            }
+          }}
           onDrop={onDropToCanvas}
           onDragOver={(e) => e.preventDefault()}
           onContextMenu={(e) => e.preventDefault()}
           onWheel={handleWheel}
+          title="Canvas Controls: Middle-click drag to pan, Mouse wheel to zoom, Space+click to drag"
         >
           {/* SVG for connections */}
           <svg
@@ -3041,6 +3428,14 @@ export default function Index() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="bg-slate-800 p-4 rounded-lg max-w-md w-full mx-4 border border-slate-700">
             <h2 className="text-xl font-semibold mb-6">Add New Token</h2>
+            <div className="text-sm text-slate-400 mb-4">
+              {currentLayer === "base" && "Base tokens define fundamental values (colors, sizes, etc.)"}
+              {currentLayer === "semantic" && "Semantic tokens reference base tokens to create meaningful names"}
+              {currentLayer === "specific" && "Specific tokens reference semantic or base tokens for specific use cases"}
+            </div>
+            <div className="text-sm text-blue-400 mb-4">
+              💡 After creating a token, drag it from the sidebar to the canvas to place it!
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -3062,17 +3457,64 @@ export default function Index() {
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Token Value
                 </label>
-                <input
-                  type="text"
-                  className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
-                  value={tokenForm.value}
-                  onChange={(e) =>
-                    setTokenForm((prev) => ({ ...prev, value: e.target.value }))
-                  }
-                  placeholder={
-                    currentTokenType === "color" ? "#4a90e2" : "Enter value..."
-                  }
-                />
+                
+                {/* For Semantic and Specific tokens, show dropdown of existing tokens */}
+                {(currentLayer === "semantic" || currentLayer === "specific") ? (
+                  <div className="space-y-2">
+                    <select
+                      className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                      value={tokenForm.value}
+                      onChange={(e) =>
+                        setTokenForm((prev) => ({ ...prev, value: e.target.value }))
+                      }
+                    >
+                      <option value="">Select from existing tokens...</option>
+                      {currentLayer === "semantic" && tokens.base.map((token) => (
+                        <option key={token.id} value={token.name}>
+                          {token.name} ({token.value})
+                        </option>
+                      ))}
+                      {currentLayer === "specific" && [
+                        ...tokens.semantic.map((token) => ({ ...token, layer: "semantic" })),
+                        ...tokens.base.map((token) => ({ ...token, layer: "base" }))
+                      ].map((token) => (
+                        <option key={token.id} value={token.name}>
+                          [{token.layer}] {token.name} ({token.value})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-xs text-slate-400">
+                      💡 Tip: Select an existing token to automatically create a connection
+                      {currentLayer === "semantic" && ` (${tokens.base.length} base tokens available)`}
+                      {currentLayer === "specific" && ` (${tokens.semantic.length + tokens.base.length} tokens available)`}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      Or enter a custom value:
+                    </div>
+                    <input
+                      type="text"
+                      className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                      value={tokenForm.value}
+                      onChange={(e) =>
+                        setTokenForm((prev) => ({ ...prev, value: e.target.value }))
+                      }
+                      placeholder="Enter custom value or select from dropdown above"
+                    />
+                  </div>
+                ) : (
+                  /* For Base tokens, show regular input */
+                  <input
+                    type="text"
+                    className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                    value={tokenForm.value}
+                    onChange={(e) =>
+                      setTokenForm((prev) => ({ ...prev, value: e.target.value }))
+                    }
+                    placeholder={
+                      currentTokenType === "color" ? "#4a90e2" : "Enter value..."
+                    }
+                  />
+                )}
 
                 {/* Color Palette for color tokens */}
                 {currentTokenType === "color" && (
