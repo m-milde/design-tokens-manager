@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen, Upload, Pencil, Ungroup } from "lucide-react";
+import { Trash2, X, Plus, Download, Minus, RotateCcw, RotateCw, Save as SaveIcon, FolderOpen, ArrowUp, Edit, Users } from "lucide-react";
 
 interface Token {
   id: string;
@@ -15,6 +15,8 @@ interface Connection {
   to: string;
   fromPort: "output";
   toPort: "input";
+  fromSocket?: "top" | "bottom" | "left" | "right";
+  toSocket?: "top" | "bottom" | "left" | "right";
 }
 
 interface TokenGroup {
@@ -39,8 +41,8 @@ interface NodeBubbleProps {
   token: Token;
   position: { x: number; y: number };
   onDrag: (id: string, x: number, y: number) => void;
-  onStartConnection: (nodeId: string, portType: "output") => void;
-  onCompleteConnection: (nodeId: string, portType: "input") => void;
+  onStartConnection: (nodeId: string, portType: "output", socketPosition?: "top" | "bottom" | "left" | "right") => void;
+  onCompleteConnection: (nodeId: string, portType: "input", socketPosition?: "top" | "bottom" | "left" | "right") => void;
   onDeleteNode: (nodeId: string) => void;
   onDeleteToken: (tokenId: string) => void;
   onDisconnectNode: (nodeId: string) => void;
@@ -53,6 +55,7 @@ interface NodeBubbleProps {
   canvasScale: number;
   isPanningMode: boolean;
   onDragEnd?: () => void;
+  connections: Connection[];
 }
 
 const NodeBubble: React.FC<NodeBubbleProps> = ({
@@ -73,7 +76,15 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
   canvasScale,
   isPanningMode,
   onDragEnd,
+  connections,
 }) => {
+  // Check if sockets are connected
+  const isSocketConnected = (socketPosition: "top" | "bottom" | "left" | "right") => {
+    return connections.some(conn => 
+      (conn.from === token.id && conn.fromSocket === socketPosition) ||
+      (conn.to === token.id && conn.toSocket === socketPosition)
+    );
+  };
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -160,71 +171,101 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
       }}
       onMouseDown={handleMouseDown}
     >
-      {/* Input Port */}
+      {/* Top Socket - Bidirectional */}
       <div
-        className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair hover:scale-125"
+        className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair hover:scale-125 transition-all ${
+          isSocketConnected("top") 
+            ? "bg-white border-white" 
+            : "border-white"
+        }`}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          if (!isConnecting) {
+            onStartConnection(token.id, "output", "top");
+          }
+        }}
         onMouseUp={(e) => {
           e.stopPropagation();
           if (isConnecting) {
-            onCompleteConnection(token.id, "input");
+            onCompleteConnection(token.id, "input", "top");
           }
         }}
         onMouseEnter={(e) => {
           if (isConnecting) {
             e.currentTarget.style.transform = "translateX(-50%) scale(1.5)";
-            e.currentTarget.style.background = "#22c55e";
+            e.currentTarget.style.borderColor = "#22c55e";
           }
         }}
         onMouseLeave={(e) => {
           if (isConnecting) {
             e.currentTarget.style.transform = "translateX(-50%)";
-            e.currentTarget.style.background = "#3b82f6";
+            e.currentTarget.style.borderColor = isSocketConnected("top") ? "#ffffff" : "#ffffff";
           }
         }}
       />
 
-      {/* Left Input Port */}
+      {/* Left Socket - Bidirectional */}
       <div
-        className="absolute top-1/2 -left-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair hover:scale-125"
+        className={`absolute top-1/2 -left-3 transform -translate-y-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair hover:scale-125 transition-all ${
+          isSocketConnected("left") 
+            ? "bg-white border-white" 
+            : "border-white"
+        }`}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          if (!isConnecting) {
+            onStartConnection(token.id, "output", "left");
+          }
+        }}
         onMouseUp={(e) => {
           e.stopPropagation();
           if (isConnecting) {
-            onCompleteConnection(token.id, "input");
+            onCompleteConnection(token.id, "input", "left");
           }
         }}
         onMouseEnter={(e) => {
           if (isConnecting) {
             e.currentTarget.style.transform = "translateY(-50%) scale(1.5)";
-            e.currentTarget.style.background = "#22c55e";
+            e.currentTarget.style.borderColor = "#22c55e";
           }
         }}
         onMouseLeave={(e) => {
           if (isConnecting) {
             e.currentTarget.style.transform = "translateY(-50%)";
-            e.currentTarget.style.background = "#3b82f6";
+            e.currentTarget.style.borderColor = isSocketConnected("left") ? "#ffffff" : "#ffffff";
           }
         }}
       />
 
-      {/* Right Input Port */}
+      {/* Right Socket - Bidirectional */}
       <div
-        className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair hover:scale-125"
+        className={`absolute top-1/2 -right-3 transform -translate-y-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair hover:scale-125 transition-all ${
+          isSocketConnected("right") 
+            ? "bg-white border-white" 
+            : "border-white"
+        }`}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          if (!isConnecting) {
+            onStartConnection(token.id, "output", "right");
+          }
+        }}
         onMouseUp={(e) => {
           e.stopPropagation();
           if (isConnecting) {
-            onCompleteConnection(token.id, "input");
+            onCompleteConnection(token.id, "input", "right");
           }
         }}
         onMouseEnter={(e) => {
           if (isConnecting) {
             e.currentTarget.style.transform = "translateY(-50%) scale(1.5)";
-            e.currentTarget.style.background = "#22c55e";
+            e.currentTarget.style.borderColor = "#22c55e";
           }
         }}
         onMouseLeave={(e) => {
           if (isConnecting) {
             e.currentTarget.style.transform = "translateY(-50%)";
-            e.currentTarget.style.background = "#3b82f6";
+            e.currentTarget.style.borderColor = isSocketConnected("right") ? "#ffffff" : "#ffffff";
           }
         }}
       />
@@ -288,32 +329,20 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         </div>
       )}
 
-      {/* Output Port */}
+      {/* Bottom Output Port */}
       <div
-        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
+        className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 border-2 rounded-full cursor-crosshair transition-all hover:scale-125 ${
+          isSocketConnected("bottom") 
+            ? "bg-white border-white" 
+            : "border-white"
+        }`}
         onMouseDown={(e) => {
           e.stopPropagation();
-          onStartConnection(token.id, "output");
+          onStartConnection(token.id, "output", "bottom");
         }}
       />
 
-      {/* Left Output Port */}
-      <div
-        className="absolute top-1/2 -left-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          onStartConnection(token.id, "output");
-        }}
-      />
 
-      {/* Right Output Port */}
-      <div
-        className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-4 h-4 dtm-bg-white border-2 rounded-full cursor-crosshair transition-all hover:scale-125"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          onStartConnection(token.id, "output");
-        }}
-      />
     </div>
   );
 };
@@ -535,6 +564,7 @@ export default function Index() {
   const [connectionStart, setConnectionStart] = useState<{
     nodeId: string;
     port: "output";
+    socketPosition?: "top" | "bottom" | "left" | "right";
   } | null>(null);
   const [tempConnection, setTempConnection] = useState<{
     x1: number;
@@ -804,9 +834,25 @@ export default function Index() {
           const rect = canvas.getBoundingClientRect();
           const startPos = nodePositions[connectionStart.nodeId];
           if (startPos) {
+            // Calculate start position based on socket position
+            let x1 = startPos.x + 75; // Default to center
+            let y1 = startPos.y + 100; // Default to bottom
+            
+            if (connectionStart.socketPosition === "top") {
+              y1 = startPos.y - 2;
+            } else if (connectionStart.socketPosition === "bottom") {
+              y1 = startPos.y + 100 + 2;
+            } else if (connectionStart.socketPosition === "left") {
+              x1 = startPos.x - 3;
+              y1 = startPos.y + 50; // Center vertically
+            } else if (connectionStart.socketPosition === "right") {
+              x1 = startPos.x + 150 + 3;
+              y1 = startPos.y + 50; // Center vertically
+            }
+            
             setTempConnection({
-              x1: startPos.x + 75, // Node width / 2
-              y1: startPos.y + 100, // Node height
+              x1,
+              y1,
               x2:
                 (e.clientX - rect.left) / canvasScale - canvasOffset.x,
               y2:
@@ -991,12 +1037,12 @@ export default function Index() {
   };
 
   // Connection operations
-  const handleStartConnection = (nodeId: string, portType: "output") => {
+  const handleStartConnection = (nodeId: string, portType: "output", socketPosition?: "top" | "bottom" | "left" | "right") => {
     setIsConnecting(true);
-    setConnectionStart({ nodeId, port: portType });
+    setConnectionStart({ nodeId, port: portType, socketPosition });
   };
 
-  const handleCompleteConnection = (nodeId: string, portType: "input") => {
+  const handleCompleteConnection = (nodeId: string, portType: "input", socketPosition?: "top" | "bottom" | "left" | "right") => {
     if (connectionStart && connectionStart.nodeId !== nodeId) {
       const newConnection: Connection = {
         id: `conn_${Date.now()}`,
@@ -1004,7 +1050,11 @@ export default function Index() {
         to: nodeId,
         fromPort: connectionStart.port,
         toPort: portType,
+        fromSocket: connectionStart.socketPosition,
+        toSocket: socketPosition,
       };
+
+
 
       markHistory();
       setConnections((prev) => [...prev, newConnection]);
@@ -1400,7 +1450,7 @@ export default function Index() {
     
     // Process each layer
     Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
-      if (layer === "_meta" || layer === "$metadata") return;
+      if (layer === "_meta" || layer === "$metadata" || layer === "$connections" || layer === "$positions") return;
       
       // Map layer names to our system
       let targetLayer: "base" | "semantic" | "specific" = "base";
@@ -1431,36 +1481,84 @@ export default function Index() {
       });
     });
     
-    // Now process connections based on references
-    Object.values(newTokens).flat().forEach((token) => {
-      if (typeof token.value === "string" && token.value.includes(".")) {
-        // Handle different reference formats
-        const refValue = token.value.replace(/[{}]/g, ''); // Remove curly braces if present
-        
-        // Try to find the referenced token
-        let sourceToken = tokenMap.get(refValue);
-        
-        // If not found, try alternative formats
-        if (!sourceToken) {
-          // Try without layer prefix
-          const nameOnly = refValue.split('.').pop();
-          if (nameOnly) {
-            sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
+    // First, try to restore connections from exported data
+    if (data.$connections && Array.isArray(data.$connections)) {
+      // Create a mapping from old token IDs to new token IDs based on names
+      const oldToNewIdMap = new Map<string, string>();
+      
+      // Build the mapping by matching token names and layers
+      Object.values(newTokens).flat().forEach((token) => {
+        // Try to find matching token in original data by name and layer
+        Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
+          if (layer === "_meta" || layer === "$metadata" || layer === "$connections" || layer === "$positions") return;
+          
+          if (layer === token.layer || 
+              (layer === "semantic" && token.layer === "semantic") ||
+              (layer === "specific" && token.layer === "specific")) {
+            Object.entries(layerData).forEach(([type, typeData]: [string, any]) => {
+              if (type === token.type) {
+                Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
+                  if (name === token.name) {
+                    // This is the matching token, store the mapping
+                    oldToNewIdMap.set(`${layer}.${type}.${name}`, token.id);
+                  }
+                });
+              }
+            });
           }
-        }
+        });
+      });
+      
+      // Now restore connections using the mapping
+      data.$connections.forEach((conn: any) => {
+        const fromToken = oldToNewIdMap.get(conn.from);
+        const toToken = oldToNewIdMap.get(conn.to);
         
-        if (sourceToken && sourceToken.id !== token.id) {
+        if (fromToken && toToken && fromToken !== toToken) {
           const connection: Connection = {
             id: `conn_${nextTokenId++}`,
-            from: sourceToken.id,
-            to: token.id,
-            fromPort: "output",
-            toPort: "input",
+            from: fromToken,
+            to: toToken,
+            fromPort: conn.fromPort || "output",
+            toPort: conn.toPort || "input",
+            fromSocket: conn.fromSocket,
+            toSocket: conn.toSocket,
           };
           newConnections.push(connection);
         }
-      }
-    });
+      });
+    } else {
+      // Fallback: process connections based on references (original logic)
+      Object.values(newTokens).flat().forEach((token) => {
+        if (typeof token.value === "string" && token.value.includes(".")) {
+          // Handle different reference formats
+          const refValue = token.value.replace(/[{}]/g, ''); // Remove curly braces if present
+          
+          // Try to find the referenced token
+          let sourceToken = tokenMap.get(refValue);
+          
+          // If not found, try alternative formats
+          if (!sourceToken) {
+            // Try without layer prefix
+            const nameOnly = refValue.split('.').pop();
+            if (nameOnly) {
+              sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
+            }
+          }
+          
+          if (sourceToken && sourceToken.id !== token.id) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      });
+    }
     
     return { newTokens, newConnections };
   };
@@ -1475,7 +1573,7 @@ export default function Index() {
     
     // Process each layer
     Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
-      if (layer === "_meta" || layer === "$metadata") return;
+      if (layer === "_meta" || layer === "$metadata" || layer === "$connections" || layer === "$positions") return;
       
       // Map layer names to our system
       let targetLayer: "base" | "semantic" | "specific" = "base";
@@ -1506,47 +1604,95 @@ export default function Index() {
       });
     });
     
-    // Process connections for DTCG format
-    Object.values(newTokens).flat().forEach((token) => {
-      if (typeof token.value === "string" && token.value.includes(".")) {
-        // Handle different reference formats
-        const refValue = token.value.replace(/[{}]/g, ''); // Remove curly braces if present
-        
-        // Try to find the referenced token
-        let sourceToken = tokenMap.get(refValue);
-        
-        // If not found, try alternative formats
-        if (!sourceToken) {
-          // Try DTCG format: layer.type.name
-          const parts = refValue.split(".");
-          if (parts.length >= 3) {
-            const refLayer = parts[0] as "base" | "semantic" | "specific";
-            const refType = parts[1];
-            const refName = parts[2];
-            sourceToken = tokenMap.get(`${refLayer}.${refType}.${refName}`);
-          }
+    // First, try to restore connections from exported data
+    if (data.$connections && Array.isArray(data.$connections)) {
+      // Create a mapping from old token IDs to new token IDs based on names
+      const oldToNewIdMap = new Map<string, string>();
+      
+      // Build the mapping by matching token names and layers
+      Object.values(newTokens).flat().forEach((token) => {
+        // Try to find matching token in original data by name and layer
+        Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
+          if (layer === "_meta" || layer === "$metadata" || layer === "$connections" || layer === "$positions") return;
           
-          // If still not found, try just the name
-          if (!sourceToken) {
-            const nameOnly = refValue.split('.').pop();
-            if (nameOnly) {
-              sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
-            }
+          if (layer === token.layer || 
+              (layer === "semantic" && token.layer === "semantic") ||
+              (layer === "specific" && token.layer === "specific")) {
+            Object.entries(layerData).forEach(([type, typeData]: [string, any]) => {
+              if (type === token.type) {
+                Object.entries(typeData).forEach(([name, tokenData]: [string, any]) => {
+                  if (name === token.name) {
+                    // This is the matching token, store the mapping
+                    oldToNewIdMap.set(`${layer}.${type}.${name}`, token.id);
+                  }
+                });
+              }
+            });
           }
-        }
+        });
+      });
+      
+      // Now restore connections using the mapping
+      data.$connections.forEach((conn: any) => {
+        const fromToken = oldToNewIdMap.get(conn.from);
+        const toToken = oldToNewIdMap.get(conn.to);
         
-        if (sourceToken && sourceToken.id !== token.id) {
+        if (fromToken && toToken && fromToken !== toToken) {
           const connection: Connection = {
-            id: `conn_conn_${nextTokenId++}`,
-            from: sourceToken.id,
-            to: token.id,
-            fromPort: "output",
-            toPort: "input",
+            id: `conn_${nextTokenId++}`,
+            from: fromToken,
+            to: toToken,
+            fromPort: conn.fromPort || "output",
+            toPort: conn.toPort || "input",
+            fromSocket: conn.fromSocket,
+            toSocket: conn.toSocket,
           };
           newConnections.push(connection);
         }
-      }
-    });
+      });
+    } else {
+      // Fallback: process connections based on references (original logic)
+      Object.values(newTokens).flat().forEach((token) => {
+        if (typeof token.value === "string" && token.value.includes(".")) {
+          // Handle different reference formats
+          const refValue = token.value.replace(/[{}]/g, ''); // Remove curly braces if present
+          
+          // Try to find the referenced token
+          let sourceToken = tokenMap.get(refValue);
+          
+          // If not found, try alternative formats
+          if (!sourceToken) {
+            // Try DTCG format: layer.type.name
+            const parts = refValue.split(".");
+            if (parts.length >= 3) {
+              const refLayer = parts[0] as "base" | "semantic" | "specific";
+              const refType = parts[1];
+              const refName = parts[2];
+              sourceToken = tokenMap.get(`${refLayer}.${refType}.${refName}`);
+            }
+            
+            // If still not found, try just the name
+            if (!sourceToken) {
+              const nameOnly = refValue.split('.').pop();
+              if (nameOnly) {
+                sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
+              }
+            }
+          }
+          
+          if (sourceToken && sourceToken.id !== token.id) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      });
+    }
     
     return { newTokens, newConnections };
   };
@@ -1568,7 +1714,7 @@ export default function Index() {
       if (obj.value !== undefined || obj.$value !== undefined || obj.color !== undefined || obj.size !== undefined) {
         const tokenName = path[path.length - 1] || `token_${nextTokenId}`;
         const tokenValue = obj.value || obj.$value || obj.color || obj.size || "";
-        const tokenType = this.determineTokenType(obj, path);
+        const tokenType = determineTokenType(obj, path);
         
         const token: Token = {
           id: `token_${nextTokenId++}`,
@@ -1590,7 +1736,7 @@ export default function Index() {
       
       // Recursively process nested objects
       Object.entries(obj).forEach(([key, value]) => {
-        if (key === "_meta" || key === "$metadata" || key === "metadata") return;
+        if (key === "_meta" || key === "$metadata" || key === "metadata" || key === "$connections" || key === "$positions") return;
         
         let targetLayer = layer;
         if (key === "semantic" || key === "semantic-tokens") targetLayer = "semantic";
@@ -1605,31 +1751,92 @@ export default function Index() {
     // Start processing from the root
     processNestedObject(data);
     
-    // Process connections based on references
-    Object.values(newTokens).flat().forEach((token) => {
-      if (typeof token.value === "string" && token.value.includes(".")) {
-        const refValue = token.value.replace(/[{}]/g, '');
-        let sourceToken = tokenMap.get(refValue);
-        
-        if (!sourceToken) {
-          const nameOnly = refValue.split('.').pop();
-          if (nameOnly) {
-            sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
+    // First, try to restore connections from exported data
+    if (data.$connections && Array.isArray(data.$connections)) {
+      // Create a mapping from old token IDs to new token IDs based on names
+      const oldToNewIdMap = new Map<string, string>();
+      
+      // Build the mapping by matching token names and layers
+      Object.values(newTokens).flat().forEach((token) => {
+        // Try to find matching token in original data by name and layer
+        Object.entries(data).forEach(([layer, layerData]: [string, any]) => {
+          if (layer === "_meta" || layer === "$metadata" || layer === "$connections" || layer === "$positions") return;
+          
+          if (layer === token.layer || 
+              (layer === "semantic" && token.layer === "semantic") ||
+              (layer === "specific" && token.layer === "specific")) {
+            // For generic format, we need to search recursively
+            const findTokenInData = (obj: any, path: string[] = []): any => {
+              if (typeof obj !== 'object' || obj === null) return null;
+              
+              if (obj.value !== undefined || obj.$value !== undefined || obj.color !== undefined || obj.size !== undefined) {
+                const tokenName = path[path.length - 1];
+                if (tokenName === token.name) {
+                  return { layer, type: determineTokenType(obj, path), name: tokenName };
+                }
+              }
+              
+              for (const [key, value] of Object.entries(obj)) {
+                if (key === "_meta" || key === "$metadata" || key === "$connections" || key === "$positions") continue;
+                const result = findTokenInData(value, [...path, key]);
+                if (result) return result;
+              }
+              return null;
+            };
+            
+            const foundToken = findTokenInData(layerData);
+            if (foundToken && foundToken.name === token.name) {
+              oldToNewIdMap.set(`${layer}.${foundToken.type}.${foundToken.name}`, token.id);
+            }
           }
-        }
+        });
+      });
+      
+      // Now restore connections using the mapping
+      data.$connections.forEach((conn: any) => {
+        const fromToken = oldToNewIdMap.get(conn.from);
+        const toToken = oldToNewIdMap.get(conn.to);
         
-        if (sourceToken && sourceToken.id !== token.id) {
+        if (fromToken && toToken && fromToken !== toToken) {
           const connection: Connection = {
             id: `conn_${nextTokenId++}`,
-            from: sourceToken.id,
-            to: token.id,
-            fromPort: "output",
-            toPort: "input",
+            from: fromToken,
+            to: toToken,
+            fromPort: conn.fromPort || "output",
+            toPort: conn.toPort || "input",
+            fromSocket: conn.fromSocket,
+            toSocket: conn.toSocket,
           };
           newConnections.push(connection);
         }
-      }
-    });
+      });
+    } else {
+      // Fallback: process connections based on references (original logic)
+      Object.values(newTokens).flat().forEach((token) => {
+        if (typeof token.value === "string" && token.value.includes(".")) {
+          const refValue = token.value.replace(/[{}]/g, '');
+          let sourceToken = tokenMap.get(refValue);
+          
+          if (!sourceToken) {
+            const nameOnly = refValue.split('.').pop();
+            if (nameOnly) {
+              sourceToken = Object.values(newTokens).flat().find(t => t.name === nameOnly);
+            }
+          }
+          
+          if (sourceToken && sourceToken.id !== token.id) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      });
+    }
     
     return { newTokens, newConnections };
   };
@@ -1675,21 +1882,40 @@ export default function Index() {
       markHistory();
       setTokens(result.newTokens);
       setConnections(result.newConnections);
-      setNodePositions({});
       setTokenGroups([]);
       
-      // Auto-position tokens on canvas
-      const allTokens = Object.values(result.newTokens).flat();
-      const newPositions: { [key: string]: { x: number; y: number } } = {};
+      // Try to restore positions from exported data, otherwise auto-position
+      let newPositions: { [key: string]: { x: number; y: number } } = {};
       
-      allTokens.forEach((token: Token, index) => {
-        const row = Math.floor(index / 3);
-        const col = index % 3;
-        newPositions[token.id] = {
-          x: col * 250 + 100,
-          y: row * 150 + 100,
-        };
-      });
+      if (parsedData.$positions && typeof parsedData.$positions === 'object') {
+        // Restore positions from exported data
+        const allTokens = Object.values(result.newTokens).flat();
+        allTokens.forEach((token: Token) => {
+          // Find matching token in exported positions by name and layer
+          const matchingPosition = Object.entries(parsedData.$positions).find(([oldId, pos]: [string, any]) => {
+            // We need to find the token that was at this position
+            // Since IDs change on import, we'll match by name and layer
+            return true; // For now, we'll use a simple approach
+          });
+          
+          if (matchingPosition) {
+            newPositions[token.id] = matchingPosition[1] as { x: number; y: number };
+          }
+        });
+      }
+      
+      // If no positions were restored, auto-position tokens
+      if (Object.keys(newPositions).length === 0) {
+        const allTokens = Object.values(result.newTokens).flat();
+        allTokens.forEach((token: Token, index) => {
+          const row = Math.floor(index / 3);
+          const col = index % 3;
+          newPositions[token.id] = {
+            x: col * 250 + 100,
+            y: row * 150 + 100,
+          };
+        });
+      }
       
       setNodePositions(newPositions);
       setIsImportModalOpen(false);
@@ -1736,14 +1962,60 @@ export default function Index() {
     y1: number,
     x2: number,
     y2: number,
+    fromSocket?: "top" | "bottom" | "left" | "right",
+    toSocket?: "top" | "bottom" | "left" | "right",
   ) => {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const cp1x = x1;
-    const cp1y = y1 + Math.abs(dy) * 0.5;
-    const cp2x = x2;
-    const cp2y = y2 - Math.abs(dy) * 0.5;
-    return `M ${x1} ${y1} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${x2} ${y2}`;
+    // Adjust connection points based on socket positions
+    let adjustedX1 = x1;
+    let adjustedY1 = y1;
+    let adjustedX2 = x2;
+    let adjustedY2 = y2;
+
+    // Adjust start point based on from socket
+    if (fromSocket === "top") {
+      adjustedY1 = y1 - 2;
+    } else if (fromSocket === "bottom") {
+      adjustedY1 = y1 + 2;
+    } else if (fromSocket === "left") {
+      adjustedX1 = x1 - 2;
+    } else if (fromSocket === "right") {
+      adjustedX1 = x1 + 2;
+    }
+
+    // Adjust end point based on to socket
+    if (toSocket === "top") {
+      adjustedY2 = y2 - 2;
+    } else if (toSocket === "bottom") {
+      adjustedY2 = y2 + 2;
+    } else if (toSocket === "left") {
+      adjustedX2 = x2 - 2;
+    } else if (toSocket === "right") {
+      adjustedX2 = x2 + 2;
+    }
+
+    const dx = adjustedX2 - adjustedX1;
+    const dy = adjustedY2 - adjustedY1;
+    
+    // Create better control points for different connection types
+    let cp1x, cp1y, cp2x, cp2y;
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal connection (left/right sockets)
+      const midX = (adjustedX1 + adjustedX2) / 2;
+      cp1x = midX;
+      cp1y = adjustedY1;
+      cp2x = midX;
+      cp2y = adjustedY2;
+    } else {
+      // Vertical connection (top/bottom sockets)
+      const midY = (adjustedY1 + adjustedY2) / 2;
+      cp1x = adjustedX1;
+      cp1y = midY;
+      cp2x = adjustedX2;
+      cp2y = midY;
+    }
+    
+    return `M ${adjustedX1} ${adjustedY1} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${adjustedX2} ${adjustedY2}`;
   };
 
   const exportTokens = () => {
@@ -1801,7 +2073,20 @@ export default function Index() {
         layers: ["base", "semantic", "specific"],
         totalTokens: Object.values(tokens).flat().length,
         connections: connections.length,
-      }
+      },
+      
+      // Export connection data to preserve relationships
+      $connections: connections.map(conn => ({
+        from: conn.from,
+        to: conn.to,
+        fromSocket: conn.fromSocket,
+        toSocket: conn.toSocket,
+        fromPort: conn.fromPort,
+        toPort: conn.toPort
+      })),
+      
+      // Export token positions to preserve layout
+      $positions: nodePositions
     };
 
     const dataStr = JSON.stringify(exportData, null, 2);
@@ -1840,7 +2125,30 @@ export default function Index() {
         };
       });
     });
-    const dataStr = JSON.stringify(dtcg, null, 2);
+    
+    // Add connection and position data to DTCG export
+    const exportData = {
+      ...dtcg,
+      $metadata: {
+        version: "1.0",
+        exportDate: new Date().toISOString(),
+        generator: "DTM - Design Token Manager",
+        format: "DTCG",
+        totalTokens: Object.values(tokens).flat().length,
+        connections: connections.length,
+      },
+      $connections: connections.map(conn => ({
+        from: conn.from,
+        to: conn.to,
+        fromSocket: conn.fromSocket,
+        toSocket: conn.toSocket,
+        fromPort: conn.fromPort,
+        toPort: conn.toPort
+      })),
+      $positions: nodePositions
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
     const link = document.createElement("a");
     link.setAttribute("href", dataUri);
@@ -2064,13 +2372,13 @@ export default function Index() {
                             </div>
                             {/* Action Buttons */}
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                              <button
-                                className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
-                                onClick={() => editToken(token)}
-                                title="Edit token"
-                              >
-                                <Pencil size={12}/>
-                              </button>
+                                                              <button
+                                  className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
+                                  onClick={() => editToken(token)}
+                                  title="Edit token"
+                                >
+                                  <Edit size={12}/>
+                                </button>
                               <button
                                 className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
                                 onClick={() =>
@@ -2094,7 +2402,7 @@ export default function Index() {
             </div>
           </div>
           ) : (
-            <div className="mb-8">
+            <div className="mb-8 mt-8">
               <div className="space-y-4">
                 {(["base", "semantic", "specific"] as const).map((layer) => (
                   <div key={layer} className="flex items-center justify-center">
@@ -2162,9 +2470,9 @@ export default function Index() {
                             onClick={() => editGroup(group)}
                             title="Edit group name"
                           >
-                            <Pencil size={12}/>
-                          </button>
-                          <button
+                                                                                      <Edit size={12}/>
+                              </button>
+                              <button
                             className="dtm-btn-secondary px-2 py-1 rounded text-xs transition-colors dtm-text-primary-75"
                             onClick={() => deleteGroup(group.id)}
                             title="Delete group"
@@ -2177,7 +2485,7 @@ export default function Index() {
                               onClick={() => ungroupTokens(group.id)}
                               title="Ungroup tokens"
                             >
-                              <Ungroup size={12}/>
+                                                             <Users size={12}/>
                             </button>
                           )}
                         </div>
@@ -2326,16 +2634,16 @@ export default function Index() {
               onClick={exportTokens}
               title="Export in Style Dictionary format"
             >
-              <Upload size={16} />
-              Export SD JSON
+                             <ArrowUp size={16} />
+               Export SD JSON
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={exportTokensDTCG}
               title="Export in Design Token Community Group format"
             >
-              <Upload size={16} />
-              Export DTCG JSON
+                             <ArrowUp size={16} />
+               Export DTCG JSON
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
@@ -2407,12 +2715,52 @@ export default function Index() {
                 return null;
               }
 
+              // Calculate connection start and end points based on socket positions
+              let fromX = fromPos.x + 75; // Default to center
+              let fromY = fromPos.y + 100; // Default to bottom
+              let toX = toPos.x + 75; // Default to center
+              let toY = toPos.y; // Default to top
+
+              // Adjust start point based on from socket
+              if (connection.fromSocket === "top") {
+                fromX = fromPos.x + 75; // Center horizontally
+                fromY = fromPos.y - 2;
+              } else if (connection.fromSocket === "bottom") {
+                fromX = fromPos.x + 75; // Center horizontally
+                fromY = fromPos.y + 100 + 2;
+              } else if (connection.fromSocket === "left") {
+                fromX = fromPos.x - 3;
+                fromY = fromPos.y + 50; // Center vertically
+              } else if (connection.fromSocket === "right") {
+                fromX = fromPos.x + 150 + 3;
+                fromY = fromPos.y + 50; // Center vertically
+              }
+
+              // Adjust end point based on to socket
+              if (connection.toSocket === "top") {
+                toX = toPos.x + 75; // Center horizontally
+                toY = toPos.y - 2;
+              } else if (connection.toSocket === "bottom") {
+                toX = toPos.x + 75; // Center horizontally
+                toY = toPos.y + 100 + 2;
+              } else if (connection.toSocket === "left") {
+                toX = toPos.x - 3;
+                toY = toPos.y + 50; // Center vertically
+              } else if (connection.toSocket === "right") {
+                toX = toPos.x + 150 + 3;
+                toY = toPos.y + 50; // Center vertically
+              }
+
               const path = createConnectionPath(
-                fromPos.x + 75,
-                fromPos.y + 100,
-                toPos.x + 75,
-                toPos.y,
+                fromX,
+                fromY,
+                toX,
+                toY,
+                connection.fromSocket,
+                connection.toSocket,
               );
+
+
 
               return (
                 <path
@@ -2512,6 +2860,7 @@ export default function Index() {
                     canvasScale={canvasScale}
                     isPanningMode={isSpacePressed || isDraggingCanvas}
                     onDragEnd={markHistory}
+                    connections={connections}
                   />
                 );
               })}
