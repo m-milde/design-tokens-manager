@@ -5,7 +5,8 @@ import {
   // New icons for future use
   Unlink, Link, Copy, Scissors, Layers, Palette, Settings,
   Eye, EyeOff, Lock, Unlock, Star, Heart, Zap, Target,
-  Grid, List, Calendar, Clock, Search, Filter, SortAsc, SortDesc
+  Grid, List, Calendar, Clock, Search, Filter, SortAsc, SortDesc,
+  Ungroup
 } from "lucide-react";
 
 interface Token {
@@ -63,6 +64,8 @@ interface NodeBubbleProps {
   isPanningMode: boolean;
   onDragEnd?: () => void;
   connections: Connection[];
+  isInGroup?: boolean;
+  onRemoveFromGroup?: (tokenId: string) => void;
 }
 
 const NodeBubble: React.FC<NodeBubbleProps> = ({
@@ -84,6 +87,8 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
   isPanningMode,
   onDragEnd,
   connections,
+  isInGroup,
+  onRemoveFromGroup,
 }) => {
   // Check if sockets are connected
   const isSocketConnected = (socketPosition: "top" | "bottom" | "left" | "right") => {
@@ -294,7 +299,17 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
             style={{ backgroundColor: token.value }}
           />
         )}
-        {token.name}
+        <span
+          className="cursor-grab hover:text-blue-400 transition-colors"
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData("canvas-token", token.id);
+            e.dataTransfer.effectAllowed = "move";
+            e.stopPropagation();
+          }}
+        >
+          {token.name}
+        </span>
       </div>
       <div className="text-xs dtm-text-muted dtm-bg-primary/20 p-2 rounded-md break-words">
         {token.value}
@@ -333,6 +348,18 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
           >
             <Trash2 size={10} />
           </button>
+          {isInGroup && onRemoveFromGroup && (
+            <button
+              className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveFromGroup(token.id);
+              }}
+              title="Remove from group"
+            >
+              <Ungroup size={10} />
+            </button>
+          )}
         </div>
       )}
 
@@ -363,6 +390,8 @@ interface CanvasGroupProps {
   onSelectGroup: (groupId: string) => void;
   isSelected: boolean;
   onDragGroup: (groupId: string, x: number, y: number) => void;
+  onAddTokenToGroup: (groupId: string, tokenId: string) => void;
+  onRemoveTokenFromGroup: (groupId: string, tokenId: string) => void;
   canvasRef: React.RefObject<HTMLDivElement>;
   canvasOffset: { x: number; y: number };
   canvasScale: number;
@@ -379,6 +408,8 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
   onSelectGroup,
   isSelected,
   onDragGroup,
+  onAddTokenToGroup,
+  onRemoveTokenFromGroup,
   canvasRef,
   canvasOffset,
   canvasScale,
@@ -487,6 +518,39 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
         zIndex: 10,
       }}
       onMouseDown={handleGroupMouseDown}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.style.borderColor = '#22c55e';
+        e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+      }}
+      onDragLeave={(e) => {
+        e.currentTarget.style.borderColor = '';
+        e.currentTarget.style.backgroundColor = '';
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.style.borderColor = '';
+        e.currentTarget.style.backgroundColor = '';
+        
+        // Handle tokens from sidebar
+        const tokenData = e.dataTransfer.getData("token");
+        if (tokenData) {
+          try {
+            const token = JSON.parse(tokenData) as Token;
+            onAddTokenToGroup(group.id, token.id);
+          } catch (error) {
+            console.error("Failed to parse token data:", error);
+          }
+        }
+        
+        // Handle existing canvas tokens (dragged by ID)
+        const tokenId = e.dataTransfer.getData("canvas-token");
+        if (tokenId) {
+          onAddTokenToGroup(group.id, tokenId);
+        }
+      }}
     >
       {/* Group Header */}
       <div className="absolute -top-8 left-0 dtm-bg-tertiary text-white px-2 py-1 rounded-md text-sm  flex items-center gap-2">
@@ -552,6 +616,8 @@ const CanvasGroup: React.FC<CanvasGroupProps> = ({
           </div>
         </div>
       )}
+
+
     </div>
   );
 };
@@ -1218,7 +1284,8 @@ export default function Index() {
   const [draggedTokenId, setDraggedTokenId] = useState<string | null>(null);
   
   const handleTokenDragStart = (e: React.DragEvent, token: Token) => {
-    e.dataTransfer.setData('text/plain', token.id);
+    console.log('🔄 Reorder drag start:', token.name);
+    e.dataTransfer.setData('reorder-token', token.id);
     e.dataTransfer.effectAllowed = 'move';
     setDraggedTokenId(token.id);
   };
@@ -1238,6 +1305,8 @@ export default function Index() {
   const handleTokenDragLeave = () => {
     setDropTargetId(null);
   };
+
+
 
   // Group drag and drop reordering functions
   const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);
@@ -1367,9 +1436,25 @@ export default function Index() {
 
   const handleTokenDrop = (e: React.DragEvent, targetToken: Token) => {
     e.preventDefault();
-    const draggedTokenId = e.dataTransfer.getData('text/plain');
     
-    if (draggedTokenId === targetToken.id) return;
+    // Debug: log all available data types
+    console.log('🔄 Available data types:', e.dataTransfer.types);
+    console.log('🔄 Reorder token data:', e.dataTransfer.getData('reorder-token'));
+    console.log('🔄 Text plain data:', e.dataTransfer.getData('text/plain'));
+    
+    const draggedTokenId = e.dataTransfer.getData('reorder-token');
+    
+    console.log('🔄 Reorder drop:', draggedTokenId, '->', targetToken.name);
+    
+    if (!draggedTokenId) {
+      console.log('🔄 No dragged token ID found!');
+      return;
+    }
+    
+    if (draggedTokenId === targetToken.id) {
+      console.log('🔄 Same token, no reorder needed');
+      return;
+    }
     
     markHistory();
     
@@ -1377,11 +1462,20 @@ export default function Index() {
       const newTokens = { ...prevTokens };
       const layer = targetToken.layer;
       
+      console.log('🔄 Reordering in layer:', layer);
+      console.log('🔄 Current tokens in layer:', newTokens[layer].map(t => t.name));
+      
       // Find the dragged and target tokens
       const draggedToken = newTokens[layer].find(t => t.id === draggedTokenId);
       const targetIndex = newTokens[layer].findIndex(t => t.id === targetToken.id);
       
-      if (!draggedToken) return newTokens;
+      console.log('🔄 Dragged token:', draggedToken?.name);
+      console.log('🔄 Target index:', targetIndex);
+      
+      if (!draggedToken) {
+        console.log('🔄 Dragged token not found in layer!');
+        return newTokens;
+      }
       
       // Remove dragged token from its current position
       newTokens[layer] = newTokens[layer].filter(t => t.id !== draggedTokenId);
@@ -1389,6 +1483,8 @@ export default function Index() {
       // Insert dragged token at target position
       newTokens[layer].splice(targetIndex, 0, draggedToken);
       
+      console.log('🔄 Reorder completed:', draggedToken.name, 'moved to position', targetIndex);
+      console.log('🔄 New token order:', newTokens[layer].map(t => t.name));
       return newTokens;
     });
   };
@@ -1599,6 +1695,73 @@ export default function Index() {
     markHistory();
     setTokenGroups((prev) => prev.filter((group) => group.id !== groupId));
     setSelectedGroup(null);
+  };
+
+  const addTokenToGroup = (groupId: string, tokenId: string) => {
+    const token = findTokenById(tokenId);
+    if (!token) return;
+
+    // Add token to the group
+    setTokenGroups((prev) =>
+      prev.map((group) =>
+        group.id === groupId
+          ? { ...group, tokenIds: [...group.tokenIds, tokenId] }
+          : group
+      )
+    );
+
+    // Position the token within the group bounds
+    const group = tokenGroups.find((g) => g.id === groupId);
+    if (group) {
+      const groupTokens = group.tokenIds.map((id) => nodePositions[id]).filter(Boolean);
+      if (groupTokens.length > 0) {
+        const minX = Math.min(...groupTokens.map((p) => p.x));
+        const minY = Math.min(...groupTokens.map((p) => p.y));
+        const maxX = Math.max(...groupTokens.map((p) => p.x + 200));
+        const maxY = Math.max(...groupTokens.map((p) => p.y + 120));
+        
+        // Position new token below the group
+        const newX = minX + (maxX - minX) / 2 - 75; // Center horizontally
+        const newY = maxY + 20; // Below the group
+        
+        setNodePositions((prev) => ({
+          ...prev,
+          [tokenId]: { x: newX, y: newY }
+        }));
+      }
+    }
+
+    markHistory();
+  };
+
+  const removeTokenFromGroup = (groupId: string, tokenId: string) => {
+    const token = findTokenById(tokenId);
+    if (!token) return;
+
+    // Remove token from the group
+    setTokenGroups((prev) =>
+      prev.map((group) =>
+        group.id === groupId
+          ? { ...group, tokenIds: group.tokenIds.filter(id => id !== tokenId) }
+          : group
+      )
+    );
+
+    // Remove token from canvas
+    setNodePositions((prev) => {
+      const newPositions = { ...prev };
+      delete newPositions[tokenId];
+      return newPositions;
+    });
+
+    // Remove connections involving this token
+    setConnections((prev) =>
+      prev.filter(
+        (conn) => conn.from !== tokenId && conn.to !== tokenId
+      )
+    );
+
+    markHistory();
   };
 
   const deleteGroup = (groupId: string) => {
@@ -2670,24 +2833,60 @@ export default function Index() {
                           } ${
                             dropTargetId === token.id && draggedTokenId !== token.id ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
                           }`}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔄 Token item drag over:', token.name);
+                            handleTokenDragOver(e, token);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔄 Token item drop event fired on:', token.name);
+                            handleTokenDrop(e, token);
+                          }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div 
                                 className="cursor-grab text-xs dtm-text-muted opacity-60 hover:opacity-100"
                                 draggable
-                                onDragStart={(e) => handleTokenDragStart(e, token)}
-                                onDragOver={(e) => handleTokenDragOver(e, token)}
-                                onDragLeave={handleTokenDragLeave}
-                                onDragEnd={handleTokenDragEnd}
-                                onDrop={(e) => handleTokenDrop(e, token)}
+                                onDragStart={(e) => {
+                                  e.stopPropagation();
+                                  handleTokenDragStart(e, token);
+                                }}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('🔄 Reorder drag over:', token.name);
+                                  handleTokenDragOver(e, token);
+                                }}
+                                onDragLeave={(e) => {
+                                  e.stopPropagation();
+                                  console.log('🔄 Reorder drag leave:', token.name);
+                                  handleTokenDragLeave();
+                                }}
+                                onDragEnd={(e) => {
+                                  e.stopPropagation();
+                                  console.log('🔄 Reorder drag end:', token.name);
+                                  handleTokenDragEnd();
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('🔄 Reorder drop event fired on:', token.name);
+                                  handleTokenDrop(e, token);
+                                }}
                               >
                                 ⋮⋮
                               </div>
                               <div
                                 className="flex-1 cursor-grab"
                                 draggable
-                                onDragStart={(e) => onDragFromPanel(token, e)}
+                                onDragStart={(e) => {
+                                  e.stopPropagation();
+                                  onDragFromPanel(token, e);
+                                }}
                               >
                                 <div className="font-medium text-sm flex items-center gap-2 dtm-text-primary">
                                   <div
@@ -2721,13 +2920,28 @@ export default function Index() {
                             </div>
                             {/* Action Buttons */}
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                              <button
+                              <button
+                                className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
+                                onClick={() => editToken(token)}
+                                title="Edit token"
+                              >
+                                <Edit size={12}/>
+                              </button>
+                              {/* Remove from group button - only show if token is in a group */}
+                              {tokenGroups.find(g => g.tokenIds.includes(token.id)) && (
+                                <button
                                   className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
-                                  onClick={() => editToken(token)}
-                                  title="Edit token"
+                                  onClick={() => {
+                                    const group = tokenGroups.find(g => g.tokenIds.includes(token.id));
+                                    if (group) {
+                                      removeTokenFromGroup(group.id, token.id);
+                                    }
+                                  }}
+                                  title="Remove from group"
                                 >
-                                  <Edit size={12}/>
+                                  <Ungroup size={12} />
                                 </button>
+                              )}
                               <button
                                 className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all"
                                 onClick={() =>
@@ -2866,28 +3080,37 @@ export default function Index() {
                           return (
                             <div
                               key={tokenId}
-                              className="dtm-bg-secondary/30 border dtm-border-secondary/50 rounded-md p-2 text-sm"
+                              className="dtm-bg-secondary/30 border dtm-border-secondary/50 rounded-md p-2 text-sm group"
                             >
-                              <div className="flex items-center">
-                                {token.type === "color" &&
-                                  token.value.startsWith("#") && (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  {token.type === "color" &&
+                                    token.value.startsWith("#") && (
+                                      <div
+                                        className="w-3 h-3 rounded border border-white/20 mr-2"
+                                        style={{ backgroundColor: token.value }}
+                                      />
+                                    )}
+                                  <div className="flex items-center gap-2">
                                     <div
-                                      className="w-3 h-3 rounded border border-white/20 mr-2"
-                                      style={{ backgroundColor: token.value }}
+                                      className={`w-3 h-3 rounded-full ${
+                                        token.layer === "base" ? "dtm-token-base" :
+                                        token.layer === "semantic" ? "dtm-token-semantic" :
+                                        "dtm-token-specific"
+                                      }`}
                                     />
-                                  )}
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className={`w-3 h-3 rounded-full ${
-                                      token.layer === "base" ? "dtm-token-base" :
-                                      token.layer === "semantic" ? "dtm-token-semantic" :
-                                      "dtm-token-specific"
-                                    }`}
-                                  />
-                                  <span className="font-medium dtm-text-primary">
-                                    {token.name}
-                                  </span>
+                                    <span className="font-medium dtm-text-primary">
+                                      {token.name}
+                                    </span>
+                                  </div>
                                 </div>
+                                <button
+                                  className="w-5 h-5 dtm-btn-secondary rounded flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                                  onClick={() => removeTokenFromGroup(group.id, tokenId)}
+                                  title="Remove from group"
+                                >
+                                  <Ungroup size={10} />
+                                </button>
                               </div>
                               <div className="text-xs dtm-text-muted mt-1">
                                 {token.value}
@@ -3111,7 +3334,7 @@ export default function Index() {
               const toPos = nodePositions[connection.to];
               if (!fromPos || !toPos) return null;
 
-              // Check if both tokens are in the same collapsed group
+              // Check if tokens are in groups and their collapsed state
               const fromTokenGroup = tokenGroups.find((group) =>
                 group.tokenIds.includes(connection.from)
               );
@@ -3119,10 +3342,11 @@ export default function Index() {
                 group.tokenIds.includes(connection.to)
               );
               
-              // Only hide connection if BOTH tokens are in the SAME collapsed group
+              // Hide connection if BOTH tokens are in DIFFERENT groups and BOTH groups are collapsed
               if (fromTokenGroup && toTokenGroup && 
-                  fromTokenGroup.id === toTokenGroup.id && 
-                  fromTokenGroup.canvasCollapsed) {
+                  fromTokenGroup.id !== toTokenGroup.id && 
+                  fromTokenGroup.canvasCollapsed && 
+                  toTokenGroup.canvasCollapsed) {
                 return null;
               }
 
@@ -3226,6 +3450,8 @@ export default function Index() {
                 onDragGroup={(tokenId, x, y) =>
                   setNodePositions((prev) => ({ ...prev, [tokenId]: { x, y } }))
                 }
+                onAddTokenToGroup={addTokenToGroup}
+                onRemoveTokenFromGroup={removeTokenFromGroup}
                 canvasRef={canvasRef}
                 canvasOffset={canvasOffset}
                 canvasScale={canvasScale}
@@ -3272,6 +3498,8 @@ export default function Index() {
                     isPanningMode={isSpacePressed || isDraggingCanvas}
                     onDragEnd={markHistory}
                     connections={connections}
+                    isInGroup={!!tokenGroup}
+                    onRemoveFromGroup={tokenGroup ? (tokenId) => removeTokenFromGroup(tokenGroup.id, tokenId) : undefined}
                   />
                 );
               })}
