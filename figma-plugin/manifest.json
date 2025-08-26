@@ -1,0 +1,13 @@
+{
+  "name": "DTM Token Sync - Clean",
+  "id": "dtm-token-sync-clean",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "permissions": ["currentuser", "activeusers"],
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["http://localhost", "https://localhost", "http://localhost:8080", "https://localhost:8080"],
+    "reasoning": "This plugin needs to connect to local development servers to sync design tokens from the DTM application to Figma variables."
+  }
+}

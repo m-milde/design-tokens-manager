@@ -1,0 +1,13 @@
+{
+  "name": "DTM Token Sync - Clean",
+  "id": "dtm-token-sync-clean",
+  "api": "1.0.0",
+  "main": "clean-code.js",
+  "ui": "clean-ui.html",
+  "capabilities": ["variables"],
+  "permissions": ["currentuser", "activeusers"],
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["localhost", "127.0.0.1", "*"]
+  }
+}
