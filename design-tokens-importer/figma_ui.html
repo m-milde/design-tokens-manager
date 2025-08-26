@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: #ffffff;
+        }
+        
+        .container {
+            max-width: 300px;
+        }
+        
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            color: #333;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+            margin-bottom: 16px;
+        }
+        
+        .upload-area:hover {
+            border-color: #18a0fb;
+        }
+        
+        .upload-area.dragover {
+            border-color: #18a0fb;
+            background-color: #f0f8ff;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .upload-text {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .file-info {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+        
+        button {
+            background: #18a0fb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        button:hover {
+            background: #0d8ce8;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 16px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status.success {
+            background: #e8f5e8;
+            color: #2d6a2d;
+            border: 1px solid #a3d4a3;
+        }
+        
+        .status.error {
+            background: #fdeaea;
+            color: #cc0000;
+            border: 1px solid #f5b2b2;
+        }
+        
+        .token-preview {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #f8f8f8;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 11px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Design Tokens Importer</h1>
+        
+        <div class="upload-area" id="upload-area">
+            <div class="upload-text">
+                Drop JSON file here or click to browse
+            </div>
+            <div class="file-info">
+                Supports design token JSON files
+            </div>
+            <input type="file" id="file-input" accept=".json" />
+        </div>
+        
+        <div id="file-name" style="display: none;">
+            <strong>Selected file:</strong> <span id="file-name-text"></span>
+        </div>
+        
+        <div id="token-preview" class="token-preview" style="display: none;"></div>
+        
+        <button id="import-btn" disabled>Import Tokens</button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const importBtn = document.getElementById('import-btn');
+        const status = document.getElementById('status');
+        const fileName = document.getElementById('file-name');
+        const fileNameText = document.getElementById('file-name-text');
+        const tokenPreview = document.getElementById('token-preview');
+        
+        let selectedFile = null;
+        let tokensData = null;
+
+        // Handle file selection
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', handleFileSelection);
+
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelection(e) {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            if (file.type !== 'application/json') {
+                showStatus('Please select a JSON file.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            fileNameText.textContent = file.name;
+            fileName.style.display = 'block';
+
+            // Read and parse JSON
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    tokensData = JSON.parse(e.target.result);
+                    showTokenPreview(tokensData);
+                    importBtn.disabled = false;
+                    showStatus('', '');
+                } catch (error) {
+                    showStatus('Invalid JSON file. Please check the file format.', 'error');
+                    importBtn.disabled = true;
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showTokenPreview(data) {
+            const preview = JSON.stringify(data, null, 2);
+            const truncated = preview.length > 500 ? preview.substring(0, 500) + '...' : preview;
+            tokenPreview.textContent = truncated;
+            tokenPreview.style.display = 'block';
+        }
+
+        function showStatus(message, type) {
+            if (message) {
+                status.textContent = message;
+                status.className = `status ${type}`;
+                status.style.display = 'block';
+            } else {
+                status.style.display = 'none';
+            }
+        }
+
+        // Handle import button click
+        importBtn.addEventListener('click', () => {
+            if (tokensData) {
+                showStatus('Importing tokens...', 'success');
+                parent.postMessage({
+                    pluginMessage: {
+                        type: 'import-tokens',
+                        tokens: tokensData
+                    }
+                }, '*');
+            }
+        });
+
+        // Listen for messages from the main plugin code
+        window.addEventListener('message', (event) => {
+            const { type, message, success } = event.data.pluginMessage || {};
+            
+            if (type === 'import-result') {
+                showStatus(message, success ? 'success' : 'error');
+                if (success) {
+                    importBtn.disabled = true;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

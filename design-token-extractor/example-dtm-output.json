@@ -1,0 +1,200 @@
+{
+  "$schema": "https://specs.figma.com/design-tokens",
+  "$metadata": {
+    "tokenSetOrder": ["colors", "typography", "shadows", "spacing", "radius"]
+  },
+  "colors": {
+    "primary-blue": {
+      "$value": "#18a0fb",
+      "$type": "color",
+      "$description": "Color style: Primary Blue",
+      "$extensions": {
+        "figma.styleId": "1:2",
+        "figma.styleName": "Primary Blue"
+      }
+    },
+    "secondary-gray": {
+      "$value": "#666666",
+      "$type": "color",
+      "$description": "Color style: Secondary Gray",
+      "$extensions": {
+        "figma.styleId": "1:3",
+        "figma.styleName": "Secondary Gray"
+      }
+    },
+    "accent-green": {
+      "$value": "#4caf50",
+      "$type": "color",
+      "$description": "Color style: Accent Green",
+      "$extensions": {
+        "figma.styleId": "1:4",
+        "figma.styleName": "Accent Green"
+      }
+    }
+  },
+  "typography": {
+    "heading-large": {
+      "$value": {
+        "fontFamily": "Inter",
+        "fontWeight": "Bold",
+        "fontSize": "32px",
+        "lineHeight": "40px"
+      },
+      "$type": "typography",
+      "$description": "Typography style: Heading Large",
+      "$extensions": {
+        "figma.styleId": "2:1",
+        "figma.styleName": "Heading Large"
+      }
+    },
+    "body-text": {
+      "$value": {
+        "fontFamily": "Inter",
+        "fontWeight": "Regular",
+        "fontSize": "16px",
+        "lineHeight": "24px"
+      },
+      "$type": "typography",
+      "$description": "Typography style: Body Text",
+      "$extensions": {
+        "figma.styleId": "2:2",
+        "figma.styleName": "Body Text"
+      }
+    },
+    "caption": {
+      "$value": {
+        "fontFamily": "Inter",
+        "fontWeight": "Medium",
+        "fontSize": "14px",
+        "lineHeight": "20px"
+      },
+      "$type": "typography",
+      "$description": "Typography style: Caption",
+      "$extensions": {
+        "figma.styleId": "2:3",
+        "figma.styleName": "Caption"
+      }
+    }
+  },
+  "shadows": {
+    "card-shadow": {
+      "$value": "0px 4px 12px #0000001a",
+      "$type": "boxShadow",
+      "$description": "Shadow style: Card Shadow",
+      "$extensions": {
+        "figma.styleId": "3:1",
+        "figma.styleName": "Card Shadow"
+      }
+    },
+    "button-shadow": {
+      "$value": "0px 2px 8px #18a0fb40",
+      "$type": "boxShadow",
+      "$description": "Shadow style: Button Shadow",
+      "$extensions": {
+        "figma.styleId": "3:2",
+        "figma.styleName": "Button Shadow"
+      }
+    },
+    "elevated-shadow": {
+      "$value": "0px 8px 24px #00000026",
+      "$type": "boxShadow",
+      "$description": "Shadow style: Elevated Shadow",
+      "$extensions": {
+        "figma.styleId": "3:3",
+        "figma.styleName": "Elevated Shadow"
+      }
+    }
+  },
+  "spacing": {
+    "xs": {
+      "$value": "4px",
+      "$type": "spacing",
+      "$description": "Spacing value: 4px",
+      "$extensions": {
+        "figma.value": 4
+      }
+    },
+    "sm": {
+      "$value": "8px",
+      "$type": "spacing",
+      "$description": "Spacing value: 8px",
+      "$extensions": {
+        "figma.value": 8
+      }
+    },
+    "md": {
+      "$value": "16px",
+      "$type": "spacing",
+      "$description": "Spacing value: 16px",
+      "$extensions": {
+        "figma.value": 16
+      }
+    },
+    "lg": {
+      "$value": "24px",
+      "$type": "spacing",
+      "$description": "Spacing value: 24px",
+      "$extensions": {
+        "figma.value": 24
+      }
+    },
+    "xl": {
+      "$value": "32px",
+      "$type": "spacing",
+      "$description": "Spacing value: 32px",
+      "$extensions": {
+        "figma.value": 32
+      }
+    },
+    "2xl": {
+      "$value": "48px",
+      "$type": "spacing",
+      "$description": "Spacing value: 48px",
+      "$extensions": {
+        "figma.value": 48
+      }
+    }
+  },
+  "radius": {
+    "none": {
+      "$value": "0px",
+      "$type": "dimension",
+      "$description": "Border radius: 0px",
+      "$extensions": {
+        "figma.value": 0
+      }
+    },
+    "sm": {
+      "$value": "4px",
+      "$type": "dimension",
+      "$description": "Border radius: 4px",
+      "$extensions": {
+        "figma.value": 4
+      }
+    },
+    "md": {
+      "$value": "8px",
+      "$type": "dimension",
+      "$description": "Border radius: 8px",
+      "$extensions": {
+        "figma.value": 8
+      }
+    },
+    "lg": {
+      "$value": "16px",
+      "$type": "dimension",
+      "$description": "Border radius: 16px",
+      "$extensions": {
+        "figma.value": 16
+      }
+    },
+    "xl": {
+      "$value": "24px",
+      "$type": "dimension",
+      "$description": "Border radius: 24px",
+      "$extensions": {
+        "figma.value": 24
+      }
+    }
+  }
+}

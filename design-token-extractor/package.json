@@ -1,0 +1,23 @@
+{
+  "name": "design-token-extractor",
+  "version": "1.0.0",
+  "description": "Figma plugin to extract design tokens and save them as JSON",
+  "main": "code.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.82.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "figma",
+    "plugin",
+    "design-tokens",
+    "extractor",
+    "json"
+  ],
+  "author": "Design Token Extractor",
+  "license": "MIT"
+}

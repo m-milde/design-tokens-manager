@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: #ffffff;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 360px;
+        }
+        
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            color: #333;
+            text-align: center;
+        }
+        
+        .description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.4;
+        }
+        
+        .extract-button {
+            background: #18a0fb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .extract-button:hover {
+            background: #0d8ce8;
+        }
+        
+        .extract-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin: 16px 0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .status.success {
+            background: #e8f5e8;
+            color: #2d6a2d;
+            border: 1px solid #a3d4a3;
+        }
+        
+        .status.error {
+            background: #fdeaea;
+            color: #cc0000;
+            border: 1px solid #f5b2b2;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+        }
+        
+        .token-preview {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            background: #f9f9f9;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .download-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .download-button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .download-button:hover {
+            background: #45a049;
+        }
+        
+        .download-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .file-name-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #18a0fb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Design Token Extractor</h1>
+        <p class="description">
+            Extract design tokens from your Figma file including colors, typography, spacing, shadows, and more.
+        </p>
+        
+        <button id="extract-btn" class="extract-button">
+            <span id="extract-text">Extract Design Tokens</span>
+            <span id="extract-loading" class="loading hidden"></span>
+        </button>
+        
+        <div id="status" class="status hidden"></div>
+        
+        <div id="download-section" class="download-section hidden">
+            <input type="text" id="file-name" class="file-name-input" placeholder="design-tokens.json" value="design-tokens.json">
+            <button id="download-btn" class="download-button">Download JSON File</button>
+        </div>
+        
+        <div id="token-preview" class="token-preview hidden"></div>
+    </div>
+
+    <script>
+        let extractedTokens = null;
+        
+        document.getElementById('extract-btn').addEventListener('click', async () => {
+            const button = document.getElementById('extract-btn');
+            const buttonText = document.getElementById('extract-text');
+            const loading = document.getElementById('extract-loading');
+            const status = document.getElementById('status');
+            
+            // Show loading state
+            button.disabled = true;
+            buttonText.textContent = 'Extracting...';
+            loading.classList.remove('hidden');
+            status.classList.add('hidden');
+            
+            try {
+                // Send message to plugin to extract tokens
+                parent.postMessage({ pluginMessage: { type: 'extract-tokens' } }, '*');
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+                resetButton();
+            }
+        });
+        
+        document.getElementById('download-btn').addEventListener('click', () => {
+            if (extractedTokens) {
+                downloadTokens(extractedTokens);
+            }
+        });
+        
+        // Listen for messages from the plugin
+        window.addEventListener('message', (event) => {
+            const message = event.data.pluginMessage;
+            
+            if (message && message.type === 'extraction-result') {
+                if (message.success) {
+                    extractedTokens = message.tokens;
+                    showStatus('✅ Tokens extracted successfully!', 'success');
+                    showDownloadSection();
+                    showTokenPreview(extractedTokens);
+                } else {
+                    showStatus('❌ ' + message.message, 'error');
+                }
+                resetButton();
+            }
+        });
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.classList.remove('hidden');
+        }
+        
+        function resetButton() {
+            const button = document.getElementById('extract-btn');
+            const buttonText = document.getElementById('extract-text');
+            const loading = document.getElementById('extract-loading');
+            
+            button.disabled = false;
+            buttonText.textContent = 'Extract Design Tokens';
+            loading.classList.add('hidden');
+        }
+        
+        function showDownloadSection() {
+            document.getElementById('download-section').classList.remove('hidden');
+        }
+        
+        function showTokenPreview(tokens) {
+            const preview = document.getElementById('token-preview');
+            preview.textContent = JSON.stringify(tokens, null, 2);
+            preview.classList.remove('hidden');
+        }
+        
+        function downloadTokens(tokens) {
+            const fileName = document.getElementById('file-name').value || 'design-tokens.json';
+            const dataStr = JSON.stringify(tokens, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = fileName;
+            link.click();
+            
+            URL.revokeObjectURL(link.href);
+        }
+    </script>
+</body>
+</html>

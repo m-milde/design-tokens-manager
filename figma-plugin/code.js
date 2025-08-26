@@ -7,8 +7,110 @@ console.log('UI API available:', !!figma.ui);
 console.log('Available APIs:', Object.keys(figma).filter(key => key !== 'ui' && key !== 'variables'));
 
 figma.ui.onmessage = async (msg) => {
+  console.log('Plugin received message:', msg);
+  
   if (msg.type === 'connected') {
     figma.notify('✅ Connected to DTM App!');
+  }
+  
+  if (msg.type === 'sync-manual-data') {
+    try {
+      figma.notify('🔄 Syncing manual data to Figma...');
+      
+      const tokenData = msg.data;
+      console.log('Manual data received:', tokenData);
+      
+      // Normalize the data structure for different formats (SD, DTCG, etc.)
+      const normalizedData = normalizeTokenData(tokenData);
+      console.log('Normalized data:', normalizedData);
+      
+      // Create variable collections
+      const collections = await createVariableCollections();
+      console.log('Collections created:', collections);
+      
+      // Create variables
+      const variables = await createVariables(normalizedData.tokens, collections);
+      console.log('Variables created:', variables);
+      
+      // Debug: Check if variables were actually created
+      console.log('Variables object keys:', Object.keys(variables));
+      console.log('Variables object values:', variables);
+      
+      // Create aliases
+      if (normalizedData.connections && normalizedData.connections.length > 0) {
+        await createAliases(normalizedData.connections, variables);
+        console.log('Aliases created');
+      }
+      
+      figma.notify('✅ Manual data synced successfully!');
+      
+    } catch (error) {
+      figma.notify('❌ Error syncing manual data: ' + error.message, { error: true });
+      console.error('Manual sync error:', error);
+    }
+  }
+  
+  if (msg.type === 'test-connection') {
+    try {
+      figma.notify('🔄 Testing connection to DTM App...');
+      
+      const response = await fetch('http://localhost:8080/api/tokens');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      figma.notify('✅ Connection successful! Found ' + (data.tokens ? Object.keys(data.tokens).length : 0) + ' token layers');
+      
+      // Send success message back to UI
+      figma.ui.postMessage({ type: 'connection-success', data });
+      
+    } catch (error) {
+      figma.notify('❌ Connection failed: ' + error.message, { error: true });
+      console.error('Connection test error:', error);
+      
+      // Send error message back to UI
+      figma.ui.postMessage({ type: 'connection-error', error: error.message });
+    }
+  }
+  
+  if (msg.type === 'create-test-token') {
+    try {
+      figma.notify('🧪 Creating test token...');
+      
+      // Create a simple test collection and token
+      const testCollection = figma.variables.createVariableCollection('DTM Test');
+      console.log('Test collection created:', testCollection);
+      console.log('Test collection type:', typeof testCollection);
+      console.log('Test collection keys:', Object.keys(testCollection));
+      
+      const lightMode = testCollection.addMode('Light');
+      const darkMode = testCollection.addMode('Dark');
+      
+      // Create a test color variable
+      console.log('About to create test variable in collection:', testCollection);
+      const testVariable = figma.variables.createVariable('test-color', 'COLOR', testCollection);
+      console.log('Test variable created:', testVariable);
+      
+      // Set values for both modes
+      const lightColor = { r: 0.2, g: 0.5, b: 1.0 };
+      const darkColor = { r: 0.8, g: 0.9, b: 1.0 };
+      
+      testVariable.setValueForMode(lightMode.id, lightColor);
+      testVariable.setValueForMode(darkMode.id, darkColor);
+      
+      figma.notify('✅ Test token created successfully! Check Variables panel.');
+      
+      // Send success message back to UI
+      figma.ui.postMessage({ type: 'test-token-created' });
+      
+    } catch (error) {
+      figma.notify('❌ Failed to create test token: ' + error.message, { error: true });
+      console.error('Test token creation error:', error);
+      
+      // Send error message back to UI
+      figma.ui.postMessage({ type: 'test-token-error', error: error.message });
+    }
   }
   
   if (msg.type === 'sync-tokens') {
@@ -97,7 +199,7 @@ figma.ui.onmessage = async (msg) => {
       console.log('Light mode added:', lightMode);
       
       // Create a simple color variable
-      const testVariable = testCollection.createVariable('test-color', 'COLOR');
+      const testVariable = figma.variables.createVariable('test-color', 'COLOR');
       console.log('Test variable created:', testVariable);
       
       // Set the color value (RGB values between 0 and 1)
@@ -154,23 +256,75 @@ figma.ui.onmessage = async (msg) => {
   }
 };
 
+// Normalize token data from different formats (SD, DTCG, etc.)
+function normalizeTokenData(data) {
+  console.log('Normalizing token data:', data);
+  
+  // Handle different data structures
+  if (data.tokens) {
+    // Standard format - already normalized
+    return data;
+  }
+  
+  // Handle SD format (if different structure)
+  if (data.designTokens || data.values) {
+    // Convert SD format to our standard format
+    return convertSDFormat(data);
+  }
+  
+  // Handle DTCG format (if different structure)
+  if (data.$schema && data.$schema.includes('dtcg')) {
+    // Convert DTCG format to our standard format
+    return convertDTCGFormat(data);
+  }
+  
+  // Fallback: assume it's already in the right format
+  return data;
+}
+
+function convertSDFormat(data) {
+  // Convert SD format to our standard format
+  // This is a placeholder - adjust based on your actual SD format
+  return {
+    tokens: {
+      base: data.values || data.designTokens || [],
+      semantic: [],
+      specific: []
+    },
+    connections: []
+  };
+}
+
+function convertDTCGFormat(data) {
+  // Convert DTCG format to our standard format
+  // This is a placeholder - adjust based on your actual DTCG format
+  return {
+    tokens: {
+      base: data.tokens || data.values || [],
+      semantic: [],
+      specific: []
+    },
+    connections: data.connections || []
+  };
+}
+
 function createSampleTokens() {
   return {
     tokens: {
       base: [
-        { id: "token_base_1", name: "color-primary", value: "#3b82f6", type: "COLOR", layer: "base" },
-        { id: "token_base_2", name: "color-secondary", value: "#6b7280", type: "COLOR", layer: "base" },
-        { id: "token_base_3", name: "spacing-xs", value: 4, type: "FLOAT", layer: "base" },
-        { id: "token_base_4", name: "spacing-sm", value: 8, type: "FLOAT", layer: "base" }
+        { id: "token_base_1", name: "color-primary", value: "#3b82f6", type: "color", layer: "base" },
+        { id: "token_base_2", name: "color-secondary", value: "#6b7280", type: "color", layer: "base" },
+        { id: "token_base_3", name: "spacing-xs", value: 4, type: "spacing", layer: "base" },
+        { id: "token_base_4", name: "spacing-sm", value: 8, type: "spacing", layer: "base" }
       ],
       semantic: [
-        { id: "token_semantic_1", name: "color-primary-default", value: "#3b82f6", type: "COLOR", layer: "semantic" },
-        { id: "token_semantic_2", name: "color-primary-hover", value: "#1d4ed8", type: "COLOR", layer: "semantic" },
-        { id: "token_semantic_3", name: "spacing-card", value: 8, type: "FLOAT", layer: "semantic" }
+        { id: "token_semantic_1", name: "color-primary-default", value: "#3b82f6", type: "color", layer: "semantic" },
+        { id: "token_semantic_2", name: "color-primary-hover", value: "#1d4ed8", type: "color", layer: "semantic" },
+        { id: "token_semantic_3", name: "spacing-card", value: 8, type: "spacing", layer: "semantic" }
       ],
       specific: [
-        { id: "token_specific_1", name: "button-primary-bg", value: "#3b82f6", type: "COLOR", layer: "specific" },
-        { id: "token_specific_2", name: "button-primary-padding", value: 8, type: "FLOAT", layer: "specific" }
+        { id: "token_specific_1", name: "button-primary-bg", value: "#3b82f6", type: "color", layer: "specific" },
+        { id: "token_specific_2", name: "button-primary-padding", value: 8, type: "spacing", layer: "specific" }
       ]
     },
     connections: [
@@ -187,8 +341,6 @@ async function createVariableCollections() {
   // Create base collection
   const baseCollection = figma.variables.createVariableCollection('DTM - Base');
   console.log('Base collection created:', baseCollection);
-  console.log('Base collection methods:', Object.keys(baseCollection));
-  console.log('Base collection prototype:', Object.getPrototypeOf(baseCollection));
   
   const lightMode = baseCollection.addMode('Light');
   const darkMode = baseCollection.addMode('Dark');
@@ -202,7 +354,6 @@ async function createVariableCollections() {
   // Create semantic collection
   const semanticCollection = figma.variables.createVariableCollection('DTM - Semantic');
   console.log('Semantic collection created:', semanticCollection);
-  console.log('Semantic collection methods:', Object.keys(semanticCollection));
   
   const semanticLightMode = semanticCollection.addMode('Light');
   const semanticDarkMode = semanticCollection.addMode('Dark');
@@ -216,7 +367,6 @@ async function createVariableCollections() {
   // Create specific collection
   const specificCollection = figma.variables.createVariableCollection('DTM - Specific');
   console.log('Specific collection created:', specificCollection);
-  console.log('Specific collection methods:', Object.keys(specificCollection));
   
   const specificLightMode = specificCollection.addMode('Light');
   const specificDarkMode = specificCollection.addMode('Dark');
@@ -261,6 +411,12 @@ async function createVariables(tokens, collections) {
       console.log('Processing token: ' + token.name + ' (' + token.layer + ')');
       
       // Create variable based on type
+      console.log('About to call createVariableByType with:', {
+        collection: collection.collection,
+        collectionType: typeof collection.collection,
+        collectionKeys: Object.keys(collection.collection || {}),
+        token: token
+      });
       const variable = createVariableByType(collection.collection, token);
       console.log('Variable created for ' + token.name + ':', variable);
       
@@ -280,87 +436,67 @@ async function createVariables(tokens, collections) {
   }
   
   console.log('Final variables object:', variables);
+  console.log('Variables object length:', Object.keys(variables).length);
+  console.log('Variables object keys:', Object.keys(variables));
   return variables;
 }
 
 function createVariableByType(collection, token) {
   console.log('=== CREATE VARIABLE DEBUG ===');
+  console.log('Token:', token);
   console.log('Collection object:', collection);
   console.log('Collection type:', typeof collection);
-  console.log('Collection methods:', Object.keys(collection));
-  console.log('Collection prototype:', Object.getPrototypeOf(collection));
+  console.log('Collection keys:', Object.keys(collection || {}));
+  console.log('Collection id:', collection && collection.id);
+  console.log('Collection name:', collection && collection.name);
   
-  // The collection object seems to be missing methods, let's try using figma.variables directly
-  console.log('Trying figma.variables.createVariable...');
+  // Normalize token type to match Figma's expected format
+  let normalizedType = token.type;
+  if (typeof normalizedType === 'string') {
+    normalizedType = normalizedType.toLowerCase();
+  }
   
-  if (typeof figma.variables.createVariable === 'function') {
-    console.log('Using figma.variables.createVariable');
-    console.log('Collection object:', collection);
-    console.log('Collection type:', typeof collection);
+  // Map DTM types to Figma types
+  const typeMapping = {
+    // DTM types -> Figma types
+    'color': 'COLOR',
+    'text': 'STRING',      // DTM Text -> Figma String
+    'spacing': 'FLOAT',    // DTM Spacing -> Figma Number
+    'boolean': 'BOOLEAN',
+    'string': 'STRING',
+    'number': 'FLOAT',
     
-    // The error message says: "Please pass the collection node instead"
-    // So we should pass the collection object, not the ID
-    try {
-      // Pass the collection object directly
-      switch (token.type) {
-        case 'COLOR':
-          return figma.variables.createVariable(token.name, 'COLOR', collection);
-        case 'FLOAT':
-          return figma.variables.createVariable(token.name, 'FLOAT', collection);
-        case 'TEXT':
-          return figma.variables.createVariable(token.name, 'TEXT', collection);
-        default:
-          return figma.variables.createVariable(token.name, 'TEXT', collection);
-      }
-    } catch (error) {
-      console.log('Creating with collection object failed:', error.message);
-      
-      // Try without collection parameter (maybe it's not needed)
-      try {
-        console.log('Trying without collection parameter...');
-        switch (token.type) {
-          case 'COLOR':
-            return figma.variables.createVariable(token.name, 'COLOR');
-          case 'FLOAT':
-            return figma.variables.createVariable(token.name, 'FLOAT');
-          case 'TEXT':
-            return figma.variables.createVariable(token.name, 'TEXT');
-          default:
-            return figma.variables.createVariable(token.name, 'TEXT');
-        }
-      } catch (error2) {
-        console.log('Creating without collection parameter also failed:', error2.message);
-        throw error2;
-      }
-    }
+    // Also handle uppercase versions
+    'COLOR': 'COLOR',
+    'TEXT': 'STRING',
+    'SPACING': 'FLOAT',
+    'BOOLEAN': 'BOOLEAN',
+    'STRING': 'STRING',
+    'NUMBER': 'FLOAT',
+    
+    // Handle legacy types
+    'borderRadius': 'FLOAT',
+    'BORDERRADIUS': 'FLOAT'
+  };
+  
+  const figmaType = typeMapping[normalizedType] || 'STRING';
+  console.log(`Token type: ${token.type} -> Normalized: ${figmaType}`);
+  
+  // Create variable WITHIN the collection to avoid ID issues
+  try {
+    console.log('Creating variable within collection object:', collection);
+    const variable = figma.variables.createVariable(token.name, figmaType, collection);
+    console.log('Variable created successfully:', variable);
+    return variable;
+  } catch (error) {
+    console.error('Failed to create variable:', error);
+    throw new Error(`Failed to create variable: ${error.message}`);
   }
-  
-  // If that doesn't work, try alternative approaches
-  console.log('figma.variables.createVariable not available, trying alternatives...');
-  
-  // Check what methods are available on figma.variables
-  console.log('Available figma.variables methods:', Object.keys(figma.variables));
-  
-  // Try to find any method that might create variables
-  const possibleMethods = ['createVariable', 'addVariable', 'newVariable', 'create'];
-  for (let i = 0; i < possibleMethods.length; i++) {
-    const methodName = possibleMethods[i];
-    if (figma.variables[methodName]) {
-      console.log('Found alternative method: ' + methodName);
-      try {
-        return figma.variables[methodName](token.name, 'COLOR', collection);
-      } catch (e) {
-        console.log('Method ' + methodName + ' failed:', e);
-      }
-    }
-  }
-  
-  throw new Error('No method found to create variables. Collection methods: ' + Object.keys(collection).join(', ') + '. Figma.variables methods: ' + Object.keys(figma.variables).join(', '));
 }
 
 function setVariableValue(variable, token, modes) {
   if (token.value) {
-    if (token.type === 'COLOR') {
+    if (token.type === 'COLOR' || token.type === 'color') {
       const colorValue = parseColorValue(token.value);
       if (colorValue) {
         variable.setValueForMode(modes.light.id, colorValue);
@@ -442,8 +578,13 @@ function hslToRgb(h, s, l) {
 async function createAliases(connections, variables) {
   for (let i = 0; i < connections.length; i++) {
     const connection = connections[i];
-    const sourceVariable = findVariableByName(connection.source, variables);
-    const targetVariable = findVariableByName(connection.target, variables);
+    
+    // Handle both connection formats (source/target and from/to)
+    const sourceName = connection.source || connection.from;
+    const targetName = connection.target || connection.to;
+    
+    const sourceVariable = findVariableByName(sourceName, variables);
+    const targetVariable = findVariableByName(targetName, variables);
     
     if (sourceVariable && targetVariable) {
       // Set target variable to reference source variable
@@ -454,4 +595,4 @@ async function createAliases(connections, variables) {
 
 function findVariableByName(name, variables) {
   return variables[name] || null;
-}
+} 

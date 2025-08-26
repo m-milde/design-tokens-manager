@@ -32,6 +32,24 @@ function expressPlugin(): Plugin {
     configureServer(server) {
       const app = createServer();
 
+      // Add CORS middleware first
+      server.middlewares.use((req, res, next) => {
+        // Set CORS headers for all requests
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        
+        // Handle preflight requests
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
+        
+        next();
+      });
+
       // Add Express app as middleware to Vite dev server
       server.middlewares.use(app);
     },

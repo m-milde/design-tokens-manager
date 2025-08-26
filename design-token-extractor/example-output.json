@@ -1,0 +1,73 @@
+{
+  "colors": {
+    "primary-blue": {
+      "$value": "#18a0fb",
+      "$type": "color",
+      "$description": "Color style: Primary Blue"
+    },
+    "secondary-gray": {
+      "$value": "#666666",
+      "$type": "color",
+      "$description": "Color style: Secondary Gray"
+    },
+    "accent-green": {
+      "$value": "#4caf50",
+      "$type": "color",
+      "$description": "Color style: Accent Green"
+    }
+  },
+  "typography": {
+    "heading-large": {
+      "$value": "Inter",
+      "$type": "fontFamily",
+      "$description": "Font family for: Heading Large"
+    },
+    "heading-large-weight": {
+      "$value": "Bold",
+      "$type": "fontWeight",
+      "$description": "Font weight for: Heading Large"
+    },
+    "heading-large-size": {
+      "$value": "32px",
+      "$type": "dimension",
+      "$description": "Font size for: Heading Large"
+    },
+    "heading-large-line-height": {
+      "$value": "40px",
+      "$type": "dimension",
+      "$description": "Line height for: Heading Large"
+    },
+    "body-text": {
+      "$value": "Inter",
+      "$type": "fontFamily",
+      "$description": "Font family for: Body Text"
+    },
+    "body-text-weight": {
+      "$value": "Regular",
+      "$type": "fontWeight",
+      "$description": "Font weight for: Body Text"
+    },
+    "body-text-size": {
+      "$value": "16px",
+      "$type": "dimension",
+      "$description": "Font size for: Body Text"
+    },
+    "body-text-line-height": {
+      "$value": "24px",
+      "$type": "dimension",
+      "$description": "Line height for: Body Text"
+    }
+  },
+  "shadows": {
+    "card-shadow": {
+      "$value": "0px 4px 12px #0000001a",
+      "$type": "boxShadow",
+      "$description": "Shadow style: Card Shadow"
+    },
+    "button-shadow": {
+      "$value": "0px 2px 8px #18a0fb40",
+      "$type": "boxShadow",
+      "$description": "Shadow style: Button Shadow"
+    }
+  }
+}

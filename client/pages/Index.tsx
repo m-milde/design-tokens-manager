@@ -728,7 +728,7 @@ export default function Index() {
   } | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importData, setImportData] = useState("");
-  const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg" | "generic">("style-dictionary");
+  const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic">("nested-collections");
 
   // New state for UI features
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -2346,6 +2346,10 @@ export default function Index() {
         result = importFromStyleDictionary(parsedData);
       } else if (importFormat === "dtcg") {
         result = importFromDTCG(parsedData);
+      } else if (importFormat === "flat-json") {
+        result = importFromFlatJSON(parsedData);
+      } else if (importFormat === "nested-collections") {
+        result = importFromNestedCollections(parsedData);
       } else {
         result = importGenericFormat(parsedData);
       }
@@ -2534,8 +2538,36 @@ export default function Index() {
 
     // Create the final Style Dictionary structure
     const exportData = {
-      // Style Dictionary expects tokens at the root level
-      ...styleDictionaryTokens,
+      // Transform to flat structure that Figma plugin expects
+      tokens: {
+        base: tokens.base.map(token => ({
+          id: token.id,
+          name: token.name,
+          value: token.value,
+          type: token.type,
+          layer: "base"
+        })),
+        semantic: tokens.semantic.map(token => ({
+          id: token.id,
+          name: token.name,
+          value: token.value,
+          type: token.type,
+          layer: "semantic"
+        })),
+        specific: tokens.specific.map(token => ({
+          id: token.id,
+          name: token.name,
+          value: token.value,
+          type: token.type,
+          layer: "specific"
+        }))
+      },
+      
+      // Transform connections to source/target format
+      connections: connections.map(conn => ({
+        source: conn.from,
+        target: conn.to
+      })),
       
       // Add metadata as a separate property (optional)
       $metadata: {
@@ -2545,20 +2577,7 @@ export default function Index() {
         layers: ["base", "semantic", "specific"],
         totalTokens: Object.values(tokens).flat().length,
         connections: connections.length,
-      },
-      
-      // Export connection data to preserve relationships
-      $connections: connections.map(conn => ({
-        from: conn.from,
-        to: conn.to,
-        fromSocket: conn.fromSocket,
-        toSocket: conn.toSocket,
-        fromPort: conn.fromPort,
-        toPort: conn.toPort
-      })),
-      
-      // Export token positions to preserve layout
-      $positions: nodePositions
+      }
     };
 
     const dataStr = JSON.stringify(exportData, null, 2);
@@ -2572,35 +2591,38 @@ export default function Index() {
   };
 
   const exportTokensDTCG = () => {
-    const dtcg: any = {};
-    const mapType = (t: Token["type"]) => {
-      if (t === "color") return "color";
-      if (t === "text" || t === "spacing") return "dimension";
-      if (t === "boolean") return "boolean";
-      if (t === "string") return "string";
-      if (t === "number") return "number";
-      return t;
-    };
-    Object.keys(tokens).forEach((layer) => {
-      if (!dtcg[layer]) dtcg[layer] = {};
-      tokens[layer].forEach((token) => {
-        if (!dtcg[layer][token.type]) dtcg[layer][token.type] = {};
-        let value: string = token.value;
-        if (value.startsWith("{") && value.endsWith("}")) {
-          const ref = value.slice(1, -1);
-          const [refLayer, refName] = ref.split(".");
-          value = `${refLayer}.${token.type}.${refName}`;
-        }
-        dtcg[layer][token.type][token.name] = {
-          $value: value,
-          $type: mapType(token.type),
-        };
-      });
-    });
-    
-    // Add connection and position data to DTCG export
     const exportData = {
-      ...dtcg,
+      // Transform to flat structure that Figma plugin expects
+      tokens: {
+        base: tokens.base.map(token => ({
+          id: token.id,
+          name: token.name,
+          value: token.value,
+          type: token.type,
+          layer: "base"
+        })),
+        semantic: tokens.semantic.map(token => ({
+          id: token.id,
+          name: token.name,
+          value: token.value,
+          type: token.type,
+          layer: "semantic"
+        })),
+        specific: tokens.specific.map(token => ({
+          id: token.id,
+          name: token.name,
+          value: token.value,
+          type: token.type,
+          layer: "specific"
+        }))
+      },
+      
+      // Transform connections to source/target format
+      connections: connections.map(conn => ({
+        source: conn.from,
+        target: conn.to
+      })),
+      
       $metadata: {
         version: "1.0",
         exportDate: new Date().toISOString(),
@@ -2608,16 +2630,7 @@ export default function Index() {
         format: "DTCG",
         totalTokens: Object.values(tokens).flat().length,
         connections: connections.length,
-      },
-      $connections: connections.map(conn => ({
-        from: conn.from,
-        to: conn.to,
-        fromSocket: conn.fromSocket,
-        toSocket: conn.toSocket,
-        fromPort: conn.fromPort,
-        toPort: conn.toPort
-      })),
-      $positions: nodePositions
+      }
     };
     
     const dataStr = JSON.stringify(exportData, null, 2);
@@ -2625,6 +2638,32 @@ export default function Index() {
     const link = document.createElement("a");
     link.setAttribute("href", dataUri);
     link.setAttribute("download", "design-tokens-dtcg.json");
+    link.click();
+  };
+
+  // Function to save full project data (including coordinates) for internal use
+  const saveProjectData = () => {
+    const projectData = {
+      tokens,
+      connections,
+      nodePositions,
+      tokenGroups,
+      collapsedLayers,
+      $metadata: {
+        version: "1.0",
+        saveDate: new Date().toISOString(),
+        generator: "DTM - Design Token Manager",
+        totalTokens: Object.values(tokens).flat().length,
+        connections: connections.length,
+        groups: tokenGroups.length
+      }
+    };
+
+    const dataStr = JSON.stringify(projectData, null, 2);
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+    const link = document.createElement("a");
+    link.setAttribute("href", dataUri);
+    link.setAttribute("download", "dtm-project-full.json");
     link.click();
   };
 
@@ -2646,6 +2685,191 @@ export default function Index() {
     "#57606F",
     "#A4B0BE",
   ];
+
+  // New import function for flat JSON structures with automatic layer detection
+  const importFromFlatJSON = (data: any) => {
+    const newTokens: { [key: string]: Token[] } = { base: [], semantic: [], specific: [] };
+    const newConnections: Connection[] = [];
+    let nextTokenId = Date.now();
+    
+    // Create a map to track tokens by their names for connection building
+    const tokenMap = new Map<string, Token>();
+    
+    // First pass: create all tokens and determine their types
+    Object.entries(data).forEach(([tokenName, tokenData]: [string, any]) => {
+      if (typeof tokenData === 'object' && tokenData !== null) {
+        const value = tokenData.$value || tokenData.value || "";
+        const type = tokenData.$type || tokenData.type || "color";
+        const description = tokenData.$description || tokenData.description || "";
+        
+        // Determine the layer based on the token name and value
+        let layer: "base" | "semantic" | "specific" = "base";
+        
+        // Check if this token references another token
+        const hasReference = typeof value === "string" && value.includes("{") && value.includes("}");
+        
+        if (hasReference) {
+          // Extract the referenced token name
+          const refMatch = value.match(/\{([^}]+)\}/);
+          if (refMatch) {
+            const referencedTokenName = refMatch[1];
+            
+            // Check what layer the referenced token is in
+            const referencedToken = tokenMap.get(referencedTokenName);
+            if (referencedToken) {
+              // If referenced token is base, this is semantic
+              // If referenced token is semantic, this is specific
+              if (referencedToken.layer === "base") {
+                layer = "semantic";
+              } else if (referencedToken.layer === "semantic") {
+                layer = "specific";
+              } else {
+                layer = "semantic"; // Default fallback
+              }
+            } else {
+              // If we haven't processed the referenced token yet, assume semantic
+              layer = "semantic";
+            }
+          }
+        } else {
+          // No reference means it's a base token
+          layer = "base";
+        }
+        
+        // Normalize token type to match our system
+        let normalizedType: Token["type"] = "color";
+        if (type === "color" || type === "COLOR") normalizedType = "color";
+        else if (type === "spacing" || type === "SPACING" || type === "size" || type === "SIZE") normalizedType = "spacing";
+        else if (type === "text" || type === "TEXT" || type === "string" || type === "STRING") normalizedType = "text";
+        else if (type === "boolean" || type === "BOOLEAN") normalizedType = "boolean";
+        else if (type === "number" || type === "NUMBER" || type === "float" || type === "FLOAT") normalizedType = "spacing";
+        
+        const token: Token = {
+          id: `token_${nextTokenId++}`,
+          name: tokenName,
+          value: value.toString(),
+          type: normalizedType,
+          layer: layer,
+        };
+        
+        newTokens[layer].push(token);
+        tokenMap.set(tokenName, token);
+      }
+    });
+    
+    // Second pass: create connections based on references
+    Object.values(newTokens).flat().forEach((token) => {
+      if (typeof token.value === "string" && token.value.includes("{") && token.value.includes("}")) {
+        // Extract the referenced token name
+        const refMatch = token.value.match(/\{([^}]+)\}/);
+        if (refMatch) {
+          const referencedTokenName = refMatch[1];
+          const sourceToken = tokenMap.get(referencedTokenName);
+          
+          if (sourceToken && sourceToken.id !== token.id) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      }
+    });
+    
+    return { newTokens, newConnections };
+  };
+
+  // New import function for nested collection JSON structures
+  const importFromNestedCollections = (data: any) => {
+    const newTokens: { [key: string]: Token[] } = { base: [], semantic: [], specific: [] };
+    const newConnections: Connection[] = [];
+    let nextTokenId = Date.now();
+    
+    // Create a map to track tokens by their full path for connection building
+    const tokenMap = new Map<string, Token>();
+    
+    // First pass: create all tokens from their respective collections
+    Object.entries(data).forEach(([collectionName, collectionData]: [string, any]) => {
+      if (typeof collectionData === 'object' && collectionData !== null) {
+        // Map collection names to our layer system
+        let targetLayer: "base" | "semantic" | "specific" = "base";
+        if (collectionName === "semantic") targetLayer = "semantic";
+        if (collectionName === "specific") targetLayer = "specific";
+        
+        // Process tokens within this collection
+        Object.entries(collectionData).forEach(([tokenName, tokenData]: [string, any]) => {
+          if (typeof tokenData === 'object' && tokenData !== null) {
+            const value = tokenData.value || tokenData.$value || "";
+            const type = tokenData.type || tokenData.$type || "color";
+            const description = tokenData.description || tokenData.$description || "";
+            
+            // Normalize token type to match our system
+            let normalizedType: Token["type"] = "color";
+            if (type === "color" || type === "COLOR") normalizedType = "color";
+            else if (type === "spacing" || type === "SPACING" || type === "size" || type === "SIZE") normalizedType = "spacing";
+            else if (type === "text" || type === "TEXT" || type === "string" || type === "STRING") normalizedType = "text";
+            else if (type === "boolean" || type === "BOOLEAN") normalizedType = "boolean";
+            else if (type === "number" || type === "NUMBER" || type === "float" || type === "FLOAT") normalizedType = "spacing";
+            
+            const token: Token = {
+              id: `token_${nextTokenId++}`,
+              name: tokenName,
+              value: value.toString(),
+              type: normalizedType,
+              layer: targetLayer,
+            };
+            
+            newTokens[targetLayer].push(token);
+            
+            // Store token with multiple reference formats for connection building
+            tokenMap.set(tokenName, token); // Just the name
+            tokenMap.set(`${collectionName}.${tokenName}`, token); // collection.name format
+            tokenMap.set(`${targetLayer}.${tokenName}`, token); // layer.name format
+          }
+        });
+      }
+    });
+    
+    // Second pass: create connections based on cross-collection references
+    Object.values(newTokens).flat().forEach((token) => {
+      if (typeof token.value === "string" && token.value.includes("{") && token.value.includes("}")) {
+        // Extract the referenced token path (e.g., "base.color-base" or "semantic.surface-color")
+        const refMatch = token.value.match(/\{([^}]+)\}/);
+        if (refMatch) {
+          const referencedTokenPath = refMatch[1];
+          
+          // Try to find the referenced token using the full path
+          let sourceToken = tokenMap.get(referencedTokenPath);
+          
+          // If not found with full path, try alternative formats
+          if (!sourceToken) {
+            // Try without collection prefix (just the token name)
+            const tokenNameOnly = referencedTokenPath.split('.').pop();
+            if (tokenNameOnly) {
+              sourceToken = tokenMap.get(tokenNameOnly);
+            }
+          }
+          
+          if (sourceToken && sourceToken.id !== token.id) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      }
+    });
+    
+    return { newTokens, newConnections };
+  };
 
   return (
     <div className="h-screen flex dtm-bg-graphite from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
@@ -3219,18 +3443,18 @@ export default function Index() {
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={exportTokens}
-              title="Export in Style Dictionary format"
+              title="Export clean JSON for Figma plugin (no coordinates)"
             >
               <Download size={16} />
-              Export SD JSON
+              Export SD JSON (Figma)
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={exportTokensDTCG}
-              title="Export in Design Token Community Group format"
+              title="Export clean JSON for Figma plugin (no coordinates)"
             >
               <Download size={16} />
-              Export DTCG JSON
+              Export DTCG JSON (Figma)
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
@@ -3243,10 +3467,10 @@ export default function Index() {
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
               onClick={saveToLocalFile}
-              title="Save complete project to local file"
+              title="Save complete project with coordinates and all data"
             >
               <SaveIcon size={16} />
-              Save Project
+              Save Project (Full)
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
@@ -4134,7 +4358,7 @@ export default function Index() {
                       name="importFormat"
                       value="style-dictionary"
                       checked={importFormat === "style-dictionary"}
-                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg")}
+                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
                       className="text-blue-500"
                     />
                     <span>Style Dictionary</span>
@@ -4145,15 +4369,68 @@ export default function Index() {
                       name="importFormat"
                       value="dtcg"
                       checked={importFormat === "dtcg"}
-                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg")}
+                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
                       className="text-blue-500"
                     />
                     <span>DTCG</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="importFormat"
+                      value="flat-json"
+                      checked={importFormat === "flat-json"}
+                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
+                      className="text-blue-500"
+                    />
+                    <span>Flat JSON</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="importFormat"
+                      value="nested-collections"
+                      checked={importFormat === "nested-collections"}
+                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
+                      className="text-blue-500"
+                    />
+                    <span>Nested Collections</span>
                   </label>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">JSON Data</label>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                    onClick={() => setImportData(`{
+  "base": {
+    "color-base": {
+      "type": "color",
+      "value": "#00b8c4ff",
+      "blendMode": "normal"
+    }
+  },
+  "semantic": {
+    "surface-color": {
+      "description": "",
+      "type": "color",
+      "value": "{base.color-base}"
+    }
+  },
+  "specific": {
+    "btn-bg-color": {
+      "description": "",
+      "type": "color",
+      "value": "{base.surface-color}"
+    }
+  }
+}`)}
+                  >
+                    Load Sample Nested Collections
+                  </button>
+                </div>
                 <textarea
                   className="w-full h-64 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none font-mono text-sm"
                   value={importData}
@@ -4161,10 +4438,12 @@ export default function Index() {
                   placeholder="Paste your JSON data here..."
                 />
               </div>
-              <div className="text-xs text-slate-400">
-                <p><strong>Style Dictionary format:</strong> Tokens organized by layer and type</p>
-                <p><strong>DTCG format:</strong> Design Token Community Group standard format</p>
-              </div>
+                              <div className="text-xs text-slate-400">
+                  <p><strong>Style Dictionary format:</strong> Tokens organized by layer and type</p>
+                  <p><strong>DTCG format:</strong> Design Token Community Group standard format</p>
+                  <p><strong>Flat JSON format:</strong> Flat structure with automatic layer detection based on references</p>
+                  <p><strong>Nested Collections format:</strong> Tokens organized by collections (base, semantic, specific) with cross-collection references</p>
+                </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button

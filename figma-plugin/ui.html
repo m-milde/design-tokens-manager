@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DTM Token Sync - Clean</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #ffffff;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 360px;
+    }
+    
+    h2 {
+      margin: 0 0 20px 0;
+      color: #18a0fb;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      text-align: center;
+    }
+    
+    .status.connected {
+      background: #e6f7ed;
+      color: #0d5c1a;
+      border: 1px solid #b3e6c1;
+    }
+    
+    .status.disconnected {
+      background: #ffe6e6;
+      color: #cc0000;
+      border: 1px solid #ffb3b3;
+    }
+    
+    .status.connecting {
+      background: #fff3e6;
+      color: #cc7700;
+      border: 1px solid #ffd699;
+    }
+    
+    .button {
+      background: #18a0fb;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      width: 100%;
+      margin-bottom: 12px;
+      transition: background-color 0.2s;
+    }
+    
+    .button:hover {
+      background: #0d8ce0;
+    }
+    
+    .button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .button.secondary {
+      background: #f0f0f0;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+    
+    .button.secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .button.danger {
+      background: #ff3b30;
+    }
+    
+    .button.danger:hover {
+      background: #e02e24;
+    }
+    
+    .info {
+      background: #f0f8ff;
+      border: 1px solid #b3d9ff;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #0066cc;
+    }
+    
+    .warning {
+      background: #fff3e6;
+      border: 1px solid #ffd699;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #cc7700;
+    }
+    
+    .manual-input {
+      margin-top: 20px;
+    }
+    
+    .manual-input label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #333;
+    }
+    
+    .manual-input textarea {
+      width: 100%;
+      height: 150px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #333;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    
+    .debug {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 12px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #666;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-bottom-color 0.2s;
+    }
+    
+    .tab.active {
+      color: #18a0fb;
+      border-bottom-color: #18a0fb;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🎨 DTM Token Sync</h2>
+    
+    <div class="warning">
+      <strong>Manual Data Import Available!</strong><br>
+      Paste your DTM JSON data directly to bypass CORS issues.
+    </div>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('auto')">Auto Sync</button>
+      <button class="tab" onclick="switchTab('manual')">Manual Data</button>
+    </div>
+    
+    <!-- Auto Sync Tab -->
+    <div id="auto-tab" class="tab-content active">
+      <div id="status" class="status disconnected">
+        ❌ Not connected to DTM App
+      </div>
+      
+      <button id="connectBtn" class="button">
+        🔌 Connect to DTM App
+      </button>
+      
+      <button id="syncBtn" class="button secondary" disabled>
+        🔄 Sync Tokens to Figma
+      </button>
+      
+      <button id="disconnectBtn" class="button secondary danger" disabled>
+        ❌ Disconnect
+      </button>
+    </div>
+    
+    <!-- Manual Data Tab -->
+    <div id="manual-tab" class="tab-content">
+      <div class="manual-input">
+        <label for="tokenData">Paste your DTM token data here (SD or DTCG format):</label>
+        <textarea id="tokenData" placeholder='Paste your JSON data here, like:
+{
+  "tokens": {
+    "base": [
+      {
+        "id": "color-primary",
+        "name": "color-primary", 
+        "value": "#3b82f6",
+        "type": "color",
+        "layer": "base"
+      }
+    ]
+  },
+  "connections": []
+}'></textarea>
+      </div>
+      
+      <button id="syncManualBtn" class="button">
+        🔄 Sync Manual Data
+      </button>
+      
+      <button id="useSampleBtn" class="button secondary">
+        📝 Use Sample Data
+      </button>
+    </div>
+    
+    <div class="info">
+      <strong>How it works:</strong><br>
+              • <strong>Auto Sync:</strong> Connects to localhost:8080 automatically<br>
+      • <strong>Manual Data:</strong> Paste JSON data directly (works around CORS)<br>
+      • Supports both SD and DTCG export formats<br>
+      • Tokens will be created as Figma Variables with Light/Dark modes
+    </div>
+    
+    <div id="debug" class="debug" style="display: none;">
+      Debug info will appear here...
+    </div>
+  </div>
+
+  <script>
+    let isConnected = false;
+    const debug = document.getElementById('debug');
+    
+    // Show debug info in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      debug.style.display = 'block';
+    }
+    
+    function switchTab(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelector(`.tab:nth-child(${tabName === 'auto' ? '1' : '2'})`).classList.add('active');
+      
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.getElementById(`${tabName}-tab`).classList.add('active');
+    }
+    
+    function updateStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${type}`;
+      
+      // Update button states
+      const connectBtn = document.getElementById('connectBtn');
+      const syncBtn = document.getElementById('syncBtn');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+      
+      if (type === 'connected') {
+        connectBtn.disabled = true;
+        syncBtn.disabled = false;
+        disconnectBtn.disabled = false;
+        isConnected = true;
+      } else if (type === 'disconnected') {
+        connectBtn.disabled = false;
+        syncBtn.disabled = true;
+        disconnectBtn.disabled = true;
+        isConnected = false;
+      } else if (type === 'connecting') {
+        connectBtn.disabled = true;
+        syncBtn.disabled = true;
+        disconnectBtn.disabled = true;
+      }
+    }
+    
+    function logDebug(message) {
+      if (debug.style.display !== 'none') {
+        debug.textContent = `${new Date().toLocaleTimeString()}: ${message}\n${debug.textContent}`;
+      }
+    }
+    
+    async function testConnection() {
+      try {
+        logDebug('Testing connection to DTM App...');
+        updateStatus('🔄 Testing connection...', 'connecting');
+        
+        const response = await fetch('http://localhost:8080/api/tokens', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        logDebug(`Response status: ${response.status}`);
+        logDebug(`Response headers: ${JSON.stringify([...response.headers.entries()])}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        logDebug(`Received data: ${JSON.stringify(data).substring(0, 200)}...`);
+        
+        updateStatus('✅ Connected to DTM App!', 'connected');
+        parent.postMessage({ pluginMessage: { type: 'connected' } }, '*');
+        
+      } catch (error) {
+        logDebug(`Connection error: ${error.message}`);
+        updateStatus(`❌ Failed to connect: ${error.message}`, 'disconnected');
+      }
+    }
+    
+    async function syncTokens() {
+      if (!isConnected) {
+        updateStatus('❌ Not connected to DTM App', 'disconnected');
+        return;
+      }
+      
+      try {
+        updateStatus('🔄 Syncing tokens...', 'connecting');
+        parent.postMessage({ pluginMessage: { type: 'sync-tokens' } }, '*');
+        
+        // Wait a bit for the sync to complete
+        setTimeout(() => {
+          if (isConnected) {
+            updateStatus('✅ Connected to DTM App!', 'connected');
+          }
+        }, 2000);
+        
+      } catch (error) {
+        logDebug(`Sync error: ${error.message}`);
+        updateStatus(`❌ Sync failed: ${error.message}`, 'disconnected');
+      }
+    }
+    
+    function disconnect() {
+      updateStatus('❌ Disconnected from DTM App', 'disconnected');
+      parent.postMessage({ pluginMessage: { type: 'disconnected' } }, '*');
+    }
+    
+    function syncManualData() {
+      try {
+        const tokenDataText = document.getElementById('tokenData').value.trim();
+        
+        if (!tokenDataText) {
+          alert('Please paste your token data first!');
+          return;
+        }
+        
+        // Parse the JSON
+        let tokenData;
+        try {
+          tokenData = JSON.parse(tokenDataText);
+        } catch (parseError) {
+          alert('Invalid JSON data. Please check your format.');
+          logDebug(`JSON parse error: ${parseError.message}`);
+          return;
+        }
+        
+        // Validate basic structure
+        if (!tokenData.tokens) {
+          alert('Invalid data format. Missing "tokens" property.');
+          return;
+        }
+        
+        logDebug(`Manual data: ${JSON.stringify(tokenData).substring(0, 200)}...`);
+        
+        // Send to plugin
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'sync-manual-data',
+            data: tokenData
+          } 
+        }, '*');
+        
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+        logDebug(`Manual sync error: ${error.message}`);
+      }
+    }
+    
+    function useSampleData() {
+      const sampleData = {
+        "tokens": {
+          "base": [
+            {
+              "id": "color-primary",
+              "name": "color-primary",
+              "value": "#3b82f6",
+              "type": "color",
+              "layer": "base"
+            },
+            {
+              "id": "color-secondary", 
+              "name": "color-secondary",
+              "value": "#6b7280",
+              "type": "color",
+              "layer": "base"
+            },
+            {
+              "id": "spacing-sm",
+              "name": "spacing-sm",
+              "value": 8,
+              "type": "spacing",
+              "layer": "base"
+            },
+            {
+              "id": "border-radius-sm",
+              "name": "border-radius-sm",
+              "value": 4,
+              "type": "spacing",
+              "layer": "base"
+            }
+          ],
+          "semantic": [
+            {
+              "id": "button-primary-bg",
+              "name": "button-primary-bg", 
+              "value": "#3b82f6",
+              "type": "color",
+              "layer": "semantic"
+            },
+            {
+              "id": "button-primary-padding",
+              "name": "button-primary-padding",
+              "value": 8,
+              "type": "spacing",
+              "layer": "semantic"
+            }
+          ],
+          "specific": [
+            {
+              "id": "button-primary",
+              "name": "button-primary",
+              "value": "#3b82f6",
+              "type": "color",
+              "layer": "specific"
+            }
+          ]
+        },
+        "connections": [
+          {
+            "source": "color-primary",
+            "target": "button-primary-bg"
+          },
+          {
+            "source": "spacing-sm",
+            "target": "button-primary-padding"
+          },
+          {
+            "source": "button-primary-bg",
+            "target": "button-primary"
+          }
+        ]
+      };
+      
+      document.getElementById('tokenData').value = JSON.stringify(sampleData, null, 2);
+    }
+    
+    // Event listeners
+    document.getElementById('connectBtn').addEventListener('click', testConnection);
+    document.getElementById('syncBtn').addEventListener('click', syncTokens);
+    document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+    document.getElementById('syncManualBtn').addEventListener('click', syncManualData);
+    document.getElementById('useSampleBtn').addEventListener('click', useSampleData);
+    
+    // Initial state
+    updateStatus('❌ Not connected to DTM App', 'disconnected');
+    logDebug('Plugin UI loaded. Ready to connect to DTM App.');
+  </script>
+</body>
+</html>
+
