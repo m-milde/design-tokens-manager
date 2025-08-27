@@ -728,7 +728,11 @@ export default function Index() {
   } | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importData, setImportData] = useState("");
-  const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic">("nested-collections");
+  const [importFormat, setImportFormat] = useState<"style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "deep-nested-collections" | "generic">("deep-nested-collections");
+  
+  // File upload state
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New state for UI features
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -2350,6 +2354,8 @@ export default function Index() {
         result = importFromFlatJSON(parsedData);
       } else if (importFormat === "nested-collections") {
         result = importFromNestedCollections(parsedData);
+      } else if (importFormat === "deep-nested-collections") {
+        result = importFromDeepNestedCollections(parsedData);
       } else {
         result = importGenericFormat(parsedData);
       }
@@ -2838,6 +2844,306 @@ export default function Index() {
     Object.values(newTokens).flat().forEach((token) => {
       if (typeof token.value === "string" && token.value.includes("{") && token.value.includes("}")) {
         // Extract the referenced token path (e.g., "base.color-base" or "semantic.surface-color")
+        const refMatch = token.value.match(/\{([^}]+)\}/);
+        if (refMatch) {
+          const referencedTokenPath = refMatch[1];
+          
+          // Try to find the referenced token using the full path
+          let sourceToken = tokenMap.get(referencedTokenPath);
+          
+          // If not found with full path, try alternative formats
+          if (!sourceToken) {
+            // Try without collection prefix (just the token name)
+            const tokenNameOnly = referencedTokenPath.split('.').pop();
+            if (tokenNameOnly) {
+              sourceToken = tokenMap.get(tokenNameOnly);
+            }
+          }
+          
+          if (sourceToken && sourceToken.id !== token.id) {
+            const connection: Connection = {
+              id: `conn_${nextTokenId++}`,
+              from: sourceToken.id,
+              to: token.id,
+              fromPort: "output",
+              toPort: "input",
+            };
+            newConnections.push(connection);
+          }
+        }
+      }
+    });
+    
+    return { newTokens, newConnections };
+  };
+
+  // Export to Figma format function
+  const exportToFigmaFormat = () => {
+    const figmaExport: any = {};
+    
+    // Process each layer
+    Object.entries(tokens).forEach(([layer, layerTokens]) => {
+      if (layerTokens.length > 0) {
+        figmaExport[layer] = {};
+        
+        // Group tokens by type within each layer
+        const tokensByType = new Map<string, any>();
+        layerTokens.forEach(token => {
+          if (!tokensByType.has(token.type)) {
+            tokensByType.set(token.type, {});
+          }
+          tokensByType.get(token.type)[token.name] = {
+            type: token.type,
+            value: token.value,
+            description: ""
+          };
+        });
+        
+        // Add tokens to the export
+        tokensByType.forEach((typeTokens, type) => {
+          figmaExport[layer][type] = typeTokens;
+        });
+      }
+    });
+    
+    // Add connections if any exist
+    if (connections.length > 0) {
+      figmaExport.$connections = connections.map(conn => {
+        const fromToken = findTokenById(conn.from);
+        const toToken = findTokenById(conn.to);
+        return {
+          from: fromToken ? `${fromToken.layer}.${fromToken.name}` : conn.from,
+          to: toToken ? `${toToken.layer}.${toToken.name}` : conn.to,
+          fromPort: conn.fromPort,
+          toPort: conn.toPort
+        };
+      });
+    }
+    
+    // Add positions for canvas layout
+    if (Object.keys(nodePositions).length > 0) {
+      figmaExport.$positions = nodePositions;
+    }
+    
+    return figmaExport;
+  };
+
+  // Export to Figma button handler
+  const handleExportToFigma = () => {
+    const figmaData = exportToFigmaFormat();
+    const dataStr = JSON.stringify(figmaData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `figma-tokens-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(link.href);
+    
+    // Show validation results
+    const validation = validateTokenReferences(tokens, connections);
+    if (validation.isValid) {
+      alert('✅ Tokens exported successfully to Figma format!\n\n' + validation.summary);
+    } else {
+      alert('⚠️ Tokens exported with validation warnings:\n\n' + validation.errors.join('\n'));
+    }
+  };
+
+  // Token validation function
+  const validateTokenReferences = (tokens: { [key: string]: Token[] }, connections: Connection[]) => {
+    const allTokens = Object.values(tokens).flat();
+    const tokenMap = new Map<string, Token>();
+    
+    // Create a map of all tokens by name for easy lookup
+    allTokens.forEach(token => {
+      tokenMap.set(token.name, token);
+      tokenMap.set(`${token.layer}.${token.name}`, token);
+    });
+    
+    const validationErrors: string[] = [];
+    const missingReferences: string[] = [];
+    
+    // Check each token for missing references
+    allTokens.forEach(token => {
+      if (typeof token.value === "string" && token.value.includes("{") && token.value.includes("}")) {
+        const refMatch = token.value.match(/\{([^}]+)\}/);
+        if (refMatch) {
+          const referencedTokenPath = refMatch[1];
+          
+          // Try to find the referenced token
+          let sourceToken = tokenMap.get(referencedTokenPath);
+          
+          if (!sourceToken) {
+            // Try alternative formats
+            const tokenNameOnly = referencedTokenPath.split('.').pop();
+            if (tokenNameOnly) {
+              sourceToken = tokenMap.get(tokenNameOnly);
+            }
+          }
+          
+          if (!sourceToken) {
+            missingReferences.push(`${token.name} → ${referencedTokenPath}`);
+            validationErrors.push(`Token "${token.name}" references missing token "${referencedTokenPath}"`);
+          }
+        }
+      }
+    });
+    
+    return {
+      isValid: validationErrors.length === 0,
+      errors: validationErrors,
+      missingReferences,
+      summary: validationErrors.length === 0 
+        ? "✅ All token references are valid" 
+        : `❌ Found ${validationErrors.length} validation errors`
+    };
+  };
+
+  // File handling functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          setImportData(content);
+          // Try to auto-detect format
+          try {
+            const parsedData = JSON.parse(content);
+            if (parsedData.base?.colors || parsedData.base?.spacing) {
+              setImportFormat("deep-nested-collections");
+            } else if (parsedData.base?.colorBase || parsedData.semantic) {
+              setImportFormat("nested-collections");
+            } else if (parsedData.colorBase || parsedData.surfaceColor) {
+              setImportFormat("flat-json");
+            }
+          } catch (e) {
+            // Keep current format if auto-detection fails
+          }
+        } catch (error) {
+          alert('Error reading file: ' + error);
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleFileDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file && file.type === 'application/json') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          setImportData(content);
+          // Try to auto-detect format
+          try {
+            const parsedData = JSON.parse(content);
+            if (parsedData.base?.colors || parsedData.base?.spacing) {
+              setImportFormat("deep-nested-collections");
+            } else if (parsedData.base?.colorBase || parsedData.semantic) {
+              setImportFormat("nested-collections");
+            } else if (parsedData.colorBase || parsedData.surfaceColor) {
+              setImportFormat("flat-json");
+            }
+          } catch (e) {
+            // Keep current format if auto-detection fails
+          }
+        } catch (error) {
+          alert('Error reading file: ' + error);
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      alert('Please drop a valid JSON file');
+    }
+  };
+
+  // New import function for deeply nested collection JSON structures (Figma-style)
+  const importFromDeepNestedCollections = (data: any) => {
+    const newTokens: { [key: string]: Token[] } = { base: [], semantic: [], specific: [] };
+    const newConnections: Connection[] = [];
+    let nextTokenId = Date.now();
+    
+    // Create a map to track tokens by their full path for connection building
+    const tokenMap = new Map<string, Token>();
+    
+    // Function to recursively process nested collections and extract tokens
+    const processNestedCollection = (
+      collectionData: any, 
+      path: string[] = [], 
+      targetLayer: "base" | "semantic" | "specific" = "base"
+    ) => {
+      if (typeof collectionData !== 'object' || collectionData === null) return;
+      
+      Object.entries(collectionData).forEach(([key, value]: [string, any]) => {
+        if (typeof value === 'object' && value !== null) {
+          // Check if this is a token (has type and value properties)
+          if (value.type !== undefined && value.value !== undefined) {
+            // This is a token, create it
+            const tokenName = key;
+            const tokenValue = value.value || "";
+            const tokenType = value.type || "color";
+            const description = value.description || "";
+            
+            // Normalize token type to match our system
+            let normalizedType: Token["type"] = "color";
+            if (tokenType === "color" || tokenType === "COLOR") normalizedType = "color";
+            else if (tokenType === "spacing" || tokenType === "SPACING" || tokenType === "size" || tokenType === "SIZE" || tokenType === "dimension") normalizedType = "spacing";
+            else if (tokenType === "text" || tokenType === "TEXT" || tokenType === "string" || tokenType === "STRING") normalizedType = "text";
+            else if (tokenType === "boolean" || tokenType === "BOOLEAN") normalizedType = "boolean";
+            else if (tokenType === "number" || tokenType === "NUMBER" || tokenType === "float" || tokenType === "FLOAT") normalizedType = "spacing";
+            
+            const token: Token = {
+              id: `token_${nextTokenId++}`,
+              name: tokenName,
+              value: tokenValue.toString(),
+              type: normalizedType,
+              layer: targetLayer,
+            };
+            
+            newTokens[targetLayer].push(token);
+            
+            // Store token with multiple reference formats for connection building
+            const fullPath = [...path, key].join('.');
+            tokenMap.set(tokenName, token); // Just the name
+            tokenMap.set(fullPath, token); // Full path (e.g., "base.colors.color-base-default")
+            tokenMap.set(`${targetLayer}.${tokenName}`, token); // layer.name format
+            
+            // Also store with collection prefix for easier lookup
+            if (path.length > 0) {
+              const collectionPrefix = path.join('.');
+              tokenMap.set(`${collectionPrefix}.${tokenName}`, token);
+            }
+          } else {
+            // This is a sub-collection, recursively process it
+            const newPath = [...path, key];
+            processNestedCollection(value, newPath, targetLayer);
+          }
+        }
+      });
+    };
+    
+    // Process each main collection (base, semantic, specific)
+    Object.entries(data).forEach(([collectionName, collectionData]: [string, any]) => {
+      if (typeof collectionData === 'object' && collectionData !== null) {
+        // Map collection names to our layer system
+        let targetLayer: "base" | "semantic" | "specific" = "base";
+        if (collectionName === "semantic") targetLayer = "semantic";
+        if (collectionName === "specific") targetLayer = "specific";
+        
+        // Process the collection (which may contain sub-collections)
+        processNestedCollection(collectionData, [collectionName], targetLayer);
+      }
+    });
+    
+    // Second pass: create connections based on cross-collection references
+    Object.values(newTokens).flat().forEach((token) => {
+      if (typeof token.value === "string" && token.value.includes("{") && token.value.includes("}")) {
+        // Extract the referenced token path (e.g., "{base.colors.color-base-default}")
         const refMatch = token.value.match(/\{([^}]+)\}/);
         if (refMatch) {
           const referencedTokenPath = refMatch[1];
@@ -3463,6 +3769,14 @@ export default function Index() {
             >
               <Search size={16} />
               Import JSON
+            </button>
+            <button
+              className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
+              onClick={handleExportToFigma}
+              title="Export tokens back to Figma format"
+            >
+              <Download size={16} />
+              Export to Figma
             </button>
             <button
               className="dtm-btn-secondary px-4 py-1 rounded-md shadow-lg transition-all flex items-center gap-2"
@@ -4351,55 +4665,21 @@ export default function Index() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Import Format</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="importFormat"
-                      value="style-dictionary"
-                      checked={importFormat === "style-dictionary"}
-                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
-                      className="text-blue-500"
-                    />
-                    <span>Style Dictionary</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="importFormat"
-                      value="dtcg"
-                      checked={importFormat === "dtcg"}
-                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
-                      className="text-blue-500"
-                    />
-                    <span>DTCG</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="importFormat"
-                      value="flat-json"
-                      checked={importFormat === "flat-json"}
-                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
-                      className="text-blue-500"
-                    />
-                    <span>Flat JSON</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="importFormat"
-                      value="nested-collections"
-                      checked={importFormat === "nested-collections"}
-                      onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "generic")}
-                      className="text-blue-500"
-                    />
-                    <span>Nested Collections</span>
-                  </label>
-                </div>
+                <select
+                  className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none"
+                  value={importFormat}
+                  onChange={(e) => setImportFormat(e.target.value as "style-dictionary" | "dtcg" | "flat-json" | "nested-collections" | "deep-nested-collections" | "generic")}
+                >
+                  <option value="deep-nested-collections">Deep Nested Collections (Figma) - Recommended</option>
+                  <option value="nested-collections">Nested Collections</option>
+                  <option value="flat-json">Flat JSON</option>
+                  <option value="style-dictionary">Style Dictionary</option>
+                  <option value="dtcg">DTCG</option>
+                  <option value="generic">Generic</option>
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">JSON Data</label>
+                {/* <label className="block text-sm font-medium text-slate-300 mb-2">JSON Data</label>
                 <div className="flex gap-2 mb-2">
                   <button
                     type="button"
@@ -4430,6 +4710,96 @@ export default function Index() {
                   >
                     Load Sample Nested Collections
                   </button>
+                  <button
+                    type="button"
+                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
+                    onClick={() => setImportData(`{
+  "base": {
+    "colors": {
+      "color-base-default": {
+        "type": "color",
+        "value": "#00b8c4ff",
+        "blendMode": "normal"
+      },
+      "color-base-light": {
+        "type": "color",
+        "value": "#00e6f5ff",
+        "blendMode": "normal"
+      }
+    },
+    "spacing": {
+      "space-6": {
+        "type": "dimension",
+        "value": 6
+      },
+      "space-12": {
+        "type": "dimension",
+        "value": 12
+      }
+    }
+  },
+  "semantic": {
+    "surface-color": {
+      "description": "",
+      "type": "color",
+      "value": "{semantic.surface-color}"
+    }
+  },
+  "specific": {
+    "btn-bg-color": {
+      "description": "",
+      "type": "color",
+      "value": "{semantic.surface-color}"
+    }
+  }
+}`)}
+                  >
+                    Load Sample Deep Nested Collections
+                  </button>
+                </div> */}
+                
+                {/* File Upload Area */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Upload JSON File</label>
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      isDragOver ? 'border-blue-400 bg-blue-400/10' : 'border-slate-600 hover:border-slate-500'
+                    }`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragOver(true);
+                    }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragOver(false);
+                      handleFileDrop(e);
+                    }}
+                  >
+                    <div className="text-slate-400 mb-2">
+                      <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-slate-400">
+                      <span className="font-medium text-blue-400">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">JSON files only</p>
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      ref={fileInputRef}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded transition-colors"
+                    >
+                      Browse Files
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   className="w-full h-64 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:border-blue-400 focus:outline-none font-mono text-sm"
@@ -4438,12 +4808,13 @@ export default function Index() {
                   placeholder="Paste your JSON data here..."
                 />
               </div>
-                              <div className="text-xs text-slate-400">
+                              {/* <div className="text-xs text-slate-400">
                   <p><strong>Style Dictionary format:</strong> Tokens organized by layer and type</p>
                   <p><strong>DTCG format:</strong> Design Token Community Group standard format</p>
                   <p><strong>Flat JSON format:</strong> Flat structure with automatic layer detection based on references</p>
                   <p><strong>Nested Collections format:</strong> Tokens organized by collections (base, semantic, specific) with cross-collection references</p>
-                </div>
+                  <p><strong>Deep Nested Collections format:</strong> Figma-style nested collections with sub-collections (colors, spacing, size, etc.) and cross-collection references</p>
+                </div> */}
             </div>
             <div className="flex gap-3 mt-6">
               <button
@@ -4454,6 +4825,28 @@ export default function Index() {
                 }}
               >
                 Cancel
+              </button>
+              <button
+                className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!importData.trim()}
+                onClick={() => {
+                  try {
+                    const parsedData = JSON.parse(importData);
+                    const tempResult = importFormat === "style-dictionary" ? importFromStyleDictionary(parsedData) :
+                                     importFormat === "dtcg" ? importFromDTCG(parsedData) :
+                                     importFormat === "flat-json" ? importFromFlatJSON(parsedData) :
+                                     importFormat === "nested-collections" ? importFromNestedCollections(parsedData) :
+                                     importFormat === "deep-nested-collections" ? importFromDeepNestedCollections(parsedData) :
+                                     importGenericFormat(parsedData);
+                    
+                    const validation = validateTokenReferences(tempResult.newTokens, tempResult.newConnections);
+                    alert(validation.summary + '\n\n' + (validation.errors.length > 0 ? 'Errors:\n' + validation.errors.join('\n') : ''));
+                  } catch (error) {
+                    alert('Invalid JSON format: ' + error);
+                  }
+                }}
+              >
+                Validate Tokens
               </button>
               <button
                 className="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

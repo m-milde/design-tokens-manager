@@ -1,0 +1,182 @@
+{
+  "base": {
+    "colors": {
+      "color-primary-default": {
+        "type": "color",
+        "value": "#00b8c4ff",
+        "blendMode": "normal"
+      },
+      "color-primary-light": {
+        "type": "color",
+        "value": "#00e6f5ff",
+        "blendMode": "normal"
+      },
+      "color-primary-dark": {
+        "type": "color",
+        "value": "#00868fff",
+        "blendMode": "normal"
+      },
+      "color-primary-muted": {
+        "type": "color",
+        "value": "#85abadff",
+        "blendMode": "normal"
+      },
+      "color-darkest": {
+        "type": "color",
+        "value": "#00181aff",
+        "blendMode": "normal"
+      },
+      "color-lightest": {
+        "type": "color",
+        "value": "#e5fdffff",
+        "blendMode": "normal"
+      }
+    },
+    "spacing": {
+      "space-6": {
+        "type": "dimension",
+        "value": 6
+      },
+      "space-12": {
+        "type": "dimension",
+        "value": 12
+      },
+      "space-8": {
+        "type": "dimension",
+        "value": 8
+      }
+    },
+    "size": {
+      "size-4": {
+        "type": "dimension",
+        "value": 4
+      },
+      "size-16": {
+        "type": "dimension",
+        "value": 16
+      }
+    }
+  },
+  "semantic": {
+    "colors": {
+      "surface-color-default": {
+        "description": "",
+        "type": "color",
+        "value": "{base.colors.color-primary-default}"
+      },
+      "surface-color-dark": {
+        "description": "",
+        "type": "color",
+        "value": "{base.colors.color-primary-dark}"
+      },
+      "surface-color-light": {
+        "description": "",
+        "type": "color",
+        "value": "{base.colors.color-primary-light}"
+      },
+      "surface-color-mutted": {
+        "description": "",
+        "type": "color",
+        "value": "{base.colors.color-primary-muted}"
+      },
+      "text-color-dark": {
+        "description": "",
+        "type": "color",
+        "value": "{base.colors.color-darkest}"
+      },
+      "icon-color-dark": {
+        "description": "",
+        "type": "color",
+        "value": "{base.colors.color-darkest}"
+      }
+    },
+    "space": {
+      "padding-6": {
+        "description": "",
+        "type": "dimension",
+        "value": "{base.spacing.space-6}"
+      },
+      "padding-12": {
+        "description": "",
+        "type": "dimension",
+        "value": "{base.spacing.space-12}"
+      },
+      "gap-8": {
+        "description": "",
+        "type": "dimension",
+        "value": "{base.spacing.space-8}"
+      }
+    },
+    "size": {
+      "radius-4": {
+        "description": "",
+        "type": "dimension",
+        "value": "{base.size.size-4}"
+      },
+      "font-size-16": {
+        "description": "",
+        "type": "dimension",
+        "value": "{base.size.size-16}"
+      }
+    }
+  },
+  "specific": {
+    "button": {
+      "btn-bg-color-default": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.colors.surface-color-default}"
+      },
+      "btn-bg-color-hover": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.colors.surface-color-light}"
+      },
+      "btn-bg-color-active": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.colors.surface-color-dark}"
+      },
+      "btn-bg-color-disabled": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.colors.surface-color-mutted}"
+      },
+      "btn-padding-x": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.space.padding-12}"
+      },
+      "btn-padding-y": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.space.padding-6}"
+      },
+      "btn-gap-x": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.space.gap-8}"
+      },
+      "btn-radius": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.size.radius-4}"
+      },
+      "btn-text-color-default": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.colors.text-color-dark}"
+      },
+      "btn-icon-color-default": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.colors.icon-color-dark}"
+      },
+      "btn-font-size": {
+        "description": "",
+        "type": "color",
+        "value": "{semantic.size.font-size-16}"
+      }
+    }
+  }
+}

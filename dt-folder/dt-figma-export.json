@@ -1,0 +1,60 @@
+{
+  "base": {
+    "colors": {
+      "color-base-default": {
+        "type": "color",
+        "value": "#00b8c4ff",
+        "blendMode": "normal"
+      },
+      "color-base-light": {
+        "type": "color",
+        "value": "#00e6f5ff",
+        "blendMode": "normal"
+      },
+      "color-base-dark": {
+        "type": "color",
+        "value": "#00868fff",
+        "blendMode": "normal"
+      },
+      "color-base-muted": {
+        "type": "color",
+        "value": "#85abadff",
+        "blendMode": "normal"
+      }
+    },
+    "spacing": {
+      "space-6": {
+        "type": "dimension",
+        "value": 6
+      },
+      "space-12": {
+        "type": "dimension",
+        "value": 12
+      },
+      "space-8": {
+        "type": "dimension",
+        "value": 8
+      }
+    },
+    "size": {
+      "size-4": {
+        "type": "dimension",
+        "value": 4
+      }
+    }
+  },
+  "semantic": {
+    "surface-color": {
+      "description": "",
+      "type": "color",
+      "value": "{base.colors.color-base-default}"
+    }
+  },
+  "specific": {
+    "btn-bg-color": {
+      "description": "",
+      "type": "color",
+      "value": "{semantic.surface-color}"
+    }
+  }
+}
