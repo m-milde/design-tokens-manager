@@ -301,6 +301,18 @@
     animation: pulse-blue 2s infinite;
   }
 
+  /* Animation for action buttons slide up */
+  @keyframes slideUp {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+
   /* Responsive design helpers */
   @media (max-width: 768px) {
     .token-panel {

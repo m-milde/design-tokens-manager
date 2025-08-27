@@ -163,7 +163,8 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
   return (
     <div
       ref={nodeRef}
-      className={`absolute min-w-[150px] max-w-[200px] dtm-bg-secondary/10 backdrop-blur-xl border-2 rounded-md p-2 cursor-move select-none shadow-lg hover:shadow-xl z-20 ${
+      data-token-id={token.id}
+      className={`absolute min-w-[150px] max-w-[200px] dtm-bg-secondary/10 backdrop-blur-xl border-2 rounded-md p-2 cursor-move select-none shadow-lg hover:shadow-xl z-20 node-bubble ${
         isDragging ? "transition-none" : ""
       } ${
         isSelected
@@ -315,51 +316,53 @@ const NodeBubble: React.FC<NodeBubbleProps> = ({
         {token.value}
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Absolute positioned above the bubble */}
       {isSelected && (
-        <div className="flex gap-1 mt-2 justify-center">
-          <button
-            className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDisconnectNode(token.id);
-            }}
-            title="Disconnect connections"
-          >
-            <Unlink size={10}/>
-          </button>
-          <button
-            className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteNode(token.id);
-            }}
-            title="Remove from canvas"
-          >
-            <X size={10} />
-          </button>
-          <button
-            className="w-6 h-6 dtm-btn-destructive text-white rounded flex items-center justify-center transition-all text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteToken(token.id);
-            }}
-            title="Delete token completely"
-          >
-            <Trash2 size={10} />
-          </button>
-          {isInGroup && onRemoveFromGroup && (
+        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 z-30 transition-all duration-300 ease-out animate-[slideUp_0.3s_ease-out]">
+          <div className="flex gap-1 bg-slate-800/95 backdrop-blur-sm border border-slate-600 rounded-full shadow-2xl p-2">
             <button
-              className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs"
+              className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs hover:scale-110"
               onClick={(e) => {
                 e.stopPropagation();
-                onRemoveFromGroup(token.id);
+                onDisconnectNode(token.id);
               }}
-              title="Remove from group"
+              title="Disconnect connections"
             >
-              <Ungroup size={10} />
+              <Unlink size={12}/>
             </button>
-          )}
+            <button
+              className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs hover:scale-110"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteNode(token.id);
+              }}
+              title="Remove from canvas"
+            >
+              <X size={12} />
+            </button>
+            <button
+              className="w-6 h-6 dtm-btn-destructive text-white rounded flex items-center justify-center transition-all text-xs hover:scale-110"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteToken(token.id);
+              }}
+              title="Delete token completely"
+            >
+              <Trash2 size={12} />
+            </button>
+            {isInGroup && onRemoveFromGroup && (
+              <button
+                className="w-6 h-6 dtm-btn-secondary rounded flex items-center justify-center transition-all text-xs hover:scale-110"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveFromGroup(token.id);
+                }}
+                title="Remove from group"
+              >
+                <Ungroup size={12} />
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -733,10 +736,14 @@ export default function Index() {
   // File upload state
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Floating action panel state
+  const [floatingPanelPosition, setFloatingPanelPosition] = useState({ x: 0, y: 0 });
+  const [showFloatingPanel, setShowFloatingPanel] = useState(false);
 
   // New state for UI features
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isTopBarCollapsed, setIsTopBarCollapsed] = useState(false);
+  const [isTopBarCollapsed, setIsTopBarCollapsed] = useState(true);
   const [isDarkTheme, setIsDarkTheme] = useState(true);
 
   // Initialize theme on mount
@@ -908,6 +915,34 @@ export default function Index() {
       setSelectedGroup(null);
     }
   };
+
+  // Handle click outside to hide floating panel - No longer needed
+  // const handleCanvasClick = (event: React.MouseEvent) => {
+  //   // Check if we clicked on the canvas itself (not on a node or other element)
+  //   if (event.target === event.currentTarget || (event.target as HTMLElement).classList.contains('canvas-background')) {
+  //     setShowFloatingPanel(false);
+  //     setSelectedNode(null);
+  //   }
+  // };
+
+  // Alternative click outside handler using document click - No longer needed
+  // useEffect(() => {
+  //   const handleDocumentClick = (event: MouseEvent) => {
+  //     const target = event.target as HTMLElement;
+  //     // Check if click is outside the floating panel and not on a node
+  //     if (showFloatingPanel && 
+  //         !target.closest('.floating-panel') && 
+  //         !target.closest('.node-bubble')) {
+  //       setShowFloatingPanel(false);
+  //       setSelectedNode(null);
+  //     }
+  //   };
+
+  //   if (showFloatingPanel) {
+  //     document.addEventListener('click', handleDocumentClick);
+  //     return () => document.removeEventListener('click', handleDocumentClick);
+  //   }
+  // }, [showFloatingPanel]);
 
 
 
@@ -1566,11 +1601,81 @@ export default function Index() {
         return newSelection;
       });
       setSelectedNode(null);
+      setShowFloatingPanel(false);
     } else {
       // Single selection
       setSelectedNode(nodeId);
       setSelectedTokens(new Set());
       setSelectedGroup(null);
+      
+            // Show action buttons (now rendered inside the bubble)
+      // No need for complex positioning logic
+    }
+  };
+
+  // Fixed positioning function for floating panel
+  const updateFloatingPanelPosition = (nodeId: string) => {
+    const token = Object.values(tokens).flat().find(t => t.id === nodeId);
+    if (token) {
+      const position = nodePositions[nodeId];
+      if (position) {
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        if (canvasRect) {
+          // Calculate position directly above the node
+          const screenX = (position.x * canvasScale) + canvasOffset.x + canvasRect.left + 75;
+          const screenY = (position.y * canvasScale) + canvasOffset.y + canvasRect.top - 45;
+          
+          setFloatingPanelPosition({
+            x: screenX,
+            y: screenY
+          });
+        }
+      }
+    }
+  };
+
+  // Update floating panel position when canvas moves or scales - No longer needed
+  // useEffect(() => {
+  //   if (showFloatingPanel && selectedNode) {
+  //     // Update position using DOM element
+  //     const nodeElement = document.querySelector(`[data-token-id="${selectedNode}"]`);
+  //     if (nodeElement) {
+  //       const rect = nodeElement.getBoundingClientRect();
+  //       setFloatingPanelPosition({
+  //         x: rect.left + rect.width / 2 - 330, // Center horizontally, remove 330px from left
+  //         y: rect.top - 10 - 30 // 10px above, remove 30px from top
+  //       });
+  //     }
+  //   }
+  // }, [canvasOffset, canvasScale, showFloatingPanel, selectedNode]);
+
+  // New improved positioning function
+  const calculatePanelPosition = (nodeId: string) => {
+    const token = Object.values(tokens).flat().find(t => t.id === nodeId);
+    if (token) {
+      const position = nodePositions[nodeId];
+      if (position) {
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        if (canvasRect) {
+          // Direct positioning: center above the bubble, 10px above
+          const screenX = (position.x * canvasScale) + canvasOffset.x + canvasRect.left + 75; // Center horizontally
+          const screenY = (position.y * canvasScale) + canvasOffset.y + canvasRect.top - 10;  // 10px above
+          
+          console.log('Panel positioning debug:', {
+            nodeId,
+            position,
+            canvasScale,
+            canvasOffset,
+            canvasRect: { left: canvasRect.left, top: canvasRect.top },
+            calculated: { x: screenX, y: screenY }
+          });
+          
+          setFloatingPanelPosition({
+            x: screenX,
+            y: screenY
+          });
+        }
+      }
     }
   };
 
@@ -3661,7 +3766,7 @@ export default function Index() {
       {/* Canvas Area */}
       <div className="flex-1 relative overflow-hidden">
         {/* Top Bar */}
-        <div className={`absolute top-0 right-5 p-5 px-8 z-40 flex gap-2 items-center transition-all duration-500 ease-in-out ${isTopBarCollapsed ? 'translate-x-full' : ''}`}>
+        <div className={`absolute top-0 right-5 p-5 px-8 z-40 flex flex-col gap-2 items-end transition-all duration-500 ease-in-out ${isTopBarCollapsed ? 'translate-x-full' : ''}`}>
           {/* Collapse/Expand button */}
           <div className="absolute top-4 right-0">
             <button
@@ -3704,7 +3809,7 @@ export default function Index() {
             </div>
           )}
 
-          <div className="flex gap-2 text-xs">
+          <div className="flex flex-col gap-2 text-xs">
             {/* Undo / Redo */}
             <button
               className={`dtm-btn-secondary p-2 rounded-md transition-all flex items-center gap-2 ${history.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -3810,17 +3915,7 @@ export default function Index() {
               {isDarkTheme ? "Light" : "Dark"}
             </button>
             
-            {/* Performance Indicator */}
-            <div className="flex items-center gap-2 px-3 py-1 dtm-bg-secondary/50 rounded-md border dtm-border-primary">
-              <div className={`w-2 h-2 rounded-full ${
-                renderQuality === 'high' ? 'bg-green-400' : 
-                renderQuality === 'medium' ? 'bg-yellow-400' : 'bg-red-400'
-              }`} />
-              <span className="text-xs dtm-text-muted">
-                {renderQuality === 'high' ? 'High' : 
-                 renderQuality === 'medium' ? 'Medium' : 'Low'} Quality
-              </span>
-            </div>
+
           </div>
         </div>
 
@@ -3828,7 +3923,7 @@ export default function Index() {
         {isTopBarCollapsed && (
           <div className="absolute top-5 right-5 z-40">
             <button
-              className="dtm-text-muted hover:dtm-text-primary p-2 rounded transition-colors dtm-bg-secondary/95 backdrop-blur-sm border dtm-border-primary"
+              className="dtm-text-muted hover:dtm-text-primary p-2 rounded-full transition-colors dtm-bg-secondary/95 backdrop-blur-sm border dtm-border-primary"
               onClick={() => setIsTopBarCollapsed(false)}
               title="Show menu"
             >
@@ -3840,7 +3935,7 @@ export default function Index() {
         {/* Canvas */}
         <div
           ref={canvasRef}
-          className={`w-full h-full ${isDraggingCanvas ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`w-full h-full canvas-background ${isDraggingCanvas ? "cursor-grabbing" : "cursor-grab"}`}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={(e) => {
             if (isDraggingCanvas) {
@@ -4187,6 +4282,8 @@ export default function Index() {
             })()}
           </div>
         </div>
+        
+        {/* Floating Action Panel - Removed, now rendered inside bubbles */}
       </div>
 
       {/* Modal */}
