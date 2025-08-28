@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Canvas - 2D Node Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1f2937;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            background-color: #2c3e50;
+            border-radius: 8px;
+            border: 2px solid #6b7280;
+            cursor: grab;
+        }
+        canvas.grabbing {
+            cursor: grabbing;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button id="addNodeBtn">Add Node</button>
+        <button id="clearBtn">Clear All</button>
+    </div>
+    <canvas id="nodeCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('nodeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Canvas constants
+        const NODE_WIDTH = 180;
+        const NODE_HEIGHT = 120;
+        const SOCKET_RADIUS = 8;
+        
+        // Canvas sizing function
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // Global state
+        let nodes = [];
+        let connections = [];
+        let isConnecting = false;
+        let dragNode = null;
+        let dragOffset = { x: 0, y: 0 };
+        let startSocket = null;
+        let mouse = { x: 0, y: 0 };
+        let temporaryConnection = null;
+        
+        // Panning state
+        let isPanning = false;
+        let panOffset = { x: 0, y: 0 };
+        let lastMousePos = { x: 0, y: 0 };
+
+        // Node class
+        class Node {
+            constructor(id, x, y, title = `Node ${id}`) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.title = title;
+                this.width = NODE_WIDTH;
+                this.height = NODE_HEIGHT;
+            }
+
+            draw(ctx) {
+                // Draw node background
+                ctx.fillStyle = '#4b5563';
+                ctx.strokeStyle = '#6b7280';
+                ctx.lineWidth = 2;
+                
+                // Add shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                
+                // Draw rounded rectangle
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, 8);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Reset shadow
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                
+                // Draw title
+                ctx.fillStyle = '#f3f4f6';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.title, this.x + this.width / 2, this.y + 30);
+                
+                // Draw sockets
+                this.drawSockets(ctx);
+            }
+
+            drawSockets(ctx) {
+                // Top socket (output)
+                ctx.fillStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y, SOCKET_RADIUS, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Bottom socket (input)
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height, SOCKET_RADIUS, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            isPointInNode(x, y) {
+                return x > this.x && x < this.x + this.width && 
+                       y > this.y && y < this.y + this.height;
+            }
+
+            getSocketAtPoint(x, y) {
+                // Check top socket (output)
+                const topDist = Math.sqrt(
+                    Math.pow(x - (this.x + this.width / 2), 2) + 
+                    Math.pow(y - this.y, 2)
+                );
+                if (topDist < SOCKET_RADIUS) {
+                    return { node: this, type: 'output', x: this.x + this.width / 2, y: this.y };
+                }
+                
+                // Check bottom socket (input)
+                const bottomDist = Math.sqrt(
+                    Math.pow(x - (this.x + this.width / 2), 2) + 
+                    Math.pow(y - (this.y + this.height), 2)
+                );
+                if (bottomDist < SOCKET_RADIUS) {
+                    return { node: this, type: 'input', x: this.x + this.width / 2, y: this.y + this.height };
+                }
+                
+                return null;
+            }
+        }
+
+        // Drawing functions
+        function drawConnection(startNode, endNode) {
+            const startX = startNode.x + startNode.width / 2;
+            const startY = startNode.y;
+            const endX = endNode.x + endNode.width / 2;
+            const endY = endNode.y + endNode.height;
+            
+            ctx.strokeStyle = '#cccccc';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            
+            // Draw curved connection
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            const midX = (startX + endX) / 2;
+            const midY = (startY + endY) / 2;
+            
+            ctx.quadraticCurveTo(midX, startY, midX, midY);
+            ctx.quadraticCurveTo(midX, endY, endX, endY);
+            ctx.stroke();
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Apply panning transformation
+            ctx.save();
+            ctx.translate(panOffset.x, panOffset.y);
+            
+            // Draw connections first (behind nodes)
+            connections.forEach(conn => {
+                drawConnection(conn.startNode, conn.endNode);
+            });
+            
+            // Draw temporary connection
+            if (isConnecting && temporaryConnection) {
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(temporaryConnection.x, temporaryConnection.y);
+                ctx.lineTo(mouse.x - panOffset.x, mouse.y - panOffset.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Draw nodes
+            nodes.forEach(node => node.draw(ctx));
+            
+            // Restore transformation
+            ctx.restore();
+            
+            // Continue animation loop
+            requestAnimationFrame(draw);
+        }
+
+        // Event handlers
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+            
+            // Convert mouse position to canvas coordinates (accounting for panning)
+            const canvasX = mouse.x - panOffset.x;
+            const canvasY = mouse.y - panOffset.y;
+
+            // Check for socket click
+            for (const node of nodes) {
+                const socket = node.getSocketAtPoint(canvasX, canvasY);
+                if (socket && socket.type === 'output') {
+                    isConnecting = true;
+                    startSocket = socket;
+                    temporaryConnection = { x: socket.x, y: socket.y };
+                    return;
+                }
+            }
+
+            // Check for node drag
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const node = nodes[i];
+                if (node.isPointInNode(canvasX, canvasY)) {
+                    dragNode = node;
+                    dragOffset.x = canvasX - node.x;
+                    dragOffset.y = canvasY - node.y;
+                    canvas.classList.add('grabbing');
+
+                    // Bring the dragged node to the front
+                    nodes.splice(i, 1);
+                    nodes.push(dragNode);
+                    return;
+                }
+            }
+            
+            // If no node or socket clicked, start panning
+            isPanning = true;
+            lastMousePos = { x: mouse.x, y: mouse.y };
+            canvas.classList.add('grabbing');
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+            
+            if (dragNode) {
+                // Update node position in canvas coordinates
+                dragNode.x = mouse.x - panOffset.x - dragOffset.x;
+                dragNode.y = mouse.y - panOffset.y - dragOffset.y;
+            }
+            
+            if (isPanning) {
+                // Calculate pan offset
+                const deltaX = mouse.x - lastMousePos.x;
+                const deltaY = mouse.y - lastMousePos.y;
+                panOffset.x += deltaX;
+                panOffset.y += deltaY;
+                lastMousePos = { x: mouse.x, y: mouse.y };
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+            
+            if (isConnecting) {
+                const endSocket = findSocketAtPoint(mouse.x - panOffset.x, mouse.y - panOffset.y);
+                if (endSocket && endSocket.type === 'input' && startSocket.node.id !== endSocket.node.id) {
+                    // Check if connection already exists
+                    const exists = connections.some(conn => 
+                        conn.startNode.id === startSocket.node.id && 
+                        conn.endNode.id === endSocket.node.id
+                    );
+                    
+                    if (!exists) {
+                        connections.push({
+                            startNode: startSocket.node,
+                            endNode: endSocket.node
+                        });
+                        console.log(`Connected ${startSocket.node.title} to ${endSocket.node.title}`);
+                    }
+                }
+                isConnecting = false;
+                startSocket = null;
+                temporaryConnection = null;
+            }
+            
+            dragNode = null;
+            isPanning = false;
+            canvas.classList.remove('grabbing');
+        });
+
+        function findSocketAtPoint(x, y) {
+            for (const node of nodes) {
+                const socket = node.getSocketAtPoint(x, y);
+                if (socket) return socket;
+            }
+            return null;
+        }
+
+        function addNode() {
+            const id = nodes.length + 1;
+            // Position nodes relative to viewport center, accounting for panning
+            const centerX = (canvas.width / 2) - panOffset.x - (NODE_WIDTH / 2);
+            const centerY = (canvas.height / 2) - panOffset.y - (NODE_HEIGHT / 2);
+            const x = centerX + (Math.random() * 200 - 100);
+            const y = centerY + (Math.random() * 200 - 100);
+            const node = new Node(id, x, y, `Node ${id}`);
+            nodes.push(node);
+            console.log(`Added node ${id}`);
+        }
+
+        function clearAll() {
+            nodes = [];
+            connections = [];
+            console.log('Cleared all nodes and connections');
+        }
+
+        // Button event listeners
+        document.getElementById('addNodeBtn').addEventListener('click', addNode);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+        // Initialize and start
+        window.onload = function() {
+            // Set initial canvas size
+            resizeCanvas();
+            
+            // Add some initial nodes
+            addNode();
+            addNode();
+            addNode();
+            
+            // Start drawing loop
+            draw();
+        };
+        
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+    </script>
+</body>
+</html>
