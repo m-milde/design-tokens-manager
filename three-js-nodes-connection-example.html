@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Node UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #1f2937; /* Dark slate background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+        canvas {
+            display: block;
+            background-color: #2c3e50;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            margin: 20px;
+            cursor: grab;
+        }
+        canvas.grabbing {
+            cursor: grabbing;
+        }
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(31, 41, 55, 0.7); /* Semi-transparent dark slate */
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+        .ui-panel button {
+            background-color: #3b82f6; /* Blue */
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+        }
+        .ui-panel button:disabled {
+            background-color: #6b7280;
+            cursor: not-allowed;
+        }
+        .ui-panel button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+        }
+        .ui-panel button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .message-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background-color: #22c55e; /* Green */
+            color: white;
+            border-radius: 9999px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 20;
+        }
+        .message-box.error {
+            background-color: #ef4444; /* Red */
+        }
+    </style>
+</head>
+<body>
+
+<div class="ui-panel">
+    <button id="addNodeBtn">Add Node</button>
+    <button id="generateNodeBtn">✨ Generate Node</button>
+    <button id="summarizeGraphBtn">✨ Summarize Graph</button>
+</div>
+
+<div id="messageBox" class="message-box"></div>
+<canvas id="nodeCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('nodeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Canvas size
+    canvas.width = window.innerWidth * 0.8;
+    canvas.height = window.innerHeight * 0.8;
+
+    // Global state
+    let nodes = [];
+    let connections = [];
+    let isConnecting = false;
+    let dragNode = null;
+    let dragOffset = { x: 0, y: 0 };
+    let startSocket = null;
+    let mouse = { x: 0, y: 0 };
+    let temporaryConnection = null;
+    let isLoading = false;
+
+    const NODE_WIDTH = 180;
+    const NODE_HEIGHT = 120;
+    const SOCKET_RADIUS = 8;
+    const SOCKET_SPACING = 30;
+
+    // Gemini API Configuration
+    const API_MODEL = 'gemini-2.5-flash-preview-05-20';
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent?key=`;
+
+    // --- Helper Functions ---
+
+    /**
+     * Toggles the loading state of the application.
+     * @param {boolean} state - true to enable loading, false to disable.
+     * @param {string} [message] - An optional message to display while loading.
+     */
+    function setLoading(state, message = 'Loading...') {
+        isLoading = state;
+        document.getElementById('addNodeBtn').disabled = state;
+        document.getElementById('generateNodeBtn').disabled = state;
+        document.getElementById('summarizeGraphBtn').disabled = state;
+        if (state) {
+            showMessage(message);
+        } else {
+            document.getElementById('messageBox').style.opacity = '0';
+        }
+    }
+
+    /**
+     * Displays a temporary message to the user.
+     * @param {string} message - The message to display.
+     * @param {boolean} isError - True for an error message, false for a success message.
+     */
+    function showMessage(message, isError = false) {
+        const msgBox = document.getElementById('messageBox');
+        msgBox.textContent = message;
+        msgBox.className = 'message-box';
+        if (isError) {
+            msgBox.classList.add('error');
+        }
+        msgBox.style.opacity = '1';
+        clearTimeout(msgBox.timeout);
+        msgBox.timeout = setTimeout(() => {
+            msgBox.style.opacity = '0';
+        }, 5000);
+    }
+
+    /**
+     * Makes a fetch call with exponential backoff for retries.
+     * @param {string} url - The API URL.
+     * @param {object} options - Fetch options.
+     * @param {number} retries - Number of retries left.
+     */
+    async function fetchWithRetry(url, options, retries = 3) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                if (response.status === 429 && retries > 0) {
+                    const delay = Math.pow(2, 3 - retries) * 1000 + Math.random() * 1000;
+                    console.log(`Rate limit exceeded. Retrying in ${delay / 1000}s...`);
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithRetry(url, options, retries - 1);
+                }
+                throw new Error(`API error: ${response.statusText}`);
+            }
+            return response.json();
+        } catch (error) {
+            console.error('Fetch failed:', error);
+            throw error;
+        }
+    }
+
+    // --- Node and Socket Classes ---
+
+    class Node {
+        constructor(id, x, y, config = {}) {
+            this.id = id;
+            this.x = x;
+            this.y = y;
+            this.width = NODE_WIDTH;
+            this.height = NODE_HEIGHT;
+            this.title = config.title || `Node ${id}`;
+            this.inputs = config.inputs || [];
+            this.outputs = config.outputs || [];
+
+            // Add some default sockets if none are provided
+            if (this.inputs.length === 0) {
+                for (let i = 0; i < 3; i++) {
+                    this.inputs.push({ name: `Input ${i + 1}` });
+                }
+            }
+            if (this.outputs.length === 0) {
+                for (let i = 0; i < 3; i++) {
+                    this.outputs.push({ name: `Output ${i + 1}` });
+                }
+            }
+
+            // Dynamically adjust height for more sockets
+            const numSockets = Math.max(this.inputs.length, this.outputs.length);
+            this.height = Math.max(NODE_HEIGHT, 40 + (numSockets * SOCKET_SPACING) + 10);
+        }
+
+        /**
+         * Draws the node and its sockets on the canvas.
+         * @param {CanvasRenderingContext2D} ctx - The canvas context.
+         */
+        draw(ctx) {
+            // Draw node box
+            ctx.fillStyle = '#4b5563';
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 5;
+            ctx.shadowOffsetY = 5;
+
+            ctx.beginPath();
+            ctx.roundRect(this.x, this.y, this.width, this.height, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            // Reset shadows for cleaner drawing of sockets and text
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Draw title
+            ctx.fillStyle = '#f3f4f6';
+            ctx.font = '16px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.title, this.x + this.width / 2, this.y + 25);
+
+            // Draw sockets and labels
+            this.inputs.forEach((socket, i) => {
+                const y = this.y + 40 + (i * SOCKET_SPACING);
+                this.drawSocket(ctx, this.x, y, '#ef4444', socket.isHovered);
+                ctx.fillStyle = '#e5e7eb';
+                ctx.textAlign = 'left';
+                ctx.fillText(socket.name, this.x + 15, y + 5);
+            });
+
+            this.outputs.forEach((socket, i) => {
+                const y = this.y + 40 + (i * SOCKET_SPACING);
+                this.drawSocket(ctx, this.x + this.width, y, '#22c55e', socket.isHovered);
+                ctx.fillStyle = '#e5e7eb';
+                ctx.textAlign = 'right';
+                ctx.fillText(socket.name, this.x + this.width - 15, y + 5);
+            });
+        }
+
+        /**
+         * Draws a single socket.
+         * @param {CanvasRenderingContext2D} ctx - The canvas context.
+         * @param {number} x - X position.
+         * @param {number} y - Y position.
+         * @param {string} color - Socket color.
+         * @param {boolean} isHovered - True if the socket is hovered.
+         */
+        drawSocket(ctx, x, y, color, isHovered) {
+            ctx.beginPath();
+            ctx.arc(x, y, SOCKET_RADIUS, 0, 2 * Math.PI);
+            ctx.fillStyle = isHovered ? '#ffff00' : color;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        /**
+         * Checks if a point is inside the node.
+         * @param {number} x - X coordinate of the point.
+         * @param {number} y - Y coordinate of the point.
+         * @returns {boolean} - True if the point is inside.
+         */
+        isPointInNode(x, y) {
+            return x > this.x && x < this.x + this.width && y > this.y && y < this.y + this.height;
+        }
+
+        /**
+         * Finds the socket at a given point.
+         * @param {number} x - X coordinate.
+         * @param {number} y - Y coordinate.
+         * @returns {object|null} - The socket object or null.
+         */
+        getSocketAtPoint(x, y) {
+            // Check input sockets
+            for (let i = 0; i < this.inputs.length; i++) {
+                const sockY = this.y + 40 + (i * SOCKET_SPACING);
+                const dist = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - sockY, 2));
+                if (dist < SOCKET_RADIUS) {
+                    return { node: this, type: 'input', index: i };
+                }
+            }
+            // Check output sockets
+            for (let i = 0; i < this.outputs.length; i++) {
+                const sockY = this.y + 40 + (i * SOCKET_SPACING);
+                const dist = Math.sqrt(Math.pow(x - (this.x + this.width), 2) + Math.pow(y - sockY, 2));
+                if (dist < SOCKET_RADIUS) {
+                    return { node: this, type: 'output', index: i };
+                }
+            }
+            return null;
+        }
+    }
+
+    // --- Drawing Functions ---
+
+    /**
+     * Draws a smooth, curved connection line.
+     * @param {object} startNode - The starting node.
+     * @param {number} startSocketIndex - The index of the starting socket.
+     * @param {object} endNode - The ending node.
+     * @param {number} endSocketIndex - The index of the ending socket.
+     */
+    function drawConnection(startNode, startSocketIndex, endNode, endSocketIndex) {
+        const startY = startNode.y + 40 + (startSocketIndex * SOCKET_SPACING);
+        const endY = endNode.y + 40 + (endSocketIndex * SOCKET_SPACING);
+
+        const startX = startNode.x + startNode.width;
+        const endX = endNode.x;
+
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 4;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+
+        const controlPointX1 = startX + (endX - startX) * 0.5;
+        const controlPointY1 = startY;
+        const controlPointX2 = startX + (endX - startX) * 0.5;
+        const controlPointY2 = endY;
+
+        ctx.bezierCurveTo(controlPointX1, controlPointY1, controlPointX2, controlPointY2, endX, endY);
+        ctx.stroke();
+    }
+
+    // --- Main Loop ---
+
+    /**
+     * The main drawing loop. Clears the canvas and redraws all elements.
+     */
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw connections first so they are behind the nodes
+        connections.forEach(conn => {
+            drawConnection(conn.startNode, conn.startSocketIndex, conn.endNode, conn.endSocketIndex);
+        });
+
+        // Draw temporary connection line
+        if (isConnecting && temporaryConnection) {
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(temporaryConnection.startX, temporaryConnection.startY);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.stroke();
+        }
+
+        // Draw nodes
+        nodes.forEach(node => node.draw(ctx));
+
+        requestAnimationFrame(draw);
+    }
+
+    // --- Event Listeners and Logic ---
+
+    /**
+     * Creates a new node.
+     */
+    function addNode(config = {}) {
+        const id = nodes.length + 1;
+        const x = canvas.width / 2 - NODE_WIDTH / 2 + Math.random() * 50 - 25;
+        const y = canvas.height / 2 - NODE_HEIGHT / 2 + Math.random() * 50 - 25;
+        const newNode = new Node(id, x, y, config);
+        nodes.push(newNode);
+        showMessage(`Node ${id} created.`);
+    }
+
+    /**
+     * Handles mouse down events.
+     */
+    canvas.addEventListener('mousedown', (e) => {
+        if (isLoading) return;
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+
+        // Check for socket click
+        for (const node of nodes) {
+            const socket = node.getSocketAtPoint(mouse.x, mouse.y);
+            if (socket && socket.type === 'output') {
+                isConnecting = true;
+                startSocket = socket;
+                temporaryConnection = {
+                    startX: socket.node.x + socket.node.width,
+                    startY: socket.node.y + 40 + (socket.index * SOCKET_SPACING)
+                };
+                return;
+            }
+        }
+
+        // Check for node drag
+        for (let i = nodes.length - 1; i >= 0; i--) {
+            const node = nodes[i];
+            if (node.isPointInNode(mouse.x, mouse.y)) {
+                dragNode = node;
+                dragOffset.x = mouse.x - node.x;
+                dragOffset.y = mouse.y - node.y;
+                canvas.classList.add('grabbing');
+
+                // Bring the dragged node to the front
+                nodes.splice(i, 1);
+                nodes.push(dragNode);
+                return;
+            }
+        }
+    });
+
+    /**
+     * Handles mouse move events.
+     */
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+
+        if (dragNode) {
+            dragNode.x = mouse.x - dragOffset.x;
+            dragNode.y = mouse.y - dragOffset.y;
+        }
+
+        // Handle socket hovering
+        for (const node of nodes) {
+            for (const sock of node.inputs) sock.isHovered = false;
+            for (const sock of node.outputs) sock.isHovered = false;
+        }
+
+        if (isConnecting) return;
+
+        const foundSocket = findSocketAtPoint(mouse.x, mouse.y);
+        if (foundSocket) {
+            const node = foundSocket.node;
+            if (foundSocket.type === 'input') {
+                node.inputs[foundSocket.index].isHovered = true;
+            } else {
+                node.outputs[foundSocket.index].isHovered = true;
+            }
+        }
+    });
+
+    /**
+     * Handles mouse up events.
+     */
+    canvas.addEventListener('mouseup', (e) => {
+        if (isLoading) return;
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+
+        if (isConnecting) {
+            const endSocket = findSocketAtPoint(mouse.x, mouse.y);
+            if (endSocket && endSocket.type === 'input' && startSocket.node.id !== endSocket.node.id) {
+                const existingConnection = connections.find(c =>
+                    c.startNode.id === startSocket.node.id &&
+                    c.startSocketIndex === startSocket.index &&
+                    c.endNode.id === endSocket.node.id &&
+                    c.endSocketIndex === endSocket.index
+                );
+
+                if (!existingConnection) {
+                    connections.push({
+                        startNode: startSocket.node,
+                        startSocketIndex: startSocket.index,
+                        endNode: endSocket.node,
+                        endSocketIndex: endSocket.index
+                    });
+                    showMessage(`Connected ${startSocket.node.title} to ${endSocket.node.title}.`);
+                } else {
+                    showMessage("Connection already exists!", true);
+                }
+            }
+            isConnecting = false;
+            startSocket = null;
+            temporaryConnection = null;
+        }
+
+        dragNode = null;
+        canvas.classList.remove('grabbing');
+    });
+
+    /**
+     * Finds a socket at a given canvas point.
+     * @param {number} x - X coordinate.
+     * @param {number} y - Y coordinate.
+     * @returns {object|null} - The socket object or null.
+     */
+    function findSocketAtPoint(x, y) {
+        for (const node of nodes) {
+            const socket = node.getSocketAtPoint(x, y);
+            if (socket) {
+                return socket;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Generates a new node based on user input using the Gemini API.
+     */
+    async function generateNodeFromGemini() {
+        const userPrompt = prompt("Describe the node you want to create (e.g., 'a node for a weather API'):");
+        if (!userPrompt) return;
+
+        setLoading(true, 'Generating node...');
+
+        const systemPrompt = `
+            You are a creative visual node graph assistant. Your task is to generate a new node configuration based on a user's request.
+            Provide a descriptive title for the node, and a list of relevant input and output socket names.
+            The response must be in JSON format, adhering strictly to the following schema:
+            {
+                "nodeName": "string",
+                "inputs": [
+                    {"name": "string"},
+                    ...
+                ],
+                "outputs": [
+                    {"name": "string"},
+                    ...
+                ]
+            }
+            Ensure the names are clear and concise.
+        `;
+
+        const payload = {
+            contents: [{ parts: [{ text: userPrompt }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        "nodeName": { "type": "STRING" },
+                        "inputs": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": { "name": { "type": "STRING" } }
+                            }
+                        },
+                        "outputs": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": { "name": { "type": "STRING" } }
+                            }
+                        }
+                    },
+                    "propertyOrdering": ["nodeName", "inputs", "outputs"]
+                }
+            }
+        };
+
+        try {
+            const response = await fetchWithRetry(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response && response.candidates && response.candidates[0] && response.candidates[0].content) {
+                const text = response.candidates[0].content.parts[0].text;
+                const config = JSON.parse(text);
+                addNode({
+                    title: config.nodeName,
+                    inputs: config.inputs,
+                    outputs: config.outputs
+                });
+            } else {
+                throw new Error("Invalid API response format.");
+            }
+        } catch (error) {
+            console.error('Error generating node:', error);
+            showMessage("Failed to generate node. Please try again.", true);
+        } finally {
+            setLoading(false);
+        }
+    }
+    
+    /**
+     * Summarizes the entire graph of nodes and connections using the Gemini API.
+     */
+    async function summarizeGraphWithGemini() {
+        if (nodes.length === 0) {
+            showMessage("Add some nodes to the graph first!", true);
+            return;
+        }
+
+        setLoading(true, 'Summarizing graph...');
+
+        let graphDescription = "The graph contains the following nodes and connections:\n\n";
+
+        // Describe nodes
+        nodes.forEach(node => {
+            graphDescription += `Node ${node.id}: "${node.title}"\n`;
+            if (node.inputs.length > 0) {
+                graphDescription += `  - Inputs: ${node.inputs.map(i => i.name).join(', ')}\n`;
+            }
+            if (node.outputs.length > 0) {
+                graphDescription += `  - Outputs: ${node.outputs.map(o => o.name).join(', ')}\n`;
+            }
+        });
+
+        // Describe connections
+        if (connections.length > 0) {
+            graphDescription += "\nConnections:\n";
+            connections.forEach(conn => {
+                const startNodeTitle = conn.startNode.title;
+                const endNodeTitle = conn.endNode.title;
+                const startSocketName = conn.startNode.outputs[conn.startSocketIndex].name;
+                const endSocketName = conn.endNode.inputs[conn.endSocketIndex].name;
+                graphDescription += `  - "${startNodeTitle}" (Output: "${startSocketName}") -> "${endNodeTitle}" (Input: "${endSocketName}")\n`;
+            });
+        }
+
+        const systemPrompt = `
+            You are a helpful workflow assistant. Analyze the provided description of a node graph and provide a brief, high-level summary of its purpose.
+            Keep the summary concise and easy to understand.
+        `;
+
+        const userQuery = `
+            Summarize the following node graph:\n\n${graphDescription}
+        `;
+
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+        };
+
+        try {
+            const response = await fetchWithRetry(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response && response.candidates && response.candidates[0] && response.candidates[0].content) {
+                const summary = response.candidates[0].content.parts[0].text;
+                showMessage(summary);
+            } else {
+                throw new Error("Invalid API response format.");
+            }
+        } catch (error) {
+            console.error('Error summarizing graph:', error);
+            showMessage("Failed to summarize graph. Please try again.", true);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // Add event listeners for new buttons
+    document.getElementById('addNodeBtn').addEventListener('click', () => addNode());
+    document.getElementById('generateNodeBtn').addEventListener('click', generateNodeFromGemini);
+    document.getElementById('summarizeGraphBtn').addEventListener('click', summarizeGraphWithGemini);
+
+    // Add initial nodes and start drawing loop
+    window.onload = function() {
+        addNode();
+        setTimeout(() => addNode(), 500);
+        setTimeout(() => addNode(), 1000);
+        draw();
+    }
+
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth * 0.8;
+        canvas.height = window.innerHeight * 0.8;
+    });
+</script>
+</body>
+</html>
