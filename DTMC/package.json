@@ -1,0 +1,37 @@
+{
+  "name": "dtmc",
+  "version": "1.0.0",
+  "description": "Design Tokens Map Creator - A comprehensive application for building, visualizing, importing, and exporting design tokens with hierarchical relationships",
+  "main": "test-canvas.html",
+  "scripts": {
+    "start": "open test-canvas.html",
+    "dev": "python3 -m http.server 8000",
+    "build": "echo 'Build process will be implemented'",
+    "test": "echo 'Testing framework will be implemented'"
+  },
+  "keywords": [
+    "design-tokens",
+    "design-system",
+    "tokens",
+    "visualization",
+    "canvas",
+    "ui",
+    "ux",
+    "design"
+  ],
+  "author": "DTMC Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/dtmc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/dtmc/issues"
+  },
+  "homepage": "https://github.com/your-username/dtmc#readme",
+  "devDependencies": {},
+  "dependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
