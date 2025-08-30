@@ -1,0 +1,80 @@
+<!-- Enhanced Token Creation Modal -->
+<div id="dtmc-token-modal" class="dtmc-modal">
+    <div class="dtmc-modal-content">
+        <h3 id="modal-title">Create New Token</h3>
+        
+        <!-- Token Type Display -->
+        <div class="dtmc-form-group">
+            <label>Token Type</label>
+            <div class="dtmc-token-type-display">
+                <span class="dtmc-type-badge" id="modal-token-type">Color</span>
+            </div>
+        </div>
+        
+        <!-- Token Name Input -->
+        <div class="dtmc-form-group">
+            <label for="token-name">Token Name</label>
+            <input type="text" id="token-name" placeholder="e.g., primary-blue">
+        </div>
+        
+        <!-- Dynamic Value Section -->
+        <div id="token-value-section">
+            <!-- Color Token Section -->
+            <div id="color-token-section" class="dtmc-token-section">
+                <label>Choose a color:</label>
+                <div class="dtmc-color-palette">
+                    <div class="dtmc-color-swatch" data-color="#ef4444" style="background-color: #ef4444;"></div>
+                    <div class="dtmc-color-swatch" data-color="#22c55e" style="background-color: #22c55e;"></div>
+                    <div class="dtmc-color-swatch" data-color="#3b82f6" style="background-color: #3b82f6;"></div>
+                    <div class="dtmc-color-swatch" data-color="#f59e0b" style="background-color: #f59e0b;"></div>
+                    <div class="dtmc-color-swatch" data-color="#8b5cf6" style="background-color: #8b5cf6;"></div>
+                    <div class="dtmc-color-swatch" data-color="#06b6d4" style="background-color: #06b6d4;"></div>
+                    <div class="dtmc-color-swatch" data-color="#84cc16" style="background-color: #84cc16;"></div>
+                    <div class="dtmc-color-swatch" data-color="#f97316" style="background-color: #f97316;"></div>
+                    <div class="dtmc-color-swatch" data-color="#ec4899" style="background-color: #ec4899;"></div>
+                    <div class="dtmc-color-swatch" data-color="#6366f1" style="background-color: #6366f1;"></div>
+                    <div class="dtmc-color-swatch" data-color="#10b981" style="background-color: #10b981;"></div>
+                    <div class="dtmc-color-swatch" data-color="#fbbf24" style="background-color: #fbbf24;"></div>
+                    <div class="dtmc-color-swatch" data-color="#6b7280" style="background-color: #6b7280;"></div>
+                    <div class="dtmc-color-swatch" data-color="#9ca3af" style="background-color: #9ca3af;"></div>
+                    <div class="dtmc-color-swatch" data-color="#d1d5db" style="background-color: #d1d5db;"></div>
+                    <div class="dtmc-color-swatch" data-color="#000000" style="background-color: #000000;"></div>
+                </div>
+                <div class="dtmc-form-group">
+                    <label for="token-value">Custom Color (Hex)</label>
+                    <input type="text" id="token-value" placeholder="#4a90e2" maxlength="7">
+                </div>
+            </div>
+            
+            <!-- Non-Primitive Layer Section -->
+            <div id="reference-token-section" class="dtmc-token-section" style="display: none;">
+                <label>Select from existing tokens:</label>
+                <select id="token-reference-dropdown">
+                    <option value="">Select from existing tokens...</option>
+                </select>
+                <div class="dtmc-tip">
+                    <span class="dtmc-tip-icon">💡</span>
+                    <span id="available-tokens-count">0 tokens available</span>
+                </div>
+                <div class="dtmc-form-group">
+                    <label for="token-value-custom">Or enter a custom value:</label>
+                    <input type="text" id="token-value-custom" placeholder="Enter custom value or select from dropdown above">
+                </div>
+            </div>
+            
+            <!-- Simple Value Section -->
+            <div id="simple-value-section" class="dtmc-token-section" style="display: none;">
+                <div class="dtmc-form-group">
+                    <label for="token-value-simple">Token Value</label>
+                    <input type="text" id="token-value-simple" placeholder="Enter value...">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="dtmc-modal-buttons">
+            <button id="dtmc-cancel-btn" class="dtmc-btn secondary">Cancel</button>
+            <button id="dtmc-create-btn" class="dtmc-btn primary">Create Token</button>
+        </div>
+    </div>
+</div>

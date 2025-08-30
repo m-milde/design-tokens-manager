@@ -259,6 +259,38 @@
             margin-top: 24px;
         }
 
+        /* Context Menu Styles */
+        .dtmc-context-menu {
+            position: fixed;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            padding: 8px 0;
+            z-index: 1000;
+            display: none;
+            min-width: 160px;
+        }
+
+        .dtmc-context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            color: #e2e8f0;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .dtmc-context-menu-item:hover {
+            background: #334155;
+        }
+
+        .dtmc-context-icon {
+            font-size: 16px;
+        }
+
         .dtmc-btn.secondary {
             background: #64748b;
             color: white;
@@ -361,6 +393,14 @@
         </div>
     </div>
 
+    <!-- Context menu for nodes -->
+    <div id="dtmc-context-menu" class="dtmc-context-menu">
+        <div class="dtmc-context-menu-item" id="dtmc-delete-node">
+            <span class="dtmc-context-icon">🗑️</span>
+            Delete Node
+        </div>
+    </div>
+
     <!-- Drag Preview -->
     <div id="dtmc-drag-preview" class="dtmc-drag-preview" style="display: none;"></div>
 
@@ -427,8 +467,21 @@
             document.getElementById('dtmc-cancel-btn').addEventListener('click', closeModal);
             document.getElementById('dtmc-create-btn').addEventListener('click', createToken);
             
+            // Context menu events
+            document.getElementById('dtmc-delete-node').addEventListener('click', () => {
+                const contextMenu = document.getElementById('dtmc-context-menu');
+                const nodeId = contextMenu.dataset.nodeId;
+                if (nodeId) {
+                    deleteNode(nodeId);
+                    hideContextMenu();
+                }
+            });
+            
             // Window events
             window.addEventListener('resize', resizeCanvas);
+            
+            // Prevent context menu on right click
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
         }
 
         // Setup sidebar functionality
@@ -564,7 +617,71 @@
             renderSidebar();
             closeModal();
             
+            // Update any existing nodes with this token
+            updateNodesWithToken(newToken);
+            
             console.log(`Created ${selectedLayer} token:`, newToken);
+        }
+
+        // Populate reference dropdown with available tokens
+        function populateReferenceDropdown() {
+            const dropdown = document.getElementById('token-reference-dropdown');
+            const countSpan = document.getElementById('available-tokens-count');
+            
+            // Clear existing options
+            dropdown.innerHTML = '<option value="">Select from existing tokens...</option>';
+            
+            let availableTokens = [];
+            
+            // Collect tokens from all layers except the current one
+            Object.keys(tokens).forEach(layer => {
+                if (layer !== selectedLayer) {
+                    tokens[layer].forEach(token => {
+                        availableTokens.push({
+                            layer: layer,
+                            name: token.name,
+                            value: token.value,
+                            displayText: `${layer}.${token.name} (${token.value})`
+                        });
+                    });
+                }
+            });
+            
+            // Add options to dropdown
+            availableTokens.forEach(token => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify(token);
+                option.textContent = token.displayText;
+                dropdown.appendChild(option);
+            });
+            
+            // Update count
+            countSpan.textContent = `${availableTokens.length} tokens available`;
+            
+            // Add change event listener
+            dropdown.onchange = function() {
+                const selectedValue = this.value;
+                if (selectedValue) {
+                    const tokenData = JSON.parse(selectedValue);
+                    document.getElementById('token-value-custom').value = `{${tokenData.layer}.${tokenData.name}}`;
+                }
+            };
+        }
+
+        // Setup color swatch click events
+        function setupColorSwatchEvents() {
+            const colorSwatches = document.querySelectorAll('.dtmc-color-swatch');
+            colorSwatches.forEach(swatch => {
+                swatch.addEventListener('click', function() {
+                    // Remove selected class from all swatches
+                    colorSwatches.forEach(s => s.classList.remove('selected'));
+                    // Add selected class to clicked swatch
+                    this.classList.add('selected');
+                    // Update the token value input
+                    const colorValue = this.getAttribute('data-color');
+                    document.getElementById('token-value').value = colorValue;
+                });
+            });
         }
 
         // Mouse event handlers
@@ -585,6 +702,13 @@
             // Check if clicking on a node
             const clickedNode = getNodeAtPoint(x, y);
             if (clickedNode) {
+                // Right click or Ctrl+click for context menu
+                if (e.button === 2 || (e.ctrlKey && e.button === 0)) {
+                    e.preventDefault();
+                    showNodeContextMenu(clickedNode, e.clientX, e.clientY);
+                    return;
+                }
+                
                 selectedNode = clickedNode;
                 isDragging = true;
                 lastMousePos = { x: e.clientX, y: e.clientY };
@@ -636,16 +760,51 @@
                 
                 const socketInfo = getSocketAtPoint(x, y);
                 if (socketInfo && socketInfo.node !== connectionStart) {
-                    // Create connection
-                    const connection = {
-                        startNode: connectionStart,
-                        endNode: socketInfo.node,
-                        startSocket: startSocket,
-                        endSocket: socketInfo.socket
-                    };
-                    
-                    connections.push(connection);
-                    saveState();
+                    // Validate connection (output to input only)
+                    if (startSocket === 'right' || startSocket === 'bottom') {
+                        if (socketInfo.socket === 'top' || socketInfo.socket === 'left') {
+                            // Store original value if not already stored
+                            if (!socketInfo.node.originalValue) {
+                                socketInfo.node.originalValue = socketInfo.node.value;
+                                console.log(`Stored original value for ${socketInfo.node.name}: ${socketInfo.node.originalValue}`);
+                            } else {
+                                console.log(`Original value already stored for ${socketInfo.node.name}: ${socketInfo.node.originalValue}`);
+                            }
+                            
+                            // Create connection
+                            const connection = {
+                                startNode: connectionStart,
+                                endNode: socketInfo.node,
+                                startSocket: startSocket,
+                                endSocket: socketInfo.socket
+                            };
+                            
+                            connections.push(connection);
+                            
+                            // Update the target node's value to show the reference path to the source
+                            const referencePath = `{${connectionStart.layer}.${connectionStart.name}}`;
+                            socketInfo.node.value = referencePath;
+                            
+                            // Also update the corresponding token in the tokens object for sidebar and JSON export
+                            const targetLayer = socketInfo.node.layer;
+                            const targetToken = tokens[targetLayer]?.find(t => t.name === socketInfo.node.name);
+                            if (targetToken) {
+                                targetToken.value = referencePath;
+                                console.log(`Updated token ${targetLayer}.${socketInfo.node.name} to: ${referencePath}`);
+                            }
+                            
+                            // Update sidebar to show updated values
+                            renderSidebar();
+                            
+                            saveState();
+                            
+                            console.log(`Connected ${connectionStart.name} to ${socketInfo.node.name} with path: ${referencePath}`);
+                        } else {
+                            console.warn('Invalid connection: Can only connect output to input sockets');
+                        }
+                    } else {
+                        console.warn('Invalid connection: Can only start from output sockets');
+                    }
                 }
                 
                 isConnecting = false;
@@ -727,6 +886,83 @@
             }
         }
 
+        // Context menu functions
+        function showNodeContextMenu(node, x, y) {
+            const contextMenu = document.getElementById('dtmc-context-menu');
+            contextMenu.style.display = 'block';
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            
+            // Store the node for deletion
+            contextMenu.dataset.nodeId = node.id;
+            
+            // Add click outside to close
+            setTimeout(() => {
+                document.addEventListener('click', hideContextMenu);
+            }, 100);
+        }
+
+        function hideContextMenu() {
+            const contextMenu = document.getElementById('dtmc-context-menu');
+            contextMenu.style.display = 'none';
+            document.removeEventListener('click', hideContextMenu);
+        }
+
+        function deleteNode(nodeId) {
+            const nodeIndex = nodes.findIndex(n => n.id === nodeId);
+            if (nodeIndex === -1) return;
+            
+            const node = nodes[nodeIndex];
+            
+            console.log(`Deleting node: ${node.name} (ID: ${nodeId})`);
+            console.log(`Node original value: ${node.originalValue}, current value: ${node.value}`);
+            
+            // Remove all connections involving this node
+            const connectionsBefore = connections.length;
+            connections = connections.filter(conn => 
+                conn.startNode.id !== nodeId && conn.endNode.id !== nodeId
+            );
+            const connectionsAfter = connections.length;
+            console.log(`Removed ${connectionsBefore - connectionsAfter} connections`);
+            
+            // Remove the node
+            nodes.splice(nodeIndex, 1);
+            
+            // Restore original token value if it was modified by connections
+            if (node.originalValue && node.originalValue !== node.value) {
+                // Find the corresponding token and restore its value
+                const tokenLayer = node.layer;
+                const tokenIndex = tokens[tokenLayer]?.findIndex(t => t.name === node.name);
+                if (tokenIndex !== -1) {
+                    const oldValue = tokens[tokenLayer][tokenIndex].value;
+                    tokens[tokenLayer][tokenIndex].value = node.originalValue;
+                    console.log(`Restored token ${tokenLayer}.${node.name}: ${oldValue} → ${node.originalValue}`);
+                } else {
+                    console.warn(`Token not found in layer ${tokenLayer} for name ${node.name}`);
+                }
+            } else {
+                console.log(`No value restoration needed for node ${node.name}`);
+            }
+            
+            // Update sidebar
+            renderSidebar();
+            
+            // Save state
+            saveState();
+            
+            // Re-render
+            render();
+            
+            console.log(`Successfully deleted node: ${node.name}`);
+        }
+
+        // Function to update node values when connections are made
+        function updateNodeValues(node) {
+            // This function will be called when connections are made
+            // For now, it's a placeholder that can be expanded later
+            console.log(`Updating values for node: ${node.name}`);
+        }
+
         // Canvas drop handling
         canvas.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -750,7 +986,8 @@
                 name: draggedToken.name,
                 value: draggedToken.value,
                 type: draggedToken.type,
-                layer: draggedToken.layer
+                layer: draggedToken.layer,
+                originalValue: draggedToken.value // Store original value for restoration
             };
             
             nodes.push(newNode);
@@ -925,6 +1162,17 @@
             a.download = 'dtmc-tokens.json';
             a.click();
             URL.revokeObjectURL(url);
+        }
+
+        // Update nodes when tokens change
+        function updateNodesWithToken(token) {
+            nodes.forEach(node => {
+                if (node.name === token.name && node.layer === selectedLayer) {
+                    node.value = token.value;
+                    console.log(`Updated existing node: ${node.name} with value: ${node.value}`);
+                }
+            });
+            render();
         }
 
         // Initialize when page loads

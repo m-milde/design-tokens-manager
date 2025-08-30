@@ -564,6 +564,9 @@
             renderSidebar();
             closeModal();
             
+            // Update any existing nodes with this token
+            updateNodesWithToken(newToken);
+            
             console.log(`Created ${selectedLayer} token:`, newToken);
         }
 
@@ -636,16 +639,31 @@
                 
                 const socketInfo = getSocketAtPoint(x, y);
                 if (socketInfo && socketInfo.node !== connectionStart) {
-                    // Create connection
-                    const connection = {
-                        startNode: connectionStart,
-                        endNode: socketInfo.node,
-                        startSocket: startSocket,
-                        endSocket: socketInfo.socket
-                    };
-                    
-                    connections.push(connection);
-                    saveState();
+                    // Validate connection (output to input only)
+                    if (startSocket === 'right' || startSocket === 'bottom') {
+                        if (socketInfo.socket === 'top' || socketInfo.socket === 'left') {
+                            // Create connection
+                            const connection = {
+                                startNode: connectionStart,
+                                endNode: socketInfo.node,
+                                startSocket: startSocket,
+                                endSocket: socketInfo.socket
+                            };
+                            
+                            connections.push(connection);
+                            saveState();
+                            
+                            // Update values after connection
+                            updateNodeValues(connectionStart);
+                            updateNodeValues(socketInfo.node);
+                            
+                            console.log(`Connected ${connectionStart.name} to ${socketInfo.node.name}`);
+                        } else {
+                            console.warn('Invalid connection: Can only connect output to input sockets');
+                        }
+                    } else {
+                        console.warn('Invalid connection: Can only start from output sockets');
+                    }
                 }
                 
                 isConnecting = false;
@@ -925,6 +943,17 @@
             a.download = 'dtmc-tokens.json';
             a.click();
             URL.revokeObjectURL(url);
+        }
+
+        // Update nodes when tokens change
+        function updateNodesWithToken(token) {
+            nodes.forEach(node => {
+                if (node.name === token.name && node.layer === selectedLayer) {
+                    node.value = token.value;
+                    console.log(`Updated existing node: ${node.name} with value: ${node.value}`);
+                }
+            });
+            render();
         }
 
         // Initialize when page loads

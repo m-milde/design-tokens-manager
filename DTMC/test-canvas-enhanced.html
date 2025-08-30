@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DTMC - Enhanced Design Tokens Map Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .dtmc-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .dtmc-sidebar {
+            width: 300px;
+            background: #1e293b;
+            border-right: 1px solid #334155;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .dtmc-sidebar h2 {
+            margin-bottom: 16px;
+            color: #f8fafc;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .dtmc-token-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 32px;
+        }
+
+        .dtmc-type-btn {
+            padding: 8px 16px;
+            background: #334155;
+            border: none;
+            border-radius: 6px;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .dtmc-type-btn:hover {
+            background: #475569;
+        }
+
+        .dtmc-type-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .dtmc-layer-section {
+            margin-bottom: 24px;
+        }
+
+        .dtmc-layer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .dtmc-layer-title {
+            font-weight: 500;
+            color: #f1f5f9;
+        }
+
+        .dtmc-add-btn {
+            padding: 6px 12px;
+            background: #10b981;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .dtmc-add-btn:hover {
+            background: #059669;
+        }
+
+        .dtmc-tokens-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .dtmc-token-item {
+            padding: 12px;
+            background: #334155;
+            border-radius: 6px;
+            cursor: grab;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .dtmc-token-item:hover {
+            background: #475569;
+            border-color: #64748b;
+        }
+
+        .dtmc-token-item:active {
+            cursor: grabbing;
+        }
+
+        .dtmc-token-name {
+            font-weight: 500;
+            color: #f8fafc;
+            margin-bottom: 4px;
+        }
+
+        .dtmc-token-value {
+            font-size: 12px;
+            color: #94a3b8;
+            font-family: monospace;
+        }
+
+        .dtmc-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dtmc-controls {
+            padding: 16px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            gap: 12px;
+        }
+
+        .dtmc-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .dtmc-btn.primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .dtmc-btn.primary:hover {
+            background: #2563eb;
+        }
+
+        .dtmc-btn.warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .dtmc-btn.warning:hover {
+            background: #d97706;
+        }
+
+        .dtmc-btn.danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .dtmc-btn.danger:hover {
+            background: #dc2626;
+        }
+
+        .dtmc-zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .dtmc-zoom-controls .dtmc-btn {
+            padding: 6px 10px;
+            min-width: 32px;
+        }
+
+        #dtmc-zoom-level {
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .dtmc-minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .dtmc-minimap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .dtmc-minimap-header span {
+            color: #e2e8f0;
+        }
+
+        #dtmc-minimap-canvas {
+            border: 1px solid #334155;
+            border-radius: 4px;
+            background: #0f172a;
+            cursor: crosshair;
+        }
+
+        .dtmc-minimap.hidden {
+            display: none;
+        }
+
+        #dtmc-canvas {
+            flex: 1;
+            background: #0f172a;
+            cursor: grab;
+        }
+
+        #dtmc-canvas:active {
+            cursor: grabbing;
+        }
+
+        .dtmc-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .dtmc-modal-content {
+            background-color: #1e293b;
+            margin: 5% auto;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid #334155;
+        }
+
+        .dtmc-modal h3 {
+            margin-bottom: 20px;
+            color: #f8fafc;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .dtmc-form-group {
+            margin-bottom: 16px;
+        }
+
+        .dtmc-form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .dtmc-form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #334155;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+
+        .dtmc-form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .dtmc-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .dtmc-btn.secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        .dtmc-btn.secondary:hover {
+            background: #475569;
+        }
+
+        /* Enhanced Modal Styles */
+        .dtmc-token-type-display {
+            margin-top: 8px;
+        }
+
+        .dtmc-type-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .dtmc-token-section {
+            margin-bottom: 20px;
+        }
+
+        .dtmc-color-palette {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .dtmc-color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .dtmc-color-swatch:hover {
+            border-color: #3b82f6;
+            transform: scale(1.1);
+        }
+
+        .dtmc-color-swatch.selected {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+
+        .dtmc-tip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: #1e293b;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .dtmc-tip-icon {
+            font-size: 14px;
+        }
+
+        #token-reference-dropdown {
+            width: 100%;
+            padding: 10px 12px;
+            background: #334155;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        #token-reference-dropdown:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        #token-reference-dropdown option {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .dtmc-drag-preview {
+            position: fixed;
+            background: #1e293b;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="dtmc-container">
+        <div class="dtmc-sidebar">
+            <h2>Design Tokens</h2>
+            
+            <div class="dtmc-token-types">
+                <button class="dtmc-type-btn active" data-type="color">Color</button>
+                <button class="dtmc-type-btn" data-type="spacing">Spacing</button>
+                <button class="dtmc-type-btn" data-type="typography">Typography</button>
+                <button class="dtmc-type-btn" data-type="number">Number</button>
+                <button class="dtmc-type-btn" data-type="string">String</button>
+                <button class="dtmc-type-btn" data-type="boolean">Boolean</button>
+            </div>
+
+            <div class="dtmc-layer-section">
+                <div class="dtmc-layer-header">
+                    <span class="dtmc-layer-title">Primitive</span>
+                    <button class="dtmc-add-btn" data-layer="primitive">+ Add</button>
+                </div>
+                <div class="dtmc-tokens-list" id="primitive-tokens"></div>
+            </div>
+
+            <div class="dtmc-layer-section">
+                <div class="dtmc-layer-header">
+                    <span class="dtmc-layer-title">Base</span>
+                    <button class="dtmc-add-btn" data-layer="base">+ Add</button>
+                </div>
+                <div class="dtmc-tokens-list" id="base-tokens"></div>
+            </div>
+
+            <div class="dtmc-layer-section">
+                <div class="dtmc-layer-header">
+                    <span class="dtmc-layer-title">Semantic</span>
+                    <button class="dtmc-add-btn" data-layer="semantic">+ Add</button>
+                </div>
+                <div class="dtmc-tokens-list" id="semantic-tokens"></div>
+            </div>
+
+            <div class="dtmc-layer-section">
+                <div class="dtmc-layer-header">
+                    <span class="dtmc-layer-title">Specific</span>
+                    <button class="dtmc-add-btn" data-layer="specific">+ Add</button>
+                </div>
+                <div class="dtmc-tokens-list" id="specific-tokens"></div>
+            </div>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="dtmc-main">
+                    <div class="dtmc-controls">
+            <button id="dtmc-undo-btn" class="dtmc-btn warning">Undo</button>
+            <button id="dtmc-clear-btn" class="dtmc-btn danger">Clear All</button>
+            <button id="dtmc-export-btn" class="dtmc-btn primary">Export JSON</button>
+            <div class="dtmc-zoom-controls">
+                <button id="dtmc-zoom-out-btn" class="dtmc-btn secondary">-</button>
+                <span id="dtmc-zoom-level">100%</span>
+                <button id="dtmc-zoom-in-btn" class="dtmc-btn secondary">+</button>
+                <button id="dtmc-reset-zoom-btn" class="dtmc-btn secondary">Reset</button>
+            </div>
+        </div>
+            <canvas id="dtmc-canvas"></canvas>
+            
+            <!-- Mini-map for navigation -->
+            <div class="dtmc-minimap">
+                <div class="dtmc-minimap-header">
+                    <span>Mini-map</span>
+                    <button id="dtmc-minimap-toggle" class="dtmc-btn secondary">Toggle</button>
+                </div>
+                <canvas id="dtmc-minimap-canvas" width="200" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Token Creation Modal -->
+    <div id="dtmc-token-modal" class="dtmc-modal">
+        <div class="dtmc-modal-content">
+            <h3 id="modal-title">Create New Token</h3>
+            
+            <!-- Token Type Display -->
+            <div class="dtmc-form-group">
+                <label>Token Type</label>
+                <div class="dtmc-token-type-display">
+                    <span class="dtmc-type-badge" id="modal-token-type">Color</span>
+                </div>
+            </div>
+            
+            <!-- Token Name Input -->
+            <div class="dtmc-form-group">
+                <label for="token-name">Token Name</label>
+                <input type="text" id="token-name" placeholder="e.g., primary-blue">
+            </div>
+            
+            <!-- Dynamic Value Section -->
+            <div id="token-value-section">
+                <!-- Color Token Section -->
+                <div id="color-token-section" class="dtmc-token-section">
+                    <label>Choose a color:</label>
+                    <div class="dtmc-color-palette">
+                        <div class="dtmc-color-swatch" data-color="#ef4444" style="background-color: #ef4444;"></div>
+                        <div class="dtmc-color-swatch" data-color="#22c55e" style="background-color: #22c55e;"></div>
+                        <div class="dtmc-color-swatch" data-color="#3b82f6" style="background-color: #3b82f6;"></div>
+                        <div class="dtmc-color-swatch" data-color="#f59e0b" style="background-color: #f59e0b;"></div>
+                        <div class="dtmc-color-swatch" data-color="#8b5cf6" style="background-color: #8b5cf6;"></div>
+                        <div class="dtmc-color-swatch" data-color="#06b6d4" style="background-color: #06b6d4;"></div>
+                        <div class="dtmc-color-swatch" data-color="#84cc16" style="background-color: #84cc16;"></div>
+                        <div class="dtmc-color-swatch" data-color="#f97316" style="background-color: #f97316;"></div>
+                        <div class="dtmc-color-swatch" data-color="#ec4899" style="background-color: #ec4899;"></div>
+                        <div class="dtmc-color-swatch" data-color="#6366f1" style="background-color: #6366f1;"></div>
+                        <div class="dtmc-color-swatch" data-color="#10b981" style="background-color: #10b981;"></div>
+                        <div class="dtmc-color-swatch" data-color="#fbbf24" style="background-color: #fbbf24;"></div>
+                        <div class="dtmc-color-swatch" data-color="#6b7280" style="background-color: #6b7280;"></div>
+                        <div class="dtmc-color-swatch" data-color="#9ca3af" style="background-color: #9ca3af;"></div>
+                        <div class="dtmc-color-swatch" data-color="#d1d5db" style="background-color: #d1d5db;"></div>
+                        <div class="dtmc-color-swatch" data-color="#000000" style="background-color: #000000;"></div>
+                    </div>
+                    <div class="dtmc-form-group">
+                        <label for="token-value">Custom Color (Hex)</label>
+                        <input type="text" id="token-value" placeholder="#4a90e2" maxlength="7">
+                    </div>
+                </div>
+                
+                <!-- Non-Primitive Layer Section -->
+                <div id="reference-token-section" class="dtmc-token-section" style="display: none;">
+                    <label>Select from existing tokens:</label>
+                    <select id="token-reference-dropdown">
+                        <option value="">Select from existing tokens...</option>
+                    </select>
+                    <div class="dtmc-tip">
+                        <span class="dtmc-tip-icon">💡</span>
+                        <span id="available-tokens-count">0 tokens available</span>
+                    </div>
+                    <div class="dtmc-form-group">
+                        <label for="token-value-custom">Or enter a custom value:</label>
+                        <input type="text" id="token-value-custom" placeholder="Enter custom value or select from dropdown above">
+                    </div>
+                </div>
+                
+                <!-- Simple Value Section -->
+                <div id="simple-value-section" class="dtmc-token-section" style="display: none;">
+                    <div class="dtmc-form-group">
+                        <label for="token-value-simple">Token Value</label>
+                        <input type="text" id="token-value-simple" placeholder="Enter value...">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="dtmc-modal-buttons">
+                <button id="dtmc-cancel-btn" class="dtmc-btn secondary">Cancel</button>
+                <button id="dtmc-create-btn" class="dtmc-btn primary">Create Token</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drag Preview -->
+    <div id="dtmc-drag-preview" class="dtmc-drag-preview" style="display: none;"></div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('dtmc-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Constants
+        const SOCKET_RADIUS = 12;
+        const NODE_WIDTH = 200;
+        const NODE_HEIGHT = 120;
+        const MIN_ZOOM = 0.5;
+        const MAX_ZOOM = 3.0;
+        
+        // State
+        let nodes = [];
+        let connections = [];
+        let selectedNode = null;
+        let selectedConnection = null;
+        let isDragging = false;
+        let isPanning = false;
+        let panOffset = { x: 0, y: 0 };
+        let lastMousePos = { x: 0, y: 0 };
+        let zoomLevel = 1.0;               // Current zoom level
+        let isConnecting = false;
+        let connectionStart = null;
+        let startSocket = null;
+        let endSocket = null;
+        let selectedTokenType = 'color';
+        let selectedLayer = null;
+        let tokens = {
+            primitive: [],
+            base: [],
+            semantic: [],
+            specific: []
+        };
+        let undoStack = [];
+        let dragPreview = null;
+        let draggedToken = null;
+
+        // Initialize
+        function init() {
+            console.log('🎯 DTMC Enhanced Interactive Sidebar System Loaded!');
+            console.log('Features: Enhanced Modal, Color Palette, Reference System, Token Types, Layers, Drag & Drop, Zoom Controls, Mini-map, Connection Labels');
+            console.log('Keyboard Shortcuts: Ctrl+M (Toggle Mini-map), Ctrl+0 (Reset Zoom), Delete/Backspace (Delete Connections)');
+            
+            setupEventListeners();
+            setupSidebar();
+            loadSampleTokens();
+            resizeCanvas();
+            updateZoomDisplay();
+            render();
+            setupColorSwatchEvents();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Canvas events
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('wheel', handleWheel);
+            
+            // Control buttons
+            document.getElementById('dtmc-clear-btn').addEventListener('click', clearAll);
+            document.getElementById('dtmc-undo-btn').addEventListener('click', undo);
+            document.getElementById('dtmc-export-btn').addEventListener('click', exportJSON);
+            
+            // Zoom controls
+            document.getElementById('dtmc-zoom-in-btn').addEventListener('click', () => zoomIn());
+            document.getElementById('dtmc-zoom-out-btn').addEventListener('click', () => zoomOut());
+            document.getElementById('dtmc-reset-zoom-btn').addEventListener('click', () => resetZoom());
+            
+            // Mini-map controls
+            document.getElementById('dtmc-minimap-toggle').addEventListener('click', toggleMiniMap);
+            
+            // Mini-map click navigation
+            document.getElementById('dtmc-minimap-canvas').addEventListener('click', handleMiniMapClick);
+            
+            // Modal events
+            document.getElementById('dtmc-cancel-btn').addEventListener('click', closeModal);
+            document.getElementById('dtmc-create-btn').addEventListener('click', createToken);
+            
+            // Window events
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Keyboard events for connection deletion
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        // Setup sidebar functionality
+        function setupSidebar() {
+            // Token type selection
+            document.querySelectorAll('.dtmc-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.dtmc-type-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedTokenType = btn.dataset.type;
+                    console.log('Selected token type:', selectedTokenType);
+                });
+            });
+
+            // Add token buttons
+            document.querySelectorAll('.dtmc-add-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedLayer = btn.dataset.layer;
+                    openModal();
+                });
+            });
+        }
+
+        // Load sample tokens
+        function loadSampleTokens() {
+            tokens.primitive = [
+                { name: 'primary-blue', value: '#4a90e2', type: 'color' },
+                { name: 'secondary-purple', value: '#805ad5', type: 'color' },
+                { name: 'font-size-base', value: '16px', type: 'number' }
+            ];
+            
+            tokens.base = [
+                { name: 'color-brand', value: '{primitive.primary-blue}', type: 'color' }
+            ];
+            
+            tokens.semantic = [
+                { name: 'button-bg', value: '{base.color-brand}', type: 'color' }
+            ];
+            
+            tokens.specific = [];
+            
+            renderSidebar();
+        }
+
+        // Render sidebar
+        function renderSidebar() {
+            Object.keys(tokens).forEach(layer => {
+                const container = document.getElementById(`${layer}-tokens`);
+                container.innerHTML = '';
+                
+                tokens[layer].forEach(token => {
+                    const tokenElement = createTokenElement(token, layer);
+                    container.appendChild(tokenElement);
+                });
+            });
+        }
+
+        // Create token element for sidebar
+        function createTokenElement(token, layer) {
+            const div = document.createElement('div');
+            div.className = 'dtmc-token-item';
+            div.draggable = true;
+            div.dataset.tokenName = token.name;
+            div.dataset.tokenValue = token.value;
+            div.dataset.tokenType = token.type;
+            div.dataset.tokenLayer = layer;
+            
+            div.innerHTML = `
+                <div class="dtmc-token-name">${token.name}</div>
+                <div class="dtmc-token-value">${token.value}</div>
+            `;
+            
+            div.addEventListener('dragstart', (e) => {
+                draggedToken = { ...token, layer };
+                e.dataTransfer.setData('text/plain', JSON.stringify(draggedToken));
+                dragPreview.style.display = 'block';
+                dragPreview.textContent = `${token.name} (${token.value})`;
+            });
+            
+            div.addEventListener('dragend', () => {
+                dragPreview.style.display = 'none';
+            });
+            
+            return div;
+        }
+
+        // Open modal for token creation
+        function openModal() {
+            const modal = document.getElementById('dtmc-token-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const tokenTypeBadge = document.getElementById('modal-token-type');
+            
+            // Update modal title and token type
+            modalTitle.textContent = `Create New ${selectedTokenType.charAt(0).toUpperCase() + selectedTokenType.slice(1)} Token`;
+            tokenTypeBadge.textContent = selectedTokenType.charAt(0).toUpperCase() + selectedTokenType.slice(1);
+            
+            // Show appropriate value section
+            showAppropriateValueSection();
+            
+            // Populate reference dropdown if needed
+            if (selectedLayer !== 'primitive') {
+                populateReferenceDropdown();
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        // Show appropriate value section based on token type and layer
+        function showAppropriateValueSection() {
+            const colorSection = document.getElementById('color-token-section');
+            const referenceSection = document.getElementById('reference-token-section');
+            const simpleSection = document.getElementById('simple-value-section');
+            
+            // Hide all sections first
+            colorSection.style.display = 'none';
+            referenceSection.style.display = 'none';
+            simpleSection.style.display = 'none';
+            
+            if (selectedTokenType === 'color' && selectedLayer === 'primitive') {
+                // Color tokens in primitive layer show color palette
+                colorSection.style.display = 'block';
+            } else if (selectedLayer !== 'primitive') {
+                // Non-primitive layers show reference dropdown
+                referenceSection.style.display = 'block';
+            } else {
+                // Other token types show simple input
+                simpleSection.style.display = 'block';
+            }
+        }
+
+        // Populate reference dropdown with available tokens
+        function populateReferenceDropdown() {
+            const dropdown = document.getElementById('token-reference-dropdown');
+            const countSpan = document.getElementById('available-tokens-count');
+            
+            // Clear existing options
+            dropdown.innerHTML = '<option value="">Select from existing tokens...</option>';
+            
+            let availableTokens = [];
+            
+            // Collect tokens from all layers except the current one
+            Object.keys(tokens).forEach(layer => {
+                if (layer !== selectedLayer) {
+                    tokens[layer].forEach(token => {
+                        availableTokens.push({
+                            layer: layer,
+                            name: token.name,
+                            value: token.value,
+                            displayText: `${layer}.${token.name} (${token.value})`
+                        });
+                    });
+                }
+            });
+            
+            // Add options to dropdown
+            availableTokens.forEach(token => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify(token);
+                option.textContent = token.displayText;
+                dropdown.appendChild(option);
+            });
+            
+            // Update count
+            countSpan.textContent = `${availableTokens.length} tokens available`;
+            
+            // Add change event listener
+            dropdown.onchange = function() {
+                const selectedValue = this.value;
+                if (selectedValue) {
+                    const tokenData = JSON.parse(selectedValue);
+                    document.getElementById('token-value-custom').value = `{${tokenData.layer}.${tokenData.name}}`;
+                }
+            };
+        }
+
+        // Setup color swatch click events
+        function setupColorSwatchEvents() {
+            const colorSwatches = document.querySelectorAll('.dtmc-color-swatch');
+            colorSwatches.forEach(swatch => {
+                swatch.addEventListener('click', function() {
+                    // Remove selected class from all swatches
+                    colorSwatches.forEach(s => s.classList.remove('selected'));
+                    // Add selected class to clicked swatch
+                    this.classList.add('selected');
+                    // Update the token value input
+                    const colorValue = this.getAttribute('data-color');
+                    document.getElementById('token-value').value = colorValue;
+                });
+            });
+        }
+
+        // Close modal
+        function closeModal() {
+            const modal = document.getElementById('dtmc-token-modal');
+            modal.style.display = 'none';
+            
+            // Clear all inputs
+            document.getElementById('token-name').value = '';
+            document.getElementById('token-value').value = '';
+            document.getElementById('token-value-custom').value = '';
+            document.getElementById('token-value-simple').value = '';
+            
+            // Reset color swatch selection
+            document.querySelectorAll('.dtmc-color-swatch').forEach(s => s.classList.remove('selected'));
+            
+            // Reset dropdown
+            document.getElementById('token-reference-dropdown').selectedIndex = 0;
+        }
+
+        // Create token
+        function createToken() {
+            const name = document.getElementById('token-name').value.trim();
+            let value = '';
+            
+            // Get value from appropriate input field
+            if (selectedTokenType === 'color' && selectedLayer === 'primitive') {
+                value = document.getElementById('token-value').value.trim();
+            } else if (selectedLayer !== 'primitive') {
+                value = document.getElementById('token-value-custom').value.trim();
+            } else {
+                value = document.getElementById('token-value-simple').value.trim();
+            }
+            
+            if (!name || !value) {
+                alert('Please fill in both name and value');
+                return;
+            }
+            
+            const newToken = {
+                name,
+                value,
+                type: selectedTokenType
+            };
+            
+            tokens[selectedLayer].push(newToken);
+            renderSidebar();
+            closeModal();
+            
+            // Update any existing nodes with this token
+            updateNodesWithToken(newToken);
+            
+            console.log(`Created ${selectedLayer} token:`, newToken);
+        }
+
+        // Mouse event handlers
+        function handleMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+            const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+            
+            // Check if clicking on a socket
+            const socketInfo = getSocketAtPoint(x, y);
+            if (socketInfo) {
+                isConnecting = true;
+                connectionStart = socketInfo.node;
+                startSocket = socketInfo.socket;
+                return;
+            }
+            
+            // Check if clicking on a connection line
+            const clickedConnection = getConnectionAtPoint(x, y);
+            if (clickedConnection) {
+                console.log('Clicked on connection:', clickedConnection);
+                
+                // Select the connection (will be drawn in red)
+                selectedConnection = clickedConnection;
+                selectedNode = null; // Deselect any selected node
+                
+                // Re-render to show selected connection
+                render();
+                return;
+            }
+            
+            // Check if clicking on a node
+            const clickedNode = getNodeAtPoint(x, y);
+            if (clickedNode) {
+                selectedNode = clickedNode;
+                selectedConnection = null; // Deselect any selected connection
+                isDragging = true;
+                lastMousePos = { x: e.clientX, y: e.clientY };
+                return;
+            }
+            
+            // Deselect if clicking on empty space
+            if (selectedNode || selectedConnection) {
+                selectedNode = null;
+                selectedConnection = null;
+                render();
+            }
+            
+            // Start panning
+            isPanning = true;
+            lastMousePos = { x: e.clientX, y: e.clientY };
+        }
+
+        function handleMouseMove(e) {
+            if (isConnecting) {
+                // Handle connection preview
+                render();
+                drawConnectionPreview(e);
+                return;
+            }
+            
+            if (isDragging && selectedNode) {
+                const deltaX = e.clientX - lastMousePos.x;
+                const deltaY = e.clientY - lastMousePos.y;
+                
+                selectedNode.x += deltaX;
+                selectedNode.y += deltaY;
+                
+                lastMousePos = { x: e.clientX, y: e.clientY };
+                render();
+                return;
+            }
+            
+            if (isPanning) {
+                const deltaX = e.clientX - lastMousePos.x;
+                const deltaY = e.clientY - lastMousePos.y;
+                
+                panOffset.x += deltaX;
+                panOffset.y += deltaY;
+                
+                lastMousePos = { x: e.clientX, y: e.clientY };
+                render();
+            }
+            
+            // Update cursor based on what's under the mouse
+            updateCursor(e);
+        }
+
+        function handleMouseUp(e) {
+            if (isConnecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+                const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+                
+                const socketInfo = getSocketAtPoint(x, y);
+                if (socketInfo && socketInfo.node !== connectionStart) {
+                    // Validate connection (output to input only)
+                    if ((startSocket === 'right' || startSocket === 'bottom') && 
+                        (socketInfo.socket === 'top' || socketInfo.socket === 'left')) {
+                        
+                        // Store original value if not already stored
+                        if (!socketInfo.node.originalValue) {
+                            socketInfo.node.originalValue = socketInfo.node.value;
+                            console.log(`Stored original value for ${socketInfo.node.name}: ${socketInfo.node.originalValue}`);
+                        }
+                        
+                        const connection = {
+                            startNode: connectionStart,
+                            endNode: socketInfo.node,
+                            startSocket: startSocket,
+                            endSocket: socketInfo.socket
+                        };
+                        
+                        connections.push(connection);
+                        saveState();
+                        
+                        // Update the target node's value to show the reference path to the source
+                        const referencePath = `{${connectionStart.layer}.${connectionStart.name}}`;
+                        socketInfo.node.value = referencePath;
+                        socketInfo.node.currentValue = referencePath;
+                        
+                        // Also update the corresponding token in the tokens object for sidebar and JSON export
+                        const targetLayer = socketInfo.node.layer;
+                        const targetToken = tokens[targetLayer]?.find(t => t.name === socketInfo.node.name);
+                        if (targetToken) {
+                            targetToken.value = referencePath;
+                            console.log(`Updated token ${targetLayer}.${socketInfo.node.name} to: ${referencePath}`);
+                        }
+                        
+                        // Re-render sidebar to show updated values
+                        renderSidebar();
+                        
+                        console.log(`Reference created: ${connectionStart.name} → ${socketInfo.node.name} with path: ${referencePath}`);
+                    } else {
+                        console.warn('Invalid connection: Can only connect output to input sockets');
+                    }
+                }
+                
+                isConnecting = false;
+                connectionStart = null;
+                startSocket = null;
+                render();
+                return;
+            }
+            
+            isDragging = false;
+            isPanning = false;
+            selectedNode = null;
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Calculate zoom factor
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel * zoomFactor));
+            
+            if (newZoom !== zoomLevel) {
+                // Calculate zoom center relative to canvas
+                const zoomCenterX = (mouseX - panOffset.x) / zoomLevel;
+                const zoomCenterY = (mouseY - panOffset.y) / zoomLevel;
+                
+                // Update zoom level
+                zoomLevel = newZoom;
+                
+                // Adjust pan offset to zoom towards mouse position
+                panOffset.x = mouseX - zoomCenterX * zoomLevel;
+                panOffset.y = mouseY - zoomCenterY * zoomLevel;
+                
+                // Re-render with new zoom
+                render();
+            }
+        }
+
+        // Helper functions
+        function getNodeAtPoint(x, y) {
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const node = nodes[i];
+                if (x >= node.x && x <= node.x + NODE_WIDTH &&
+                    y >= node.y && y <= node.y + NODE_HEIGHT) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        function getSocketAtPoint(x, y) {
+            for (const node of nodes) {
+                const sockets = [
+                    { x: node.x + NODE_WIDTH / 2, y: node.y, type: 'input', socket: 'top' },
+                    { x: node.x, y: node.y + NODE_HEIGHT / 2, type: 'input', socket: 'left' },
+                    { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2, type: 'output', socket: 'right' },
+                    { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT, type: 'output', socket: 'bottom' }
+                ];
+                
+                for (const socket of sockets) {
+                    const distance = Math.sqrt((x - socket.x) ** 2 + (y - socket.y) ** 2);
+                    if (distance <= SOCKET_RADIUS) {
+                        return { node, ...socket };
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Check if a point is near a connection line
+        function getConnectionAtPoint(x, y) {
+            const CLICK_TOLERANCE = 8; // How close to the line you need to click
+            
+            for (const connection of connections) {
+                const startPoint = getSocketPosition(connection.startNode, connection.startSocket);
+                const endPoint = getSocketPosition(connection.endNode, connection.endSocket);
+                
+                // Calculate distance from point to line segment
+                const distance = distanceToLineSegment(x, y, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+                
+                if (distance <= CLICK_TOLERANCE) {
+                    return connection;
+                }
+            }
+            return null;
+        }
+
+        // Calculate distance from point to line segment
+        function distanceToLineSegment(px, py, x1, y1, x2, y2) {
+            const A = px - x1;
+            const B = py - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+            
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            
+            if (lenSq === 0) {
+                // Point is at start point
+                return Math.sqrt(A * A + B * B);
+            }
+            
+            let param = dot / lenSq;
+            
+            if (param < 0) {
+                // Closest point is start point
+                return Math.sqrt(A * A + B * B);
+            } else if (param > 1) {
+                // Closest point is end point
+                return Math.sqrt((px - x2) * (px - x2) + (py - y2) * (py - y2));
+            } else {
+                // Closest point is on the line segment
+                const x = x1 + param * C;
+                const y = y1 + param * D;
+                return Math.sqrt((px - x) * (px - x) + (py - y) * (py - y));
+            }
+        }
+
+        function drawConnectionPreview(e) {
+            if (!connectionStart) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+            const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+            
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            
+            const startPoint = getSocketPosition(connectionStart, startSocket);
+            ctx.beginPath();
+            ctx.moveTo(startPoint.x, startPoint.y);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
+        }
+
+        function getSocketPosition(node, socket) {
+            switch (socket) {
+                case 'top': return { x: node.x + NODE_WIDTH / 2, y: node.y };
+                case 'left': return { x: node.x, y: node.y + NODE_HEIGHT / 2 };
+                case 'right': return { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2 };
+                case 'bottom': return { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT };
+                default: return { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT / 2 };
+            }
+        }
+
+        // Canvas drop handling
+        canvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            if (!draggedToken) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+            const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+            
+            // Create new node from token
+            const newNode = {
+                id: Date.now(),
+                x: x - NODE_WIDTH / 2,
+                y: y - NODE_HEIGHT / 2,
+                name: draggedToken.name,
+                value: draggedToken.value,
+                type: draggedToken.type,
+                layer: draggedToken.layer,
+                originalValue: draggedToken.value // Store original value for restoration
+            };
+            
+            nodes.push(newNode);
+            saveState();
+            render();
+            
+            console.log('Created node from token:', newNode);
+        });
+
+        // Rendering functions
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(panOffset.x, panOffset.y);
+            ctx.scale(zoomLevel, zoomLevel);
+            
+            // Draw connections first
+            connections.forEach(connection => {
+                drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
+            });
+            
+            // Draw nodes on top
+            nodes.forEach(node => {
+                drawNode(node);
+            });
+            
+            ctx.restore();
+            
+            // Update mini-map if visible
+            const minimap = document.querySelector('.dtmc-minimap');
+            if (minimap && !minimap.classList.contains('hidden')) {
+                renderMiniMap();
+            }
+        }
+
+        function drawNode(node) {
+            // Node background
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            
+            // Use rectangle instead of roundRect for better browser compatibility
+            ctx.beginPath();
+            ctx.rect(node.x, node.y, NODE_WIDTH, NODE_HEIGHT, 8);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Layer label
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(node.layer.toUpperCase(), node.x + NODE_WIDTH / 2, node.y + 20);
+            
+            // Token name
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.fillText(node.name, node.x + NODE_WIDTH / 2, node.y + 45);
+            
+            // Token value
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.fillText(node.value, node.x + NODE_WIDTH / 2, node.y + 70);
+            
+            // Draw sockets
+            ctx.fillStyle = '#ef4444'; // Red for input
+            ctx.beginPath();
+            ctx.arc(node.x + NODE_WIDTH / 2, node.y, SOCKET_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(node.x, node.y + NODE_HEIGHT / 2, SOCKET_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#22c55e'; // Green for output
+            ctx.beginPath();
+            ctx.arc(node.x + NODE_WIDTH, node.y + NODE_HEIGHT / 2, SOCKET_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(node.x + NODE_WIDTH / 2, node.y + NODE_HEIGHT, SOCKET_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawConnection(startNode, endNode, startSocket, endSocket) {
+            const startPoint = getSocketPosition(startNode, startSocket);
+            const endPoint = getSocketPosition(endNode, endSocket);
+            
+            // Check if this connection is selected
+            const isSelected = selectedConnection && 
+                selectedConnection.startNode.id === startNode.id && 
+                selectedConnection.endNode.id === endNode.id &&
+                selectedConnection.startSocket === startSocket && 
+                selectedConnection.endSocket === endSocket;
+            
+            // Draw selected connections in red, normal ones in blue
+            if (isSelected) {
+                ctx.strokeStyle = '#dc2626'; // Red for selected
+                ctx.lineWidth = 5; // Thicker for selected
+            } else {
+                ctx.strokeStyle = '#3b82f6'; // Blue for normal
+                ctx.lineWidth = 3;
+            }
+            
+            // Create curved connection
+            const controlPoint1 = {
+                x: startPoint.x + (endPoint.x - startPoint.x) * 0.5,
+                y: startPoint.y
+            };
+            
+            const controlPoint2 = {
+                x: startPoint.x + (endPoint.x - startPoint.x) * 0.5,
+                y: endPoint.y
+            };
+            
+            ctx.beginPath();
+            ctx.moveTo(startPoint.x, startPoint.y);
+            ctx.bezierCurveTo(
+                controlPoint1.x, controlPoint1.y,
+                controlPoint2.x, controlPoint2.y,
+                endPoint.x, endPoint.y
+            );
+            ctx.stroke();
+            
+            // Draw connection label
+            drawConnectionLabel(startPoint, endPoint, startNode, endNode);
+        }
+
+        // Utility functions
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            render();
+        }
+
+        function saveState() {
+            undoStack.push({
+                nodes: JSON.parse(JSON.stringify(nodes)),
+                connections: JSON.parse(JSON.stringify(connections))
+            });
+            
+            if (undoStack.length > 20) {
+                undoStack.shift();
+            }
+        }
+
+        function undo() {
+            if (undoStack.length > 0) {
+                const previousState = undoStack.pop();
+                nodes = previousState.nodes;
+                connections = previousState.connections;
+                render();
+            }
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all nodes and connections?')) {
+                nodes = [];
+                connections = [];
+                undoStack = [];
+                render();
+            }
+        }
+
+        function exportJSON() {
+            const data = {
+                tokens: tokens,
+                nodes: nodes,
+                connections: connections
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dtmc-enhanced-tokens.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Update nodes when tokens change
+        function updateNodesWithToken(token) {
+            nodes.forEach(node => {
+                if (node.name === token.name && node.layer === selectedLayer) {
+                    node.value = token.value;
+                    console.log(`Updated existing node: ${node.name} with value: ${node.value}`);
+                }
+            });
+            render();
+        }
+
+        // Update cursor based on what's under the mouse
+        function updateCursor(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+            const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+            
+            // Check if hovering over a connection
+            const connectionUnderMouse = getConnectionAtPoint(x, y);
+            if (connectionUnderMouse) {
+                canvas.style.cursor = 'pointer';
+            } else {
+                canvas.style.cursor = 'grab';
+            }
+        }
+
+        // Zoom control functions
+        function zoomIn() {
+            const newZoom = Math.min(MAX_ZOOM, zoomLevel * 1.2);
+            if (newZoom !== zoomLevel) {
+                zoomLevel = newZoom;
+                updateZoomDisplay();
+                render();
+            }
+        }
+
+        function zoomOut() {
+            const newZoom = Math.max(MIN_ZOOM, zoomLevel / 1.2);
+            if (newZoom !== zoomLevel) {
+                zoomLevel = newZoom;
+                updateZoomDisplay();
+                render();
+            }
+        }
+
+        function resetZoom() {
+            zoomLevel = 1.0;
+            panOffset = { x: 0, y: 0 };
+            updateZoomDisplay();
+            render();
+        }
+
+        function updateZoomDisplay() {
+            const zoomDisplay = document.getElementById('dtmc-zoom-level');
+            zoomDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+        }
+
+        // Draw connection labels
+        function drawConnectionLabel(startPoint, endPoint, startNode, endNode) {
+            // Calculate label position (middle of the connection)
+            const labelX = (startPoint.x + endPoint.x) / 2;
+            const labelY = (startPoint.y + endPoint.y) / 2;
+            
+            // Create label text
+            const labelText = `${startNode.name} → ${endNode.name}`;
+            
+            // Set text style
+            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Draw label background
+            const textMetrics = ctx.measureText(labelText);
+            const padding = 4;
+            const bgWidth = textMetrics.width + padding * 2;
+            const bgHeight = 16;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(labelX - bgWidth / 2, labelY - bgHeight / 2, bgWidth, bgHeight);
+            
+            // Draw label text
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(labelText, labelX, labelY);
+        }
+
+        // Mini-map functionality
+        function toggleMiniMap() {
+            const minimap = document.querySelector('.dtmc-minimap');
+            minimap.classList.toggle('hidden');
+            
+            if (!minimap.classList.contains('hidden')) {
+                renderMiniMap();
+            }
+        }
+
+        function renderMiniMap() {
+            const minimapCanvas = document.getElementById('dtmc-minimap-canvas');
+            const minimapCtx = minimapCanvas.getContext('2d');
+            
+            // Clear minimap
+            minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+            
+            if (nodes.length === 0) return;
+            
+            // Calculate bounds of all nodes
+            let minX = Math.min(...nodes.map(n => n.x));
+            let maxX = Math.max(...nodes.map(n => n.x + NODE_WIDTH));
+            let minY = Math.min(...nodes.map(n => n.y));
+            let maxY = Math.max(...nodes.map(n => n.y + NODE_HEIGHT));
+            
+            // Add padding
+            const padding = 50;
+            minX -= padding;
+            maxX += padding;
+            minY -= padding;
+            maxY += padding;
+            
+            // Calculate scale to fit in minimap
+            const scaleX = minimapCanvas.width / (maxX - minX);
+            const scaleY = minimapCanvas.height / (maxY - minY);
+            const scale = Math.min(scaleX, scaleY);
+            
+            // Draw nodes on minimap
+            minimapCtx.fillStyle = '#3b82f6';
+            nodes.forEach(node => {
+                const minimapX = (node.x - minX) * scale;
+                const minimapY = (node.y - minY) * scale;
+                const minimapWidth = NODE_WIDTH * scale;
+                const minimapHeight = NODE_HEIGHT * scale;
+                
+                minimapCtx.fillRect(minimapX, minimapY, minimapWidth, minimapHeight);
+            });
+            
+            // Draw connections on minimap
+            minimapCtx.strokeStyle = '#60a5fa';
+            minimapCtx.lineWidth = 1;
+            connections.forEach(connection => {
+                const startPoint = getSocketPosition(connection.startNode, connection.startSocket);
+                const endPoint = getSocketPosition(connection.endNode, connection.endSocket);
+                
+                const startX = (startPoint.x - minX) * scale;
+                const startY = (startPoint.y - minY) * scale;
+                const endX = (endPoint.x - minX) * scale;
+                const endY = (endPoint.y - minY) * scale;
+                
+                minimapCtx.beginPath();
+                minimapCtx.moveTo(startX, startY);
+                minimapCtx.lineTo(endX, endY);
+                minimapCtx.stroke();
+            });
+            
+            // Draw viewport indicator
+            const viewportX = (-panOffset.x - minX) * scale;
+            const viewportY = (-panOffset.y - minY) * scale;
+            const viewportWidth = (canvas.width / zoomLevel - minX) * scale;
+            const viewportHeight = (canvas.height / zoomLevel - minY) * scale;
+            
+            minimapCtx.strokeStyle = '#fbbf24';
+            minimapCtx.lineWidth = 2;
+            minimapCtx.strokeRect(viewportX, viewportY, viewportWidth, viewportHeight);
+        }
+
+        // Handle mini-map clicks for navigation
+        function handleMiniMapClick(e) {
+            const minimapCanvas = document.getElementById('dtmc-minimap-canvas');
+            const rect = minimapCanvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            if (nodes.length === 0) return;
+            
+            // Calculate bounds (same logic as renderMiniMap)
+            let minX = Math.min(...nodes.map(n => n.x));
+            let maxX = Math.max(...nodes.map(n => n.x + NODE_WIDTH));
+            let minY = Math.min(...nodes.map(n => n.y));
+            let maxY = Math.max(...nodes.map(n => n.y + NODE_HEIGHT));
+            
+            const padding = 50;
+            minX -= padding;
+            maxX += padding;
+            minY -= padding;
+            maxY += padding;
+            
+            const scaleX = minimapCanvas.width / (maxX - minX);
+            const scaleY = minimapCanvas.height / (maxY - minY);
+            const scale = Math.min(scaleX, scaleY);
+            
+            // Convert click position to world coordinates
+            const worldX = minX + (clickX / scale);
+            const worldY = minY + (clickY / scale);
+            
+            // Center viewport on clicked position
+            panOffset.x = -worldX + canvas.width / (2 * zoomLevel);
+            panOffset.y = -worldY + canvas.height / (2 * zoomLevel);
+            
+            // Re-render
+            render();
+        }
+
+        // Keyboard event handler for connection deletion
+        function handleKeyDown(e) {
+            // Handle Delete or Backspace for connection deletion
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedConnection) {
+                e.preventDefault(); // Prevent default browser behavior
+                
+                console.log(`Delete key pressed for connection`);
+                
+                // Show confirmation dialog
+                const startName = selectedConnection.startNode.name;
+                const endName = selectedConnection.endNode.name;
+                const confirmMessage = `Are you sure you want to delete the connection from "${startName}" to "${endName}"?\n\nThis will restore the original value of "${endName}".`;
+                
+                if (confirm(confirmMessage)) {
+                    console.log(`User confirmed deletion of connection`);
+                    deleteSelectedConnection();
+                } else {
+                    console.log(`User cancelled deletion of connection`);
+                }
+                return;
+            }
+            
+            // Handle Ctrl+M for mini-map toggle
+            if (e.ctrlKey && e.key === 'm') {
+                e.preventDefault();
+                toggleMiniMap();
+                return;
+            }
+            
+            // Handle Ctrl+0 for reset zoom
+            if (e.ctrlKey && e.key === '0') {
+                e.preventDefault();
+                resetZoom();
+                return;
+            }
+        }
+
+        // Delete the currently selected connection
+        function deleteSelectedConnection() {
+            if (!selectedConnection) return;
+            
+            const startName = selectedConnection.startNode.name;
+            const endName = selectedConnection.endNode.name;
+            
+            console.log(`Deleting connection from ${startName} to ${endName}`);
+            console.log(`Target node ${endName} current value: ${selectedConnection.endNode.value}`);
+            console.log(`Target node ${endName} original value: ${selectedConnection.endNode.originalValue}`);
+            
+            // Remove the connection
+            const connectionIndex = connections.findIndex(conn => 
+                conn.startNode.id === selectedConnection.startNode.id && 
+                conn.endNode.id === selectedConnection.endNode.id &&
+                conn.startSocket === selectedConnection.startSocket && 
+                conn.endSocket === selectedConnection.endSocket
+            );
+            
+            if (connectionIndex !== -1) {
+                connections.splice(connectionIndex, 1);
+                console.log(`Removed connection`);
+            }
+            
+            // Restore the original value of the target node
+            const targetNode = selectedConnection.endNode;
+            
+            // Find the original token value from the tokens object
+            const targetLayer = targetNode.layer;
+            const targetToken = tokens[targetLayer]?.find(t => t.name === targetNode.name);
+            
+            if (targetToken && targetNode.originalValue) {
+                // Restore the node's value to its original value
+                const oldValue = targetNode.value;
+                targetNode.value = targetNode.originalValue;
+                
+                // Also restore the corresponding token in the tokens object
+                targetToken.value = targetNode.originalValue;
+                console.log(`Restored token ${targetLayer}.${targetNode.name}: ${oldValue} → ${targetNode.originalValue}`);
+                
+                // Update sidebar
+                renderSidebar();
+            } else {
+                console.warn(`No original value found for node ${targetNode.name}, cannot restore`);
+            }
+            
+            // Clear selection
+            selectedConnection = null;
+            
+            // Save state
+            saveState();
+            
+            // Re-render
+            render();
+            
+            console.log(`Successfully deleted connection from ${startName} to ${endName}`);
+        }
+
+        // Initialize when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
