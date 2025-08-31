@@ -4,417 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DTMC - Enhanced Design Tokens Map Creator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            overflow: hidden;
-        }
-
-        .dtmc-container {
-            display: flex;
-            height: 100vh;
-        }
-
-        .dtmc-sidebar {
-            width: 300px;
-            background: #1e293b;
-            border-right: 1px solid #334155;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .dtmc-sidebar h2 {
-            margin-bottom: 16px;
-            color: #f8fafc;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .dtmc-token-types {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 32px;
-        }
-
-        .dtmc-type-btn {
-            padding: 8px 16px;
-            background: #334155;
-            border: none;
-            border-radius: 6px;
-            color: #cbd5e1;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        .dtmc-type-btn:hover {
-            background: #475569;
-        }
-
-        .dtmc-type-btn.active {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .dtmc-layer-section {
-            margin-bottom: 24px;
-        }
-
-        .dtmc-layer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .dtmc-layer-title {
-            font-weight: 500;
-            color: #f1f5f9;
-        }
-
-        .dtmc-add-btn {
-            padding: 6px 12px;
-            background: #10b981;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-            transition: background 0.2s;
-        }
-
-        .dtmc-add-btn:hover {
-            background: #059669;
-        }
-
-        .dtmc-tokens-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .dtmc-token-item {
-            padding: 12px;
-            background: #334155;
-            border-radius: 6px;
-            cursor: grab;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .dtmc-token-item:hover {
-            background: #475569;
-            border-color: #64748b;
-        }
-
-        .dtmc-token-item:active {
-            cursor: grabbing;
-        }
-
-        .dtmc-token-name {
-            font-weight: 500;
-            color: #f8fafc;
-            margin-bottom: 4px;
-        }
-
-        .dtmc-token-value {
-            font-size: 12px;
-            color: #94a3b8;
-            font-family: monospace;
-        }
-
-        .dtmc-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .dtmc-controls {
-            padding: 16px;
-            background: #1e293b;
-            border-bottom: 1px solid #334155;
-            display: flex;
-            gap: 12px;
-        }
-
-        .dtmc-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        .dtmc-btn.primary {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .dtmc-btn.primary:hover {
-            background: #2563eb;
-        }
-
-        .dtmc-btn.warning {
-            background: #f59e0b;
-            color: white;
-        }
-
-        .dtmc-btn.warning:hover {
-            background: #d97706;
-        }
-
-        .dtmc-btn.danger {
-            background: #ef4444;
-            color: white;
-        }
-
-        .dtmc-btn.danger:hover {
-            background: #dc2626;
-        }
-
-        .dtmc-zoom-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: auto;
-        }
-
-        .dtmc-zoom-controls .dtmc-btn {
-            padding: 6px 10px;
-            min-width: 32px;
-        }
-
-        #dtmc-zoom-level {
-            color: #94a3b8;
-            font-size: 14px;
-            font-weight: 500;
-            min-width: 50px;
-            text-align: center;
-        }
-
-        .dtmc-minimap {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 12px;
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-        }
-
-        .dtmc-minimap-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            color: #94a3b8;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .dtmc-minimap-header span {
-            color: #e2e8f0;
-        }
-
-        #dtmc-minimap-canvas {
-            border: 1px solid #334155;
-            border-radius: 4px;
-            background: #0f172a;
-            cursor: crosshair;
-        }
-
-        .dtmc-minimap.hidden {
-            display: none;
-        }
-
-        #dtmc-canvas {
-            flex: 1;
-            background: #0f172a;
-            cursor: grab;
-        }
-
-        #dtmc-canvas:active {
-            cursor: grabbing;
-        }
-
-        .dtmc-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-
-        .dtmc-modal-content {
-            background-color: #1e293b;
-            margin: 5% auto;
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-            border: 1px solid #334155;
-        }
-
-        .dtmc-modal h3 {
-            margin-bottom: 20px;
-            color: #f8fafc;
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        .dtmc-form-group {
-            margin-bottom: 16px;
-        }
-
-        .dtmc-form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #e2e8f0;
-            font-weight: 500;
-        }
-
-        .dtmc-form-group input {
-            width: 100%;
-            padding: 10px 12px;
-            background: #334155;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            color: #e2e8f0;
-            font-size: 14px;
-        }
-
-        .dtmc-form-group input:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-
-        .dtmc-modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 24px;
-        }
-
-        .dtmc-btn.secondary {
-            background: #64748b;
-            color: white;
-        }
-
-        .dtmc-btn.secondary:hover {
-            background: #475569;
-        }
-
-        /* Enhanced Modal Styles */
-        .dtmc-token-type-display {
-            margin-top: 8px;
-        }
-
-        .dtmc-type-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            background: #3b82f6;
-            color: white;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: capitalize;
-        }
-
-        .dtmc-token-section {
-            margin-bottom: 20px;
-        }
-
-        .dtmc-color-palette {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 8px;
-            margin: 12px 0;
-        }
-
-        .dtmc-color-swatch {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .dtmc-color-swatch:hover {
-            border-color: #3b82f6;
-            transform: scale(1.1);
-        }
-
-        .dtmc-color-swatch.selected {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-        }
-
-        .dtmc-tip {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 8px 0;
-            padding: 8px 12px;
-            background: #1e293b;
-            border-radius: 6px;
-            font-size: 12px;
-            color: #94a3b8;
-        }
-
-        .dtmc-tip-icon {
-            font-size: 14px;
-        }
-
-        #token-reference-dropdown {
-            width: 100%;
-            padding: 10px 12px;
-            background: #334155;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            color: #e2e8f0;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        #token-reference-dropdown:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-
-        #token-reference-dropdown option {
-            background: #334155;
-            color: #e2e8f0;
-        }
-
-        .dtmc-drag-preview {
-            position: fixed;
-            background: #1e293b;
-            border: 2px solid #3b82f6;
-            border-radius: 8px;
-            padding: 8px 12px;
-            color: #e2e8f0;
-            font-size: 14px;
-            pointer-events: none;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-    </style>
+    <link rel="stylesheet" href="dtmc-styles.css">
 </head>
 <body>
     <div class="dtmc-container">
@@ -469,6 +59,8 @@
             <button id="dtmc-undo-btn" class="dtmc-btn warning">Undo</button>
             <button id="dtmc-clear-btn" class="dtmc-btn danger">Clear All</button>
             <button id="dtmc-export-btn" class="dtmc-btn primary">Export JSON</button>
+            <button id="dtmc-save-btn" class="dtmc-btn secondary">Save Session</button>
+            <button id="dtmc-load-btn" class="dtmc-btn secondary">Load Session</button>
             <div class="dtmc-zoom-controls">
                 <button id="dtmc-zoom-out-btn" class="dtmc-btn secondary">-</button>
                 <span id="dtmc-zoom-level">100%</span>
@@ -490,29 +82,24 @@
     </div>
 
     <!-- Enhanced Token Creation Modal -->
-    <div id="dtmc-token-modal" class="dtmc-modal">
-        <div class="dtmc-modal-content">
-            <h3 id="modal-title">Create New Token</h3>
-            
-            <!-- Token Type Display -->
-            <div class="dtmc-form-group">
-                <label>Token Type</label>
-                <div class="dtmc-token-type-display">
-                    <span class="dtmc-type-badge" id="modal-token-type">Color</span>
-                </div>
+    <div id="dtmc-token-modal" class="dtmc-modal-overlay" style="display: none;">
+        <div class="dtmc-modal">
+            <div class="dtmc-modal-header">
+                <h3 class="dtmc-modal-title">Create New Token</h3>
+                <p class="dtmc-modal-subtitle">Add a new token to your design system</p>
             </div>
             
             <!-- Token Name Input -->
             <div class="dtmc-form-group">
-                <label for="token-name">Token Name</label>
-                <input type="text" id="token-name" placeholder="e.g., primary-blue">
+                <label for="token-name" class="dtmc-form-label">Token Name</label>
+                <input type="text" id="token-name" class="dtmc-form-input" placeholder="e.g., primary-blue">
             </div>
             
             <!-- Dynamic Value Section -->
             <div id="token-value-section">
                 <!-- Color Token Section -->
                 <div id="color-token-section" class="dtmc-token-section">
-                    <label>Choose a color:</label>
+                    <label class="dtmc-form-label">Choose a color:</label>
                     <div class="dtmc-color-palette">
                         <div class="dtmc-color-swatch" data-color="#ef4444" style="background-color: #ef4444;"></div>
                         <div class="dtmc-color-swatch" data-color="#22c55e" style="background-color: #22c55e;"></div>
@@ -532,15 +119,15 @@
                         <div class="dtmc-color-swatch" data-color="#000000" style="background-color: #000000;"></div>
                     </div>
                     <div class="dtmc-form-group">
-                        <label for="token-value">Custom Color (Hex)</label>
-                        <input type="text" id="token-value" placeholder="#4a90e2" maxlength="7">
+                        <label for="token-value" class="dtmc-form-label">Custom Color (Hex)</label>
+                        <input type="text" id="token-value" class="dtmc-form-input" placeholder="#4a90e2" maxlength="7">
                     </div>
                 </div>
                 
                 <!-- Non-Primitive Layer Section -->
                 <div id="reference-token-section" class="dtmc-token-section" style="display: none;">
-                    <label>Select from existing tokens:</label>
-                    <select id="token-reference-dropdown">
+                    <label class="dtmc-form-label">Select from existing tokens:</label>
+                    <select id="token-reference-dropdown" class="dtmc-form-select">
                         <option value="">Select from existing tokens...</option>
                     </select>
                     <div class="dtmc-tip">
@@ -548,24 +135,24 @@
                         <span id="available-tokens-count">0 tokens available</span>
                     </div>
                     <div class="dtmc-form-group">
-                        <label for="token-value-custom">Or enter a custom value:</label>
-                        <input type="text" id="token-value-custom" placeholder="Enter custom value or select from dropdown above">
+                        <label for="token-value-custom" class="dtmc-form-label">Or enter a custom value:</label>
+                        <input type="text" id="token-value-custom" class="dtmc-form-input" placeholder="Enter custom value or select from dropdown above">
                     </div>
                 </div>
                 
                 <!-- Simple Value Section -->
                 <div id="simple-value-section" class="dtmc-token-section" style="display: none;">
                     <div class="dtmc-form-group">
-                        <label for="token-value-simple">Token Value</label>
-                        <input type="text" id="token-value-simple" placeholder="Enter value...">
+                        <label for="token-value-simple" class="dtmc-form-label">Token Value</label>
+                        <input type="text" id="token-value-simple" class="dtmc-form-input" placeholder="Enter value...">
                     </div>
                 </div>
             </div>
             
             <!-- Action Buttons -->
-            <div class="dtmc-modal-buttons">
-                <button id="dtmc-cancel-btn" class="dtmc-btn secondary">Cancel</button>
-                <button id="dtmc-create-btn" class="dtmc-btn primary">Create Token</button>
+            <div class="dtmc-modal-footer">
+                <button id="dtmc-cancel-btn" class="dtmc-modal-btn cancel">Cancel</button>
+                <button id="dtmc-create-btn" class="dtmc-modal-btn create">Create Token</button>
             </div>
         </div>
     </div>
@@ -573,13 +160,103 @@
     <!-- Drag Preview -->
     <div id="dtmc-drag-preview" class="dtmc-drag-preview" style="display: none;"></div>
 
+    <!-- Save Session Modal -->
+    <div id="dtmc-save-modal" class="dtmc-modal-overlay" style="display: none;">
+        <div class="dtmc-modal">
+            <div class="dtmc-modal-header">
+                <h3 class="dtmc-modal-title">Save Session</h3>
+                <p class="dtmc-modal-subtitle">Save your current design token setup</p>
+            </div>
+            
+            <div class="dtmc-form-group">
+                <label for="session-name" class="dtmc-form-label">Session Name</label>
+                <input type="text" id="session-name" class="dtmc-form-input" placeholder="e.g., My Design System v1">
+            </div>
+            
+            <div class="dtmc-form-group">
+                <label for="session-description" class="dtmc-form-label">Description (optional)</label>
+                <textarea id="session-description" class="dtmc-form-input" placeholder="Brief description of this session..." rows="3"></textarea>
+            </div>
+            
+            <div class="dtmc-form-group">
+                <label class="dtmc-form-label">Session Info</label>
+                <div class="dtmc-session-info">
+                    <div class="dtmc-session-stat">
+                        <span class="dtmc-session-stat-label">Tokens:</span>
+                        <span id="save-token-count" class="dtmc-session-stat-value">0</span>
+                    </div>
+                    <div class="dtmc-session-stat">
+                        <span class="dtmc-session-stat-label">Connections:</span>
+                        <span id="save-connection-count" class="dtmc-session-stat-value">0</span>
+                    </div>
+                    <div class="dtmc-session-stat">
+                        <span class="dtmc-session-stat-label">Last Modified:</span>
+                        <span id="save-last-modified" class="dtmc-session-stat-value">Now</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dtmc-modal-footer">
+                <button id="dtmc-save-cancel-btn" class="dtmc-modal-btn cancel">Cancel</button>
+                <button id="dtmc-save-confirm-btn" class="dtmc-modal-btn create">Save Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Session Modal -->
+    <div id="dtmc-load-modal" class="dtmc-modal-overlay" style="display: none;">
+        <div class="dtmc-modal">
+            <div class="dtmc-modal-header">
+                <h3 class="dtmc-modal-title">Load Session</h3>
+                <p class="dtmc-modal-subtitle">Load a previously saved session</p>
+            </div>
+            
+            <div class="dtmc-form-group">
+                <label class="dtmc-form-label">Saved Sessions</label>
+                <div id="dtmc-sessions-list" class="dtmc-sessions-list">
+                    <!-- Sessions will be populated here -->
+                </div>
+            </div>
+            
+            <div class="dtmc-form-group">
+                <div class="dtmc-load-warning">
+                    <span class="dtmc-warning-icon">⚠️</span>
+                    <span>Loading a session will replace your current setup. Make sure to save any unsaved changes.</span>
+                </div>
+            </div>
+            
+            <div class="dtmc-modal-footer">
+                <button id="dtmc-load-cancel-btn" class="dtmc-modal-btn cancel">Cancel</button>
+                <button id="dtmc-load-confirm-btn" class="dtmc-modal-btn create" disabled>Load Selected Session</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Helper function to get CSS variables
+        function getCSSVariable(variableName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+        }
+        
+        // Helper function to parse CSS values
+        function parseCSSValue(value) {
+            if (value.includes('px')) {
+                return parseFloat(value);
+            } else if (value.includes('rgba')) {
+                return value; // Return as is for rgba values
+            } else if (value.includes('#')) {
+                return value; // Return as is for hex colors
+            } else {
+                return parseFloat(value);
+            }
+        }
+        
         // Canvas setup
         const canvas = document.getElementById('dtmc-canvas');
         const ctx = canvas.getContext('2d');
         
         // Constants
-        const SOCKET_RADIUS = 12;
+        const SOCKET_RADIUS = 9; // 18px diameter = 9px radius
         const NODE_WIDTH = 200;
         const NODE_HEIGHT = 120;
         const MIN_ZOOM = 0.5;
@@ -636,13 +313,21 @@
             
             // Control buttons
             document.getElementById('dtmc-clear-btn').addEventListener('click', clearAll);
-            document.getElementById('dtmc-undo-btn').addEventListener('click', undo);
+            document.getElementById('dtmc-undo-btn').addEventListener('click', () => {
+                console.log('🔘 Undo button clicked!');
+                console.log('Undo stack length:', undoStack.length);
+                undo();
+            });
             document.getElementById('dtmc-export-btn').addEventListener('click', exportJSON);
             
             // Zoom controls
             document.getElementById('dtmc-zoom-in-btn').addEventListener('click', () => zoomIn());
             document.getElementById('dtmc-zoom-out-btn').addEventListener('click', () => zoomOut());
             document.getElementById('dtmc-reset-zoom-btn').addEventListener('click', () => resetZoom());
+            
+            // Save/Load session buttons
+            document.getElementById('dtmc-save-btn').addEventListener('click', showSaveModal);
+            document.getElementById('dtmc-load-btn').addEventListener('click', showLoadModal);
             
             // Mini-map controls
             document.getElementById('dtmc-minimap-toggle').addEventListener('click', toggleMiniMap);
@@ -676,7 +361,10 @@
             // Add token buttons
             document.querySelectorAll('.dtmc-add-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    console.log('🔘 Add button clicked!');
+                    console.log('Button dataset:', btn.dataset);
                     selectedLayer = btn.dataset.layer;
+                    console.log('Selected layer set to:', selectedLayer);
                     openModal();
                 });
             });
@@ -747,13 +435,27 @@
 
         // Open modal for token creation
         function openModal() {
-            const modal = document.getElementById('dtmc-token-modal');
-            const modalTitle = document.getElementById('modal-title');
-            const tokenTypeBadge = document.getElementById('modal-token-type');
+            console.log('🔍 Opening modal...');
+            console.log('Selected token type:', selectedTokenType);
+            console.log('Selected layer:', selectedLayer);
             
-            // Update modal title and token type
+            const modal = document.getElementById('dtmc-token-modal');
+            const modalTitle = document.querySelector('.dtmc-modal-title');
+            
+            if (!modal) {
+                console.error('❌ Modal not found!');
+                return;
+            }
+            
+            if (!modalTitle) {
+                console.error('❌ Modal title not found!');
+                return;
+            }
+            
+            console.log('✅ Modal and title found');
+            
+            // Update modal title
             modalTitle.textContent = `Create New ${selectedTokenType.charAt(0).toUpperCase() + selectedTokenType.slice(1)} Token`;
-            tokenTypeBadge.textContent = selectedTokenType.charAt(0).toUpperCase() + selectedTokenType.slice(1);
             
             // Show appropriate value section
             showAppropriateValueSection();
@@ -763,7 +465,8 @@
                 populateReferenceDropdown();
             }
             
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
+            console.log('🎉 Modal opened successfully!');
         }
 
         // Show appropriate value section based on token type and layer
@@ -970,6 +673,11 @@
                 selectedNode.y += deltaY;
                 
                 lastMousePos = { x: e.clientX, y: e.clientY };
+                
+                // Ensure connections are updated when node moves
+                console.log(`Node ${selectedNode.name} moved to (${selectedNode.x}, ${selectedNode.y})`);
+                console.log(`Active connections: ${connections.length}`);
+                
                 render();
                 return;
             }
@@ -1166,8 +874,12 @@
             const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
             const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
             
-            ctx.strokeStyle = '#3b82f6';
-            ctx.lineWidth = 2;
+            // Get CSS variables for connection preview styling
+            const connectionPreviewColor = getCSSVariable('--dtmc-connection-preview-color');
+            const connectionWidth = parseCSSValue(getCSSVariable('--dtmc-connection-width'));
+            
+            ctx.strokeStyle = connectionPreviewColor;
+            ctx.lineWidth = connectionWidth;
             ctx.setLineDash([5, 5]);
             
             const startPoint = getSocketPosition(connectionStart, startSocket);
@@ -1232,7 +944,9 @@
             ctx.scale(zoomLevel, zoomLevel);
             
             // Draw connections first
-            connections.forEach(connection => {
+            console.log(`Rendering ${connections.length} connections`);
+            connections.forEach((connection, index) => {
+                console.log(`Drawing connection ${index + 1}: ${connection.startNode.name} → ${connection.endNode.name}`);
                 drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
             });
             
@@ -1251,56 +965,233 @@
         }
 
         function drawNode(node) {
-            // Node background
-            ctx.fillStyle = '#1e293b';
+            // Check if node is selected
+            const isSelected = selectedNode && selectedNode.id === node.id;
+            
+            // Get CSS variables for bubble styling
+            const bubbleBgColor = getCSSVariable('--dtmc-bubble-bg-color');
+            const bubbleBlur = parseCSSValue(getCSSVariable('--dtmc-bubble-blur'));
+            const bubbleRadius = parseCSSValue(getCSSVariable('--dtmc-bubble-radius'));
+            const bubbleShadowColor = getCSSVariable('--dtmc-bubble-shadow-color');
+            const bubbleNameColor = getCSSVariable('--dtmc-bubble-name-color');
+            const bubbleNameFontSize = getCSSVariable('--dtmc-bubble-name-font-size');
+            const bubbleNameYOffset = parseCSSValue(getCSSVariable('--dtmc-bubble-name-y-offset'));
+            
+            // Draw node background with CSS-controlled styling
+            ctx.fillStyle = bubbleBgColor;
             ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = isSelected ? 3 : 2;
             
-            // Use rectangle instead of roundRect for better browser compatibility
+            // Apply backdrop blur effect (simulated with shadow)
+            ctx.shadowColor = bubbleShadowColor;
+            ctx.shadowBlur = bubbleBlur;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            
             ctx.beginPath();
-            ctx.rect(node.x, node.y, NODE_WIDTH, NODE_HEIGHT, 8);
+            ctx.roundRect(node.x, node.y, NODE_WIDTH, NODE_HEIGHT, bubbleRadius);
             ctx.fill();
-            ctx.stroke();
             
-            // Layer label
-            ctx.fillStyle = '#64748b';
-            ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+            // Reset shadow for border
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            
+            // Draw gradient border based on layer type
+            drawGradientBorder(node);
+            
+            // Node content
             ctx.textAlign = 'center';
-            ctx.fillText(node.layer.toUpperCase(), node.x + NODE_WIDTH / 2, node.y + 20);
             
-            // Token name
-            ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif';
-            ctx.fillText(node.name, node.x + NODE_WIDTH / 2, node.y + 45);
+            // Token name with CSS-controlled styling
+            ctx.fillStyle = bubbleNameColor;
+            ctx.font = `${bubbleNameFontSize} Sora, system-ui, sans-serif`;
+            ctx.fillText(node.name, node.x + NODE_WIDTH / 2, node.y + bubbleNameYOffset);
             
-            // Token value
-            ctx.fillStyle = '#cbd5e1';
-            ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
-            ctx.fillText(node.value, node.x + NODE_WIDTH / 2, node.y + 70);
+            // Token value in black background container
+            drawValueContainer(node);
             
             // Draw sockets
-            ctx.fillStyle = '#ef4444'; // Red for input
-            ctx.beginPath();
-            ctx.arc(node.x + NODE_WIDTH / 2, node.y, SOCKET_RADIUS, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(node.x, node.y + NODE_HEIGHT / 2, SOCKET_RADIUS, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#22c55e'; // Green for output
-            ctx.beginPath();
-            ctx.arc(node.x + NODE_WIDTH, node.y + NODE_HEIGHT / 2, SOCKET_RADIUS, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(node.x + NODE_WIDTH / 2, node.y + NODE_HEIGHT, SOCKET_RADIUS, 0, Math.PI * 2);
-            ctx.fill();
+            drawSockets(node);
         }
-
+        
+        function drawGradientBorder(node) {
+            // Get CSS variables for border styling
+            const borderWidth = parseCSSValue(getCSSVariable('--dtmc-bubble-border-width'));
+            const borderRadius = parseCSSValue(getCSSVariable('--dtmc-bubble-border-radius'));
+            const borderEndColor = getCSSVariable('--dtmc-bubble-border-end-color');
+            
+            let startColor, endColor;
+            
+            // Set gradient colors based on layer type using CSS variables
+            switch (node.layer) {
+                case 'primitive':
+                    startColor = getCSSVariable('--dtmc-primitive-start');
+                    endColor = getCSSVariable('--dtmc-primitive-end');
+                    break;
+                case 'base':
+                    startColor = getCSSVariable('--dtmc-base-start');
+                    endColor = getCSSVariable('--dtmc-base-end');
+                    break;
+                case 'semantic':
+                    startColor = getCSSVariable('--dtmc-semantic-start');
+                    endColor = getCSSVariable('--dtmc-semantic-end');
+                    break;
+                case 'specific':
+                    startColor = getCSSVariable('--dtmc-specific-start');
+                    endColor = getCSSVariable('--dtmc-specific-end');
+                    break;
+                default:
+                    startColor = getCSSVariable('--dtmc-primitive-start');
+                    endColor = getCSSVariable('--dtmc-primitive-end');
+            }
+            
+            // Create gradient outline by drawing the border as a stroke
+            ctx.lineWidth = borderWidth;
+            
+            // Create gradient for the border
+            const gradient = ctx.createLinearGradient(
+                node.x, node.y, 
+                node.x, node.y + NODE_HEIGHT / 2
+            );
+            gradient.addColorStop(0, startColor);
+            gradient.addColorStop(1, endColor);
+            
+            // Draw the border with gradient
+            ctx.strokeStyle = gradient;
+            ctx.beginPath();
+            ctx.roundRect(node.x + borderWidth/2, node.y + borderWidth/2, NODE_WIDTH - borderWidth, NODE_HEIGHT - borderWidth, borderRadius);
+            ctx.stroke();
+            
+            // Draw the bottom half with solid color
+            ctx.strokeStyle = borderEndColor;
+            ctx.beginPath();
+            ctx.moveTo(node.x + borderWidth/2, node.y + NODE_HEIGHT / 2);
+            ctx.lineTo(node.x + NODE_WIDTH - borderWidth/2, node.y + NODE_HEIGHT / 2);
+            ctx.lineTo(node.x + NODE_WIDTH - borderWidth/2, node.y + NODE_HEIGHT - borderWidth/2);
+            ctx.lineTo(node.x + borderWidth/2, node.y + NODE_HEIGHT - borderWidth/2);
+            ctx.closePath();
+            ctx.stroke();
+        }
+        
+        function drawValueContainer(node) {
+            // Get CSS variables for value container styling
+            const containerBg = getCSSVariable('--dtmc-value-container-bg');
+            const containerRadius = parseCSSValue(getCSSVariable('--dtmc-value-container-radius'));
+            const containerMarginX = parseCSSValue(getCSSVariable('--dtmc-value-container-margin-x'));
+            const containerYOffset = parseCSSValue(getCSSVariable('--dtmc-value-container-y-offset'));
+            const containerHeight = parseCSSValue(getCSSVariable('--dtmc-value-container-height'));
+            const valueTextColor = getCSSVariable('--dtmc-value-text-color');
+            const valueTextFontSize = getCSSVariable('--dtmc-value-text-font-size');
+            
+            const containerX = node.x + containerMarginX;
+            const containerY = node.y + containerYOffset;
+            const containerWidth = NODE_WIDTH - (containerMarginX * 2);
+            
+            // Draw background container
+            ctx.fillStyle = containerBg;
+            ctx.beginPath();
+            ctx.roundRect(containerX, containerY, containerWidth, containerHeight, containerRadius);
+            ctx.fill();
+            
+            // Draw value text
+            ctx.fillStyle = valueTextColor;
+            ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText(node.value, node.x + NODE_WIDTH / 2, containerY + containerHeight/2 + 4);
+        }
+        
+        function drawSockets(node) {
+            // Check which sockets are connected
+            const connectedSockets = new Set();
+            connections.forEach(connection => {
+                if (connection.startNode.id === node.id) {
+                    connectedSockets.add(connection.startSocket);
+                }
+                if (connection.endNode.id === node.id) {
+                    connectedSockets.add(connection.endSocket);
+                }
+            });
+            
+            // Top socket (INPUT - red)
+            const topSocket = { x: node.x + NODE_WIDTH / 2, y: node.y };
+            drawSocket(topSocket.x, topSocket.y, 'input', connectedSockets.has('top'));
+            
+            // Left socket (INPUT - red)
+            const leftSocket = { x: node.x, y: node.y + NODE_HEIGHT / 2 };
+            drawSocket(leftSocket.x, leftSocket.y, 'input', connectedSockets.has('left'));
+            
+            // Right socket (OUTPUT - green)
+            const rightSocket = { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2 };
+            drawSocket(rightSocket.x, rightSocket.y, 'output', connectedSockets.has('right'));
+            
+            // Bottom socket (OUTPUT - green)
+            const bottomSocket = { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT };
+            drawSocket(bottomSocket.x, bottomSocket.y, 'output', connectedSockets.has('bottom'));
+        }
+        
+        function drawSocket(x, y, type, isConnected) {
+            // Get CSS variables for socket styling
+            const socketRadius = parseCSSValue(getCSSVariable('--dtmc-socket-radius'));
+            const socketConnectedColor = getCSSVariable('--dtmc-socket-connected-color');
+            const socketDisconnectedColor = getCSSVariable('--dtmc-socket-disconnected-color');
+            const socketStrokeColor = getCSSVariable('--dtmc-socket-stroke-color');
+            const socketStrokeWidth = parseCSSValue(getCSSVariable('--dtmc-socket-stroke-width'));
+            const socketInnerCircleRadius = parseCSSValue(getCSSVariable('--dtmc-socket-inner-circle-radius'));
+            const socketPlusSize = parseCSSValue(getCSSVariable('--dtmc-socket-plus-size'));
+            
+            // Draw socket background
+            if (isConnected) {
+                ctx.fillStyle = socketConnectedColor;
+            } else {
+                ctx.fillStyle = socketDisconnectedColor;
+            }
+            
+            ctx.beginPath();
+            ctx.arc(x, y, socketRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Draw socket content
+            if (isConnected) {
+                // When connected, just fill with connected color
+                ctx.strokeStyle = socketConnectedColor;
+                ctx.lineWidth = socketStrokeWidth;
+                ctx.stroke();
+            } else {
+                // When not connected, draw appropriate symbol
+                ctx.strokeStyle = socketStrokeColor;
+                ctx.lineWidth = socketStrokeWidth;
+                ctx.stroke();
+                
+                if (type === 'input') {
+                    // Draw small circle inside for input sockets
+                    ctx.fillStyle = socketStrokeColor;
+                    ctx.beginPath();
+                    ctx.arc(x, y, socketInnerCircleRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else {
+                    // Draw plus sign for output sockets
+                    ctx.strokeStyle = socketStrokeColor;
+                    ctx.lineWidth = socketStrokeWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(x - socketPlusSize, y);
+                    ctx.lineTo(x + socketPlusSize, y);
+                    ctx.moveTo(x, y - socketPlusSize);
+                    ctx.lineTo(x, y + socketPlusSize);
+                    ctx.stroke();
+                }
+            }
+        }
+        
         function drawConnection(startNode, endNode, startSocket, endSocket) {
             const startPoint = getSocketPosition(startNode, startSocket);
             const endPoint = getSocketPosition(endNode, endSocket);
+            
+            // Get CSS variables for connection styling
+            const connectionColor = getCSSVariable('--dtmc-connection-color');
+            const connectionWidth = parseCSSValue(getCSSVariable('--dtmc-connection-width'));
+            const connectionSelectedWidth = parseCSSValue(getCSSVariable('--dtmc-connection-selected-width'));
             
             // Check if this connection is selected
             const isSelected = selectedConnection && 
@@ -1309,13 +1200,13 @@
                 selectedConnection.startSocket === startSocket && 
                 selectedConnection.endSocket === endSocket;
             
-            // Draw selected connections in red, normal ones in blue
+            // Draw connections with CSS-controlled styling
             if (isSelected) {
-                ctx.strokeStyle = '#dc2626'; // Red for selected
-                ctx.lineWidth = 5; // Thicker for selected
+                ctx.strokeStyle = connectionColor;
+                ctx.lineWidth = connectionSelectedWidth;
             } else {
-                ctx.strokeStyle = '#3b82f6'; // Blue for normal
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = connectionColor;
+                ctx.lineWidth = connectionWidth;
             }
             
             // Create curved connection
@@ -1361,11 +1252,18 @@
         }
 
         function undo() {
+            console.log('🔄 Undo function called');
+            console.log('Current undo stack length:', undoStack.length);
+            
             if (undoStack.length > 0) {
                 const previousState = undoStack.pop();
+                console.log('✅ Restoring previous state:', previousState);
                 nodes = previousState.nodes;
                 connections = previousState.connections;
                 render();
+                console.log('🎉 Undo completed');
+            } else {
+                console.log('⚠️ Nothing to undo');
             }
         }
 
@@ -1688,6 +1586,300 @@
             console.log(`Successfully deleted connection from ${startName} to ${endName}`);
         }
 
+        // ===== SAVE/LOAD SESSION FUNCTIONS =====
+        
+        // Show save session modal
+        function showSaveModal() {
+            const modal = document.getElementById('dtmc-save-modal');
+            const sessionNameInput = document.getElementById('session-name');
+            const sessionDescriptionInput = document.getElementById('session-description');
+            const tokenCountSpan = document.getElementById('save-token-count');
+            const connectionCountSpan = document.getElementById('save-connection-count');
+            const lastModifiedSpan = document.getElementById('save-last-modified');
+            
+            // Update session info
+            const totalTokens = Object.values(tokens).flat().length;
+            const totalConnections = connections.length;
+            
+            tokenCountSpan.textContent = totalTokens;
+            connectionCountSpan.textContent = totalConnections;
+            lastModifiedSpan.textContent = new Date().toLocaleString();
+            
+            // Clear previous inputs
+            sessionNameInput.value = '';
+            sessionDescriptionInput.value = '';
+            
+            // Show modal
+            modal.style.display = 'flex';
+            sessionNameInput.focus();
+            
+            // Setup event listeners
+            setupSaveModalEvents();
+        }
+        
+        // Setup save modal event listeners
+        function setupSaveModalEvents() {
+            const modal = document.getElementById('dtmc-save-modal');
+            const sessionNameInput = document.getElementById('session-name');
+            const saveBtn = document.getElementById('dtmc-save-confirm-btn');
+            const cancelBtn = document.getElementById('dtmc-save-cancel-btn');
+            
+            // Save button click
+            saveBtn.onclick = () => {
+                const sessionName = sessionNameInput.value.trim();
+                if (!sessionName) {
+                    alert('Please enter a session name');
+                    return;
+                }
+                saveSession(sessionName);
+            };
+            
+            // Cancel button click
+            cancelBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+            
+            // Enter key in name input
+            sessionNameInput.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    saveBtn.click();
+                }
+            };
+            
+            // Click outside modal to close
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+        }
+        
+        // Save session to localStorage
+        function saveSession(sessionName) {
+            const sessionDescription = document.getElementById('session-description').value.trim();
+            
+            const sessionData = {
+                name: sessionName,
+                description: sessionDescription,
+                timestamp: new Date().toISOString(),
+                data: {
+                    nodes: nodes,
+                    connections: connections,
+                    tokens: tokens,
+                    panOffset: panOffset,
+                    zoomLevel: zoomLevel
+                }
+            };
+            
+            // Get existing sessions
+            const existingSessions = JSON.parse(localStorage.getItem('dtmc-sessions') || '{}');
+            
+            // Add new session (overwrite if name exists)
+            existingSessions[sessionName] = sessionData;
+            
+            // Save to localStorage
+            localStorage.setItem('dtmc-sessions', JSON.stringify(existingSessions));
+            
+            // Close modal
+            document.getElementById('dtmc-save-modal').style.display = 'none';
+            
+            // Show success message
+            showNotification(`Session "${sessionName}" saved successfully!`, 'success');
+            
+            console.log(`Session "${sessionName}" saved with ${nodes.length} nodes and ${connections.length} connections`);
+        }
+        
+        // Show load session modal
+        function showLoadModal() {
+            const modal = document.getElementById('dtmc-load-modal');
+            const sessionsList = document.getElementById('dtmc-sessions-list');
+            
+            // Load and display sessions
+            loadSessionsList();
+            
+            // Show modal
+            modal.style.display = 'flex';
+            
+            // Setup event listeners
+            setupLoadModalEvents();
+        }
+        
+        // Load sessions list from localStorage
+        function loadSessionsList() {
+            const sessionsList = document.getElementById('dtmc-sessions-list');
+            const sessions = JSON.parse(localStorage.getItem('dtmc-sessions') || '{}');
+            
+            if (Object.keys(sessions).length === 0) {
+                sessionsList.innerHTML = '<div class="dtmc-session-item"><div class="dtmc-session-item-description">No saved sessions found</div></div>';
+                return;
+            }
+            
+            // Sort sessions by timestamp (newest first)
+            const sortedSessions = Object.values(sessions).sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            
+            sessionsList.innerHTML = sortedSessions.map(session => {
+                const date = new Date(session.timestamp).toLocaleString();
+                const nodeCount = session.data.nodes.length;
+                const connectionCount = session.data.connections.length;
+                
+                return `
+                    <div class="dtmc-session-item" data-session-name="${session.name}">
+                        <div class="dtmc-session-item-header">
+                            <div class="dtmc-session-item-name">${session.name}</div>
+                            <div class="dtmc-session-item-date">${date}</div>
+                        </div>
+                        ${session.description ? `<div class="dtmc-session-item-description">${session.description}</div>` : ''}
+                        <div class="dtmc-session-item-stats">
+                            <div class="dtmc-session-item-stat">
+                                <span>🎯</span>
+                                <span>${nodeCount} tokens</span>
+                            </div>
+                            <div class="dtmc-session-item-stat">
+                                <span>🔗</span>
+                                <span>${connectionCount} connections</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Setup load modal event listeners
+        function setupLoadModalEvents() {
+            const modal = document.getElementById('dtmc-load-modal');
+            const sessionsList = document.getElementById('dtmc-sessions-list');
+            const loadBtn = document.getElementById('dtmc-load-confirm-btn');
+            const cancelBtn = document.getElementById('dtmc-load-cancel-btn');
+            let selectedSessionName = null;
+            
+            // Session item click
+            sessionsList.onclick = (e) => {
+                const sessionItem = e.target.closest('.dtmc-session-item');
+                if (!sessionItem) return;
+                
+                // Remove previous selection
+                document.querySelectorAll('.dtmc-session-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Add selection to clicked item
+                sessionItem.classList.add('selected');
+                selectedSessionName = sessionItem.dataset.sessionName;
+                
+                // Enable load button
+                loadBtn.disabled = false;
+            };
+            
+            // Load button click
+            loadBtn.onclick = () => {
+                if (selectedSessionName) {
+                    loadSession(selectedSessionName);
+                }
+            };
+            
+            // Cancel button click
+            cancelBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+            
+            // Click outside modal to close
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+        }
+        
+        // Load session from localStorage
+        function loadSession(sessionName) {
+            const sessions = JSON.parse(localStorage.getItem('dtmc-sessions') || '{}');
+            const sessionData = sessions[sessionName];
+            
+            if (!sessionData) {
+                showNotification(`Session "${sessionName}" not found!`, 'error');
+                return;
+            }
+            
+            // Confirm before loading (will replace current setup)
+            const confirmMessage = `Are you sure you want to load session "${sessionName}"?\n\nThis will replace your current setup with ${sessionData.data.nodes.length} tokens and ${sessionData.data.connections.length} connections.`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            try {
+                // Load session data
+                nodes = sessionData.data.nodes;
+                connections = sessionData.data.connections;
+                tokens = sessionData.data.tokens;
+                panOffset = sessionData.data.panOffset || { x: 0, y: 0 };
+                zoomLevel = sessionData.data.zoomLevel || 1.0;
+                
+                // Fix connection references to point to the newly loaded nodes
+                connections.forEach(connection => {
+                    // Find the corresponding nodes in the newly loaded nodes array
+                    const startNode = nodes.find(node => node.id === connection.startNode.id);
+                    const endNode = nodes.find(node => node.id === connection.endNode.id);
+                    
+                    if (startNode && endNode) {
+                        connection.startNode = startNode;
+                        connection.endNode = endNode;
+                    } else {
+                        console.warn('Could not find node references for connection:', connection);
+                    }
+                });
+                
+                console.log(`Fixed ${connections.length} connection references`);
+                
+                // Clear selections
+                selectedNode = null;
+                selectedConnection = null;
+                
+                // Update UI
+                renderSidebar();
+                updateZoomDisplay();
+                render();
+                
+                // Close modal
+                document.getElementById('dtmc-load-modal').style.display = 'none';
+                
+                // Show success message
+                showNotification(`Session "${sessionName}" loaded successfully!`, 'success');
+                
+                console.log(`Session "${sessionName}" loaded with ${nodes.length} nodes and ${connections.length} connections`);
+                
+            } catch (error) {
+                console.error('Error loading session:', error);
+                showNotification('Error loading session. The session data might be corrupted.', 'error');
+            }
+        }
+        
+        // Show notification message
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `dtmc-notification dtmc-notification-${type}`;
+            notification.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('dtmc-notification-show');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('dtmc-notification-show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
         // Initialize when page loads
         window.onload = init;
     </script>

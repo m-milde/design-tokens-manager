@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DTMC - Design Tokens Map Creator</title>
+    <link rel="stylesheet" href="dtmc-styles.css">
+</head>
+<body>
+    <div class="dtmc-container">
+        <!-- Sidebar -->
+        <aside class="dtmc-sidebar">
+            <div class="dtmc-sidebar-header">
+                <h1 class="dtmc-logo">DTMC</h1>
+                <p class="dtmc-subtitle">Design Tokens Map Creator</p>
+            </div>
+
+            <!-- Token Type Selection -->
+            <div class="dtmc-token-types">
+                <h3>Token Types</h3>
+                <div class="dtmc-type-buttons">
+                    <button class="dtmc-type-btn active" data-type="color">Color</button>
+                    <button class="dtmc-type-btn" data-type="spacing">Spacing</button>
+                    <button class="dtmc-type-btn" data-type="typography">Typography</button>
+                    <button class="dtmc-type-btn" data-type="number">Number</button>
+                    <button class="dtmc-type-btn" data-type="string">String</button>
+                    <button class="dtmc-type-btn" data-type="boolean">Boolean</button>
+                </div>
+            </div>
+
+            <!-- Token Layers -->
+            <div class="dtmc-layers">
+                <div class="dtmc-layer">
+                    <h4 class="dtmc-layer-title">Primitive</h4>
+                    <div id="primitive-tokens" class="dtmc-tokens"></div>
+                    <button class="dtmc-add-btn" data-layer="primitive">+ Add Token</button>
+                </div>
+
+                <div class="dtmc-layer">
+                    <h4 class="dtmc-layer-title">Base</h4>
+                    <div id="base-tokens" class="dtmc-tokens"></div>
+                    <button class="dtmc-add-btn" data-layer="base">+ Add Token</button>
+                </div>
+
+                <div class="dtmc-layer">
+                    <h4 class="dtmc-layer-title">Semantic</h4>
+                    <div id="semantic-tokens" class="dtmc-tokens"></div>
+                    <button class="dtmc-add-btn" data-layer="semantic">+ Add Token</button>
+                </div>
+
+                <div class="dtmc-layer">
+                    <h4 class="dtmc-layer-title">Specific</h4>
+                    <div id="specific-tokens" class="dtmc-tokens"></div>
+                    <button class="dtmc-add-btn" data-layer="specific">+ Add Token</button>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="dtmc-controls">
+                <button id="dtmc-clear-btn" class="dtmc-btn secondary">Clear All</button>
+                <button id="dtmc-undo-btn" class="dtmc-btn secondary">Undo</button>
+                <button id="dtmc-export-btn" class="dtmc-btn primary">Export JSON</button>
+            </div>
+        </aside>
+
+        <!-- Main Canvas Area -->
+        <main class="dtmc-main">
+            <!-- Canvas Controls -->
+            <div class="dtmc-canvas-controls">
+                <div class="dtmc-zoom-controls">
+                    <button id="dtmc-zoom-out-btn" class="dtmc-zoom-btn" title="Zoom Out">−</button>
+                    <span id="dtmc-zoom-level" class="dtmc-zoom-level">100%</span>
+                    <button id="dtmc-zoom-in-btn" class="dtmc-zoom-btn" title="Zoom In">+</button>
+                    <button id="dtmc-reset-zoom-btn" class="dtmc-zoom-btn" title="Reset Zoom">⌂</button>
+                </div>
+                
+                <button id="dtmc-minimap-toggle" class="dtmc-minimap-toggle" title="Toggle Mini-map">🗺️</button>
+            </div>
+
+            <!-- Canvas -->
+            <canvas id="dtmc-canvas" class="dtmc-canvas"></canvas>
+
+            <!-- Mini-map -->
+            <div class="dtmc-minimap hidden">
+                <canvas id="dtmc-minimap-canvas" width="200" height="150"></canvas>
+            </div>
+        </main>
+    </div>
+
+    <!-- Token Creation Modal -->
+    <div id="dtmc-token-modal" class="dtmc-modal-overlay" style="display: none;">
+        <div class="dtmc-modal">
+            <div class="dtmc-modal-header">
+                <h3 class="dtmc-modal-title">Create New Token</h3>
+                <p class="dtmc-modal-subtitle">Add a new token to your design system</p>
+            </div>
+
+            <div class="dtmc-modal-body">
+                <div class="dtmc-form-group">
+                    <label for="token-name" class="dtmc-form-label">Token Name</label>
+                    <input type="text" id="token-name" class="dtmc-form-input" placeholder="e.g., primary-blue, button-bg">
+                </div>
+
+                <!-- Color Token Section -->
+                <div id="color-token-section" class="dtmc-token-section" style="display: none;">
+                    <div class="dtmc-form-group">
+                        <label class="dtmc-form-label">Choose Color</label>
+                        <div class="dtmc-color-palette">
+                            <div class="dtmc-color-swatch" data-color="#3b82f6" style="background-color: #3b82f6;"></div>
+                            <div class="dtmc-color-swatch" data-color="#ef4444" style="background-color: #ef4444;"></div>
+                            <div class="dtmc-color-swatch" data-color="#10b981" style="background-color: #10b981;"></div>
+                            <div class="dtmc-color-swatch" data-color="#f59e0b" style="background-color: #f59e0b;"></div>
+                            <div class="dtmc-color-swatch" data-color="#8b5cf6" style="background-color: #8b5cf6;"></div>
+                            <div class="dtmc-color-swatch" data-color="#ec4899" style="background-color: #ec4899;"></div>
+                            <div class="dtmc-color-swatch" data-color="#06b6d4" style="background-color: #06b6d4;"></div>
+                            <div class="dtmc-color-swatch" data-color="#84cc16" style="background-color: #84cc16;"></div>
+                        </div>
+                        <div class="dtmc-form-group">
+                            <label for="token-value" class="dtmc-form-label">Custom Color (HEX)</label>
+                            <input type="text" id="token-value" class="dtmc-form-input" placeholder="#000000">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reference Token Section -->
+                <div id="reference-token-section" class="dtmc-token-section" style="display: none;">
+                    <div class="dtmc-form-group">
+                        <label for="token-reference-dropdown" class="dtmc-form-label">Reference Existing Token</label>
+                        <select id="token-reference-dropdown" class="dtmc-form-input">
+                            <option value="">Select from existing tokens...</option>
+                        </select>
+                        <p class="dtmc-tip">
+                            <span class="dtmc-tip-icon">💡</span>
+                            <span id="available-tokens-count">0 tokens available</span>
+                        </p>
+                    </div>
+                    <div class="dtmc-form-group">
+                        <label for="token-value-custom" class="dtmc-form-label">Token Value</label>
+                        <input type="text" id="token-value-custom" class="dtmc-form-input" placeholder="e.g., {primitive.primary-blue}" readonly>
+                    </div>
+                </div>
+
+                <!-- Simple Value Section -->
+                <div id="simple-value-section" class="dtmc-token-section" style="display: none;">
+                    <div class="dtmc-form-group">
+                        <label for="token-value-simple" class="dtmc-form-label">Token Value</label>
+                        <input type="text" id="token-value-simple" class="dtmc-form-input" placeholder="e.g., 16px, 24px, 32px">
+                    </div>
+                </div>
+            </div>
+
+            <div class="dtmc-modal-footer">
+                <button id="dtmc-cancel-btn" class="dtmc-modal-btn cancel">Cancel</button>
+                <button id="dtmc-create-btn" class="dtmc-modal-btn create">Create Token</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript -->
+    <script src="dtmc-app.js"></script>
+</body>
+</html>
