@@ -447,8 +447,8 @@ body {
 /* ===== FLOATING MENU ===== */
 .dtmc-floating-menu {
   position: absolute;
-  background: var(--dtmc-neutral-800);
-  border: 1px solid var(--dtmc-neutral-600);
+  background: var(--dtmc-neutral-900);
+  border: 1px solid var(--dtmc-neutral-800);
   border-radius: 100px;
   padding: var(--dtmc-spacing-sm);
   box-shadow: var(--dtmc-shadow-xl);
@@ -456,7 +456,7 @@ body {
   z-index: var(--dtmc-z-dropdown);
   display: none;
   min-width: auto;
-  transform: translateY(20px) translateX(-50%);
+  transform: translateY(30px) translateX(-60%);
   opacity: 1;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: auto;
@@ -473,10 +473,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   padding: 0;
-  background: var(--dtmc-neutral-700);
+  background: var(--dtmc-neutral-800);
   color: var(--dtmc-neutral-200);
   border: none;
   border-radius: 50%;
