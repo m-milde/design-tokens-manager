@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DTMC - Enhanced Design Tokens Map Creator</title>
+    
+    <!-- Import Google Fonts - Sora -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Import Material Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
     <link rel="stylesheet" href="dtmc-styles.css">
 </head>
 <body>
@@ -23,7 +34,7 @@
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
                     <span class="dtmc-layer-title">Primitive</span>
-                    <button class="dtmc-add-btn" data-layer="primitive">+ Add</button>
+                    <button class="dtmc-add-btn" data-layer="primitive">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="primitive-tokens"></div>
             </div>
@@ -31,7 +42,7 @@
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
                     <span class="dtmc-layer-title">Base</span>
-                    <button class="dtmc-add-btn" data-layer="base">+ Add</button>
+                    <button class="dtmc-add-btn" data-layer="base">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="base-tokens"></div>
             </div>
@@ -39,7 +50,7 @@
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
                     <span class="dtmc-layer-title">Semantic</span>
-                    <button class="dtmc-add-btn" data-layer="semantic">+ Add</button>
+                    <button class="dtmc-add-btn" data-layer="semantic">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="semantic-tokens"></div>
             </div>
@@ -47,7 +58,7 @@
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
                     <span class="dtmc-layer-title">Specific</span>
-                    <button class="dtmc-add-btn" data-layer="specific">+ Add</button>
+                    <button class="dtmc-add-btn" data-layer="specific">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="specific-tokens"></div>
             </div>
@@ -61,17 +72,28 @@
             <button id="dtmc-export-btn" class="dtmc-btn primary">Export JSON</button>
             <button id="dtmc-save-btn" class="dtmc-btn secondary">Save Session</button>
             <button id="dtmc-load-btn" class="dtmc-btn secondary">Load Session</button>
-            <div class="dtmc-zoom-controls">
-                <button id="dtmc-zoom-out-btn" class="dtmc-btn secondary">-</button>
-                <span id="dtmc-zoom-level">100%</span>
-                <button id="dtmc-zoom-in-btn" class="dtmc-btn secondary">+</button>
-                <button id="dtmc-reset-zoom-btn" class="dtmc-btn secondary">Reset</button>
-            </div>
+            <button id="dtmc-test-icon-btn" class="dtmc-btn primary" onclick="initIconSystem()">Load Icons</button>
         </div>
             <canvas id="dtmc-canvas"></canvas>
             
+            <!-- Floating Context Menu -->
+            <div id="dtmc-floating-menu" class="dtmc-floating-menu" style="display: none;">
+                <button id="dtmc-delete-node-btn" class="dtmc-floating-btn" title="Delete from canvas">
+                    <span class="material-icons">delete</span>
+                </button>
+                <button id="dtmc-delete-token-btn" class="dtmc-floating-btn" title="Delete token entirely">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            
             <!-- Mini-map for navigation -->
             <div class="dtmc-minimap">
+                <div class="dtmc-zoom-controls">
+                    <button id="dtmc-zoom-out-btn" class="dtmc-btn secondary">-</button>
+                    <span id="dtmc-zoom-level">100%</span>
+                    <button id="dtmc-zoom-in-btn" class="dtmc-btn secondary">+</button>
+                    <button id="dtmc-reset-zoom-btn" class="dtmc-btn secondary">Reset</button>
+                </div>
                 <div class="dtmc-minimap-header">
                     <span>Mini-map</span>
                     <button id="dtmc-minimap-toggle" class="dtmc-btn secondary">Toggle</button>
@@ -232,6 +254,12 @@
         </div>
     </div>
 
+    <!-- Import DTMC Icon System -->
+    <script src="dtmc-icons.js"></script>
+    
+    <!-- Import Fixed Functions -->
+    <script src="fixed-functions.js"></script>
+
     <script>
         // Helper function to get CSS variables
         function getCSSVariable(variableName) {
@@ -294,6 +322,9 @@
             console.log('Features: Enhanced Modal, Color Palette, Reference System, Token Types, Layers, Drag & Drop, Zoom Controls, Mini-map, Connection Labels');
             console.log('Keyboard Shortcuts: Ctrl+M (Toggle Mini-map), Ctrl+0 (Reset Zoom), Delete/Backspace (Delete Connections)');
             
+            console.log('🔧 Canvas element:', canvas);
+            console.log('🔧 Canvas element found:', !!canvas);
+            
             setupEventListeners();
             setupSidebar();
             loadSampleTokens();
@@ -301,10 +332,19 @@
             updateZoomDisplay();
             render();
             setupColorSwatchEvents();
+            
+            // Initialize icon system
+            if (typeof window.initIconSystem === 'function') {
+                window.initIconSystem();
+            } else {
+                console.error('❌ initIconSystem function not available');
+            }
         }
 
         // Setup event listeners
         function setupEventListeners() {
+            console.log('🔧 setupEventListeners function called');
+            
             // Canvas events
             canvas.addEventListener('mousedown', handleMouseDown);
             canvas.addEventListener('mousemove', handleMouseMove);
@@ -342,8 +382,57 @@
             // Window events
             window.addEventListener('resize', resizeCanvas);
             
+
+            
             // Keyboard events for connection deletion
             document.addEventListener('keydown', handleKeyDown);
+            
+            // Floating menu button events
+            document.getElementById('dtmc-delete-node-btn').addEventListener('click', deleteNodeFromCanvas);
+            document.getElementById('dtmc-delete-token-btn').addEventListener('click', deleteTokenEntirely);
+            
+            // Right-click to show floating menu (with proper preventDefault)
+            console.log('🔧 Adding contextmenu event listener to canvas for floating menu');
+            canvas.addEventListener('contextmenu', (e) => {
+                console.log('🔍 Right-click detected on canvas');
+                e.preventDefault(); // Prevent browser context menu on canvas
+                e.stopPropagation(); // Stop event bubbling
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+                const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+                
+                console.log('🔍 Canvas coordinates:', { x, y });
+                
+                const clickedNode = getNodeAtPoint(x, y);
+                console.log('🔍 Clicked node:', clickedNode);
+                
+                if (clickedNode) {
+                    console.log('🔍 Calling showFloatingMenu for node:', clickedNode.name);
+                    showFloatingMenu(x, y, clickedNode);
+                } else {
+                    console.log('🔍 No node clicked, hiding menu');
+                    hideFloatingMenu();
+                }
+            });
+            
+            // Hide floating menu when clicking elsewhere
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#dtmc-floating-menu')) {
+                    hideFloatingMenu();
+                }
+            });
+            
+            // Hide floating menu when right-clicking anywhere else
+            document.addEventListener('contextmenu', (e) => {
+                if (!e.target.closest('#dtmc-floating-menu')) {
+                    hideFloatingMenu();
+                }
+                // Only prevent browser context menu when clicking on canvas
+                if (e.target.closest('#dtmc-canvas')) {
+                    e.preventDefault();
+                }
+            });
         }
 
         // Setup sidebar functionality
@@ -640,8 +729,14 @@
             if (clickedNode) {
                 selectedNode = clickedNode;
                 selectedConnection = null; // Deselect any selected connection
-                isDragging = true;
-                lastMousePos = { x: e.clientX, y: e.clientY };
+                
+                // Only start dragging if it's a left click (not right click for context menu)
+                if (e.button === 0) { // Left click
+                    isDragging = true;
+                    lastMousePos = { x: e.clientX, y: e.clientY };
+                    // Hide floating menu when starting to drag
+                    hideFloatingMenu();
+                }
                 return;
             }
             
@@ -652,9 +747,15 @@
                 render();
             }
             
+            // Hide floating menu when clicking on empty canvas
+            hideFloatingMenu();
+            
             // Start panning
             isPanning = true;
             lastMousePos = { x: e.clientX, y: e.clientY };
+            
+            // Hide floating menu when starting to pan
+            hideFloatingMenu();
         }
 
         function handleMouseMove(e) {
@@ -695,6 +796,12 @@
             
             // Update cursor based on what's under the mouse
             updateCursor(e);
+            
+            // Always update lastMousePos for hover effects
+            lastMousePos = { x: e.clientX, y: e.clientY };
+            
+            // Re-render to show hover effects
+            render();
         }
 
         function handleMouseUp(e) {
@@ -898,6 +1005,120 @@
                 case 'right': return { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2 };
                 case 'bottom': return { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT };
                 default: return { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT / 2 };
+            }
+        }
+
+        // ===== FLOATING MENU FUNCTIONS =====
+        
+        // Show floating menu at specified position
+        function showFloatingMenu(x, y, node) {
+            console.log('🔍 showFloatingMenu called with:', { x, y, node: node.name });
+            
+            const menu = document.getElementById('dtmc-floating-menu');
+            console.log('🔍 Menu element found:', menu);
+            
+            if (!menu) {
+                console.error('❌ Menu element not found!');
+                return;
+            }
+            
+            // Position menu above the bubble, horizontally centered
+            const menuWidth = 180;
+            const bubbleCenterX = node.x + NODE_WIDTH / 2;
+            const menuX = bubbleCenterX * zoomLevel + panOffset.x - menuWidth / 2 + (NODE_WIDTH * 0.5);
+            const menuY = (node.y - 10) * zoomLevel + panOffset.y - 80; // 10px above bubble, accounting for menu height
+            
+            console.log('🔍 Positioning debug:', {
+                nodeX: node.x,
+                nodeY: node.y,
+                NODE_WIDTH,
+                NODE_HEIGHT,
+                bubbleCenterX,
+                zoomLevel,
+                panOffsetX: panOffset.x,
+                panOffsetY: panOffset.y,
+                menuWidth,
+                calculatedMenuX: menuX,
+                calculatedMenuY: menuY
+            });
+            
+            menu.style.left = menuX + 'px';
+            menu.style.top = menuY + 'px';
+            menu.style.display = 'flex';
+            
+            // Store reference to the node for delete operations
+            menu.dataset.nodeId = nodes.indexOf(node);
+            
+            console.log(`🎯 Floating menu shown for node: ${node.name}`);
+            console.log('🔍 Menu display style after setting:', menu.style.display);
+        }
+        
+        // Hide floating menu
+        function hideFloatingMenu() {
+            const menu = document.getElementById('dtmc-floating-menu');
+            if (menu) {
+                menu.style.display = 'none';
+                menu.dataset.nodeId = '';
+            }
+        }
+        
+        // Delete node from canvas
+        function deleteNodeFromCanvas() {
+            const menu = document.getElementById('dtmc-floating-menu');
+            const nodeIndex = parseInt(menu.dataset.nodeId);
+            
+            if (nodeIndex >= 0 && nodeIndex < nodes.length) {
+                const node = nodes[nodeIndex];
+                console.log(`🗑️ Deleting node from canvas: ${node.name}`);
+                
+                // Remove all connections involving this node
+                connections = connections.filter(conn => 
+                    conn.startNode !== node && conn.endNode !== node
+                );
+                
+                // Remove the node
+                nodes.splice(nodeIndex, 1);
+                
+                // Save state and re-render
+                saveState();
+                render();
+                hideFloatingMenu();
+                
+                console.log(`✅ Node ${node.name} deleted from canvas`);
+            }
+        }
+        
+        // Delete token entirely (from both canvas and sidebar)
+        function deleteTokenEntirely() {
+            const menu = document.getElementById('dtmc-floating-menu');
+            const nodeIndex = parseInt(menu.dataset.nodeId);
+            
+            if (nodeIndex >= 0 && nodeIndex < nodes.length) {
+                const node = nodes[nodeIndex];
+                console.log(`🗑️ Deleting token entirely: ${node.name}`);
+                
+                // Remove all connections involving this node
+                connections = connections.filter(conn => 
+                    conn.startNode !== node && conn.endNode !== node
+                );
+                
+                // Remove the node from canvas
+                nodes.splice(nodeIndex, 1);
+                
+                // Remove the token from the sidebar
+                const layer = node.layer;
+                if (tokens[layer]) {
+                    tokens[layer] = tokens[layer].filter(t => t.name !== node.name);
+                    console.log(`🗑️ Removed token ${node.name} from ${layer} layer`);
+                }
+                
+                // Save state and re-render
+                saveState();
+                render();
+                renderSidebar();
+                hideFloatingMenu();
+                
+                console.log(`✅ Token ${node.name} deleted entirely`);
             }
         }
 
@@ -1116,22 +1337,24 @@
             
             // Top socket (INPUT - red)
             const topSocket = { x: node.x + NODE_WIDTH / 2, y: node.y };
-            drawSocket(topSocket.x, topSocket.y, 'input', connectedSockets.has('top'));
+            drawSocket(topSocket.x, topSocket.y, 'input', connectedSockets.has('top'), node);
             
             // Left socket (INPUT - red)
             const leftSocket = { x: node.x, y: node.y + NODE_HEIGHT / 2 };
-            drawSocket(leftSocket.x, leftSocket.y, 'input', connectedSockets.has('left'));
+            drawSocket(leftSocket.x, leftSocket.y, 'input', connectedSockets.has('left'), node);
             
             // Right socket (OUTPUT - green)
             const rightSocket = { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2 };
-            drawSocket(rightSocket.x, rightSocket.y, 'output', connectedSockets.has('right'));
+            drawSocket(rightSocket.x, rightSocket.y, 'output', connectedSockets.has('right'), node);
             
             // Bottom socket (OUTPUT - green)
             const bottomSocket = { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT };
-            drawSocket(bottomSocket.x, bottomSocket.y, 'output', connectedSockets.has('bottom'));
+            drawSocket(bottomSocket.x, bottomSocket.y, 'output', connectedSockets.has('bottom'), node);
         }
         
-        function drawSocket(x, y, type, isConnected) {
+
+        
+        function drawSocket(x, y, type, isConnected, node) {
             // Get CSS variables for socket styling
             const socketRadius = parseCSSValue(getCSSVariable('--dtmc-socket-radius'));
             const socketConnectedColor = getCSSVariable('--dtmc-socket-connected-color');
@@ -1140,6 +1363,14 @@
             const socketStrokeWidth = parseCSSValue(getCSSVariable('--dtmc-socket-stroke-width'));
             const socketInnerCircleRadius = parseCSSValue(getCSSVariable('--dtmc-socket-inner-circle-radius'));
             const socketPlusSize = parseCSSValue(getCSSVariable('--dtmc-socket-plus-size'));
+            
+            // Check if mouse is hovering over the entire node (bubble)
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (lastMousePos.x - rect.left - panOffset.x) / zoomLevel;
+            const mouseY = (lastMousePos.y - rect.top - panOffset.y) / zoomLevel;
+            
+            const isHoveringOverNode = mouseX >= node.x && mouseX <= node.x + NODE_WIDTH &&
+                                     mouseY >= node.y && mouseY <= node.y + NODE_HEIGHT;
             
             // Draw socket background
             if (isConnected) {
@@ -1152,18 +1383,23 @@
             ctx.arc(x, y, socketRadius, 0, 2 * Math.PI);
             ctx.fill();
             
+            // Draw socket border with hover effect
+            if (isHoveringOverNode) {
+                // White border when hovering over the bubble
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = socketStrokeWidth * 1.5;
+                ctx.stroke();
+            } else {
+                // No border when not hovering (transparent)
+                // Don't draw border
+            }
+            
             // Draw socket content
             if (isConnected) {
                 // When connected, just fill with connected color
-                ctx.strokeStyle = socketConnectedColor;
-                ctx.lineWidth = socketStrokeWidth;
-                ctx.stroke();
+                // (border already drawn above if hovering)
             } else {
                 // When not connected, draw appropriate symbol
-                ctx.strokeStyle = socketStrokeColor;
-                ctx.lineWidth = socketStrokeWidth;
-                ctx.stroke();
-                
                 if (type === 'input') {
                     // Draw small circle inside for input sockets
                     ctx.fillStyle = socketStrokeColor;

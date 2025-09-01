@@ -162,7 +162,7 @@
   --dtmc-socket-connected-color: #FFFFFF;
   --dtmc-socket-disconnected-color: #000000;
   --dtmc-socket-stroke-color: #FFFFFF;
-  --dtmc-socket-stroke-width: 2px;
+  --dtmc-socket-stroke-width: 1px;
   --dtmc-socket-inner-circle-radius: 3px;
   --dtmc-socket-plus-size: 4.5px;
   
@@ -444,6 +444,57 @@ body {
   background: var(--dtmc-danger-700);
 }
 
+/* ===== FLOATING MENU ===== */
+.dtmc-floating-menu {
+  position: absolute;
+  background: var(--dtmc-neutral-800);
+  border: 1px solid var(--dtmc-neutral-600);
+  border-radius: 100px;
+  padding: var(--dtmc-spacing-sm);
+  box-shadow: var(--dtmc-shadow-xl);
+  backdrop-filter: blur(10px);
+  z-index: var(--dtmc-z-dropdown);
+  display: none;
+  min-width: auto;
+  transform: translateY(20px) translateX(-50%);
+  opacity: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dtmc-spacing-sm);
+  margin: 0;
+  left: 0;
+  top: 0;
+}
+
+.dtmc-floating-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--dtmc-neutral-700);
+  color: var(--dtmc-neutral-200);
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all var(--dtmc-transition-normal);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.dtmc-floating-btn:hover {
+  background: var(--dtmc-neutral-600);
+  color: var(--dtmc-neutral-100);
+  transform: translateY(-2px);
+}
+
+
+
 /* ===== ZOOM CONTROLS ===== */
 .dtmc-zoom-controls {
   display: flex;
@@ -471,6 +522,10 @@ body {
   height: 100%;
   cursor: grab;
   background: var(--dtmc-neutral-900);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 #dtmc-canvas:active {
