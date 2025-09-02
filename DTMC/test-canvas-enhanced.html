@@ -67,11 +67,11 @@
         <!-- Main Canvas Area -->
         <div class="dtmc-main">
                     <div class="dtmc-controls">
-            <button id="dtmc-undo-btn" class="dtmc-btn warning">Undo</button>
-            <button id="dtmc-clear-btn" class="dtmc-btn danger">Clear All</button>
-            <button id="dtmc-export-btn" class="dtmc-btn primary">Export JSON</button>
-            <button id="dtmc-save-btn" class="dtmc-btn secondary">Save Session</button>
-            <button id="dtmc-load-btn" class="dtmc-btn secondary">Load Session</button>
+            <button id="dtmc-undo-btn" class="dtmc-btn secondary" title=Undo">Undo</button>
+            <button id="dtmc-clear-btn" class="dtmc-btn secondary" title="Clear canvas">Clear All</button>
+            <button id="dtmc-export-btn" class="dtmc-btn secondary" title="Export JSON">Export JSON</button>
+            <button id="dtmc-save-btn" class="dtmc-btn secondary" title="Save setup">Save Session</button>
+            <button id="dtmc-load-btn" class="dtmc-btn secondary" title="Load setup">Load Session</button>
 
         </div>
             <canvas id="dtmc-canvas"></canvas>
@@ -133,15 +133,15 @@
             
             <!-- Mini-map for navigation -->
             <div class="dtmc-minimap">
-                <div class="d-flex">
-                    <div class="dtmc-minimap-header">
-                        <button id="dtmc-minimap-toggle" class="dtmc-btn secondary">Toggle</button>
-                    </div>
+                <div class="dtmc-d-flex dtmc-align-center dtmc-justify-between dtmc-mb-md">
                     <div class="dtmc-zoom-controls">
                         <button id="dtmc-zoom-out-btn" class="dtmc-btn secondary">-</button>
                         <span id="dtmc-zoom-level">100%</span>
                         <button id="dtmc-zoom-in-btn" class="dtmc-btn secondary">+</button>
                         <button id="dtmc-reset-zoom-btn" class="dtmc-btn secondary">Reset</button>
+                    </div>
+                    <div class="dtmc-minimap-header">
+                        <button id="dtmc-minimap-toggle" class="dtmc-btn secondary">Toggle</button>
                     </div>
                 </div>
                 <canvas id="dtmc-minimap-canvas" width="200" height="150"></canvas>
@@ -174,24 +174,63 @@
                 <!-- Color Token Section -->
                 <div id="color-token-section" class="dtmc-token-section">
                     <label class="dtmc-form-label">Choose a color:</label>
-                    <div class="dtmc-color-palette">
-                        <div class="dtmc-color-swatch" data-color="#ef4444" style="background-color: #ef4444;"></div>
-                        <div class="dtmc-color-swatch" data-color="#22c55e" style="background-color: #22c55e;"></div>
-                        <div class="dtmc-color-swatch" data-color="#3b82f6" style="background-color: #3b82f6;"></div>
-                        <div class="dtmc-color-swatch" data-color="#f59e0b" style="background-color: #f59e0b;"></div>
-                        <div class="dtmc-color-swatch" data-color="#8b5cf6" style="background-color: #8b5cf6;"></div>
-                        <div class="dtmc-color-swatch" data-color="#06b6d4" style="background-color: #06b6d4;"></div>
-                        <div class="dtmc-color-swatch" data-color="#84cc16" style="background-color: #84cc16;"></div>
-                        <div class="dtmc-color-swatch" data-color="#f97316" style="background-color: #f97316;"></div>
-                        <div class="dtmc-color-swatch" data-color="#ec4899" style="background-color: #ec4899;"></div>
-                        <div class="dtmc-color-swatch" data-color="#6366f1" style="background-color: #6366f1;"></div>
-                        <div class="dtmc-color-swatch" data-color="#10b981" style="background-color: #10b981;"></div>
-                        <div class="dtmc-color-swatch" data-color="#fbbf24" style="background-color: #fbbf24;"></div>
-                        <div class="dtmc-color-swatch" data-color="#6b7280" style="background-color: #6b7280;"></div>
-                        <div class="dtmc-color-swatch" data-color="#9ca3af" style="background-color: #9ca3af;"></div>
-                        <div class="dtmc-color-swatch" data-color="#d1d5db" style="background-color: #d1d5db;"></div>
-                        <div class="dtmc-color-swatch" data-color="#000000" style="background-color: #000000;"></div>
+                    
+                    <!-- Enhanced Color Picker -->
+                    <div class="dtmc-color-picker-container">
+                        <!-- Main Color Picker Square -->
+                        <div class="dtmc-color-picker-main">
+                            <div class="dtmc-color-square-container">
+                                <canvas id="dtmc-color-square" width="300" height="300" class="dtmc-color-square"></canvas>
+                                <div id="dtmc-color-square-indicator" class="dtmc-color-square-indicator"></div>
+                            </div>
+                            
+                            <!-- Eyedropper Tool -->
+                            <div class="dtmc-eyedropper-tool">
+                                <button id="dtmc-eyedropper-btn" class="dtmc-eyedropper-btn" title="Pick color from screen">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                        <path d="M2 17l10 5 10-5"/>
+                                        <path d="M2 12l10 5 10-5"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Hue Slider -->
+                        <div class="dtmc-hue-slider-container">
+                            <canvas id="dtmc-hue-slider" width="280" height="20" class="dtmc-hue-slider"></canvas>
+                            <div id="dtmc-hue-indicator" class="dtmc-hue-indicator"></div>
+                        </div>
+                        
+                        <!-- Opacity Slider -->
+                        <div class="dtmc-opacity-slider-container">
+                            <canvas id="dtmc-opacity-slider" width="280" height="20" class="dtmc-opacity-slider"></canvas>
+                            <div id="dtmc-opacity-indicator" class="dtmc-opacity-indicator"></div>
+                        </div>
+                        
+                        <!-- Color Input Controls -->
+                        <div class="dtmc-color-controls">
+                            <!-- Hex Input with Dropdown -->
+                            <div class="dtmc-hex-input-group">
+                                <div class="dtmc-hex-dropdown">
+                                    <select id="dtmc-color-format" class="dtmc-format-select">
+                                        <option value="hex">Hex</option>
+                                        <option value="rgb">RGB</option>
+                                        <option value="hsl">HSL</option>
+                                    </select>
+                                </div>
+                                <input type="text" id="dtmc-hex-input" class="dtmc-hex-input" placeholder="#F5F5F5" maxlength="7">
+                            </div>
+                            
+                            <!-- Opacity Input -->
+                            <div class="dtmc-opacity-input-group">
+                                <input type="number" id="dtmc-opacity-input" class="dtmc-opacity-input" min="0" max="100" value="100">
+                                <span class="dtmc-opacity-percent">%</span>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <!-- Custom Color Input (Legacy) -->
                     <div class="dtmc-form-group">
                         <label for="token-value" class="dtmc-form-label">Custom Color (Hex)</label>
                         <input type="text" id="token-value" class="dtmc-form-input" placeholder="#4a90e2" maxlength="7">
@@ -771,6 +810,15 @@
             }
             
             modal.style.display = 'flex';
+            
+            // Initialize color picker if this is a color token
+            if (selectedTokenType === 'color' && selectedLayer === 'primitive') {
+                // Use setTimeout to ensure DOM elements are rendered
+                setTimeout(() => {
+                    initColorPicker();
+                }, 100);
+            }
+            
             console.log('🎉 Modal opened successfully!');
         }
 
@@ -854,11 +902,527 @@
                     // Update the token value input
                     const colorValue = this.getAttribute('data-color');
                     document.getElementById('token-value').value = colorValue;
+                    
+                    // Update color picker with selected color
+                    updateColorPickerFromHex(colorValue);
                 });
             });
         }
 
-        // Close modal
+        // Initialize enhanced color picker
+        function initColorPicker() {
+            const colorSquareCanvas = document.getElementById('dtmc-color-square');
+            const hueSliderCanvas = document.getElementById('dtmc-hue-slider');
+            const opacitySliderCanvas = document.getElementById('dtmc-opacity-slider');
+            
+            if (colorSquareCanvas && hueSliderCanvas && opacitySliderCanvas) {
+                renderColorSquare(colorSquareCanvas);
+                renderHueSlider(hueSliderCanvas);
+                renderOpacitySlider(opacitySliderCanvas);
+                
+                // Add event listeners
+                setupColorSquareEvents(colorSquareCanvas);
+                setupHueSliderEvents(hueSliderCanvas);
+                setupOpacitySliderEvents(opacitySliderCanvas);
+                setupColorInputEvents();
+                setupEyedropperEvents();
+                
+                // Set initial color
+                updateColorPickerFromHex('#F5F5F5');
+            }
+        }
+
+        // Render main color square (saturation/lightness picker)
+        function renderColorSquare(canvas) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Get current hue
+            const currentHue = window.currentHue || 0;
+            
+            // Create saturation gradient (left to right)
+            for (let x = 0; x < width; x++) {
+                const saturation = (x / width) * 100;
+                
+                // Create lightness gradient (top to bottom)
+                for (let y = 0; y < height; y++) {
+                    const lightness = 100 - (y / height) * 100;
+                    
+                    ctx.fillStyle = `hsl(${currentHue}, ${saturation}%, ${lightness}%)`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+
+        // Render saturation/lightness picker
+        function renderSLPicker(canvas, baseColor) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Extract hue from base color
+            const tempDiv = document.createElement('div');
+            tempDiv.style.color = baseColor;
+            document.body.appendChild(tempDiv);
+            const computedColor = getComputedStyle(tempDiv).color;
+            document.body.removeChild(tempDiv);
+            
+            // Parse RGB to get HSL
+            const rgbMatch = computedColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (rgbMatch) {
+                const r = parseInt(rgbMatch[1]) / 255;
+                const g = parseInt(rgbMatch[2]) / 255;
+                const b = parseInt(rgbMatch[3]) / 255;
+                
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+                
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+                
+                // Draw saturation/lightness grid
+                for (let x = 0; x < width; x++) {
+                    for (let y = 0; y < height; y++) {
+                        const saturation = x / width;
+                        const lightness = 1 - (y / height);
+                        
+                        if (lightness <= 0 || lightness >= 1) {
+                            ctx.fillStyle = '#000000';
+                        } else {
+                            const color = `hsl(${h * 360}, ${saturation * 100}%, ${lightness * 100}%)`;
+                            ctx.fillStyle = color;
+                        }
+                        
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+        }
+
+        // Render hue slider
+        function renderHueSlider(canvas) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Create hue gradient
+            for (let x = 0; x < width; x++) {
+                const hue = (x / width) * 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.fillRect(x, 0, 1, height);
+            }
+        }
+
+        // Render opacity slider with checkerboard background
+        function renderOpacitySlider(canvas) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw checkerboard pattern
+            const checkerSize = 8;
+            for (let x = 0; x < width; x += checkerSize) {
+                for (let y = 0; y < height; y += checkerSize) {
+                    const isEven = ((x / checkerSize) + (y / checkerSize)) % 2 === 0;
+                    ctx.fillStyle = isEven ? '#ffffff' : '#cccccc';
+                    ctx.fillRect(x, y, checkerSize, checkerSize);
+                }
+            }
+            
+            // Draw opacity gradient
+            const currentColor = window.currentColor || '#F5F5F5';
+            for (let x = 0; x < width; x++) {
+                const opacity = x / width;
+                ctx.fillStyle = currentColor + Math.round(opacity * 255).toString(16).padStart(2, '0');
+                ctx.fillRect(x, 0, 1, height);
+            }
+        }
+
+        // Setup color square events
+        function setupColorSquareEvents(canvas) {
+            canvas.addEventListener('mousedown', handleColorSquareMouseDown);
+            canvas.addEventListener('mousemove', handleColorSquareMouseMove);
+            canvas.addEventListener('mouseup', handleColorSquareMouseUp);
+            
+            let isDragging = false;
+            
+            function handleColorSquareMouseDown(e) {
+                isDragging = true;
+                updateColorFromSquare(e);
+            }
+            
+            function handleColorSquareMouseMove(e) {
+                if (isDragging) {
+                    updateColorFromSquare(e);
+                }
+            }
+            
+            function handleColorSquareMouseUp() {
+                isDragging = false;
+            }
+            
+            function updateColorFromSquare(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const saturation = Math.round((x / canvas.width) * 100);
+                const lightness = Math.round(100 - (y / canvas.height) * 100);
+                const hue = window.currentHue || 0;
+                
+                updateCurrentColor(hue, saturation, lightness);
+            }
+        }
+
+        // Setup hue slider events
+        function setupHueSliderEvents(canvas) {
+            canvas.addEventListener('mousedown', handleHueSliderMouseDown);
+            canvas.addEventListener('mousemove', handleHueSliderMouseMove);
+            canvas.addEventListener('mouseup', handleHueSliderMouseUp);
+            
+            let isDragging = false;
+            
+            function handleHueSliderMouseDown(e) {
+                isDragging = true;
+                updateHueFromSlider(e);
+            }
+            
+            function handleHueSliderMouseMove(e) {
+                if (isDragging) {
+                    updateHueFromSlider(e);
+                }
+            }
+            
+            function handleHueSliderMouseUp() {
+                isDragging = false;
+            }
+            
+            function updateHueFromSlider(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                
+                const hue = Math.round((x / canvas.width) * 360);
+                window.currentHue = hue;
+                
+                // Re-render color square with new hue
+                const colorSquare = document.getElementById('dtmc-color-square');
+                renderColorSquare(colorSquare);
+                
+                // Update current color with new hue
+                const currentS = window.currentSaturation || 0;
+                const currentL = window.currentLightness || 100;
+                updateCurrentColor(hue, currentS, currentL);
+            }
+        }
+
+        // Setup opacity slider events
+        function setupOpacitySliderEvents(canvas) {
+            canvas.addEventListener('mousedown', handleOpacitySliderMouseDown);
+            canvas.addEventListener('mousemove', handleOpacitySliderMouseMove);
+            canvas.addEventListener('mouseup', handleOpacitySliderMouseUp);
+            
+            let isDragging = false;
+            
+            function handleOpacitySliderMouseDown(e) {
+                isDragging = true;
+                updateOpacityFromSlider(e);
+            }
+            
+            function handleOpacitySliderMouseMove(e) {
+                if (isDragging) {
+                    updateOpacityFromSlider(e);
+                }
+            }
+            
+            function handleOpacitySliderMouseUp() {
+                isDragging = false;
+            }
+            
+            function updateOpacityFromSlider(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                
+                const opacity = Math.round((x / canvas.width) * 100);
+                window.currentOpacity = opacity;
+                
+                // Update opacity input
+                document.getElementById('dtmc-opacity-input').value = opacity;
+                
+                // Update main token value with opacity
+                updateTokenValueWithOpacity();
+            }
+        }
+
+        // Setup color input events
+        function setupColorInputEvents() {
+            // Hex input
+            document.getElementById('dtmc-hex-input').addEventListener('input', function() {
+                const hex = this.value;
+                if (isValidHex(hex)) {
+                    updateColorPickerFromHex(hex, false);
+                }
+            });
+            
+            // Opacity input
+            document.getElementById('dtmc-opacity-input').addEventListener('input', function() {
+                const opacity = parseInt(this.value) || 100;
+                window.currentOpacity = opacity;
+                updateTokenValueWithOpacity();
+            });
+            
+            // Format dropdown
+            document.getElementById('dtmc-color-format').addEventListener('change', function() {
+                const format = this.value;
+                updateInputFormat(format);
+            });
+        }
+
+        // Setup eyedropper events
+        function setupEyedropperEvents() {
+            document.getElementById('dtmc-eyedropper-btn').addEventListener('click', function() {
+                // Note: Eyedropper API is limited in web browsers
+                // This is a placeholder for future implementation
+                console.log('Eyedropper tool clicked - feature coming soon');
+            });
+        }
+
+        // Update current color from hue, saturation, lightness
+        function updateCurrentColor(h, s, l) {
+            const hex = hslToHex(h, s, l);
+            const rgb = hexToRGB(hex);
+            
+            // Store current values
+            window.currentHue = h;
+            window.currentSaturation = s;
+            window.currentLightness = l;
+            window.currentColor = hex;
+            
+            // Update input fields
+            document.getElementById('dtmc-hex-input').value = hex;
+            
+            // Update main token value input
+            updateTokenValueWithOpacity();
+            
+            // Update picker indicators
+            updateColorSquareIndicator(s, l);
+            updateHueIndicator(h);
+            updateOpacityIndicator(window.currentOpacity || 100);
+            
+            // Re-render opacity slider with new color
+            const opacitySlider = document.getElementById('dtmc-opacity-slider');
+            renderOpacitySlider(opacitySlider);
+        }
+
+        // Update token value with current opacity
+        function updateTokenValueWithOpacity() {
+            const tokenValueInput = document.getElementById('token-value');
+            if (tokenValueInput && window.currentColor) {
+                const opacity = window.currentOpacity || 100;
+                if (opacity < 100) {
+                    // Convert to rgba format
+                    const rgb = hexToRGB(window.currentColor);
+                    tokenValueInput.value = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity / 100})`;
+                } else {
+                    tokenValueInput.value = window.currentColor;
+                }
+            }
+        }
+
+        // Update input format based on dropdown selection
+        function updateInputFormat(format) {
+            const hexInput = document.getElementById('dtmc-hex-input');
+            if (!window.currentColor) return;
+            
+            const rgb = hexToRGB(window.currentColor);
+            const hsl = hexToHSL(window.currentColor);
+            
+            switch (format) {
+                case 'hex':
+                    hexInput.value = window.currentColor;
+                    break;
+                case 'rgb':
+                    hexInput.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+                    break;
+                case 'hsl':
+                    hexInput.value = `hsl(${Math.round(hsl.h)}, ${Math.round(hsl.s)}%, ${Math.round(hsl.l)}%)`;
+                    break;
+            }
+        }
+
+        // Update color picker from hex value
+        function updateColorPickerFromHex(hex, updateInputs = true) {
+            if (!isValidHex(hex)) return;
+            
+            const rgb = hexToRGB(hex);
+            const hsl = hexToHSL(hex);
+            
+            // Store current values
+            window.currentHue = Math.round(hsl.h);
+            window.currentSaturation = Math.round(hsl.s);
+            window.currentLightness = Math.round(hsl.l);
+            window.currentColor = hex;
+            
+            if (updateInputs) {
+                // Update input fields
+                document.getElementById('dtmc-hex-input').value = hex;
+            }
+            
+            // Update main token value input
+            updateTokenValueWithOpacity();
+            
+            // Update picker indicators
+            updateColorSquareIndicator(hsl.s, hsl.l);
+            updateHueIndicator(hsl.h);
+            updateOpacityIndicator(window.currentOpacity || 100);
+            
+            // Re-render color square and opacity slider
+            const colorSquare = document.getElementById('dtmc-color-square');
+            const opacitySlider = document.getElementById('dtmc-opacity-slider');
+            renderColorSquare(colorSquare);
+            renderOpacitySlider(opacitySlider);
+        }
+
+        // Update color square indicator position
+        function updateColorSquareIndicator(saturation, lightness) {
+            const indicator = document.getElementById('dtmc-color-square-indicator');
+            if (!indicator) return;
+            
+            const canvas = document.getElementById('dtmc-color-square');
+            const x = (saturation / 100) * canvas.width;
+            const y = (1 - lightness / 100) * canvas.height;
+            
+            indicator.style.left = x + 'px';
+            indicator.style.top = y + 'px';
+        }
+
+        // Update hue indicator position
+        function updateHueIndicator(hue) {
+            const indicator = document.getElementById('dtmc-hue-indicator');
+            if (!indicator) return;
+            
+            const canvas = document.getElementById('dtmc-hue-slider');
+            const x = (hue / 360) * canvas.width;
+            
+            indicator.style.left = x + 'px';
+        }
+
+        // Update opacity indicator position
+        function updateOpacityIndicator(opacity) {
+            const indicator = document.getElementById('dtmc-opacity-indicator');
+            if (!indicator) return;
+            
+            const canvas = document.getElementById('dtmc-opacity-slider');
+            const x = (opacity / 100) * canvas.width;
+            
+            indicator.style.left = x + 'px';
+        }
+
+        // Utility functions
+        function isValidHex(hex) {
+            return /^#[0-9A-F]{6}$/i.test(hex);
+        }
+
+        function hexToRGB(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        }
+
+        function hexToHSL(hex) {
+            const rgb = hexToRGB(hex);
+            const r = rgb.r / 255;
+            const g = rgb.g / 255;
+            const b = rgb.b / 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            
+            return {
+                h: h * 360,
+                s: s * 100,
+                l: l * 100
+            };
+        }
+
+        function hslToHex(h, s, l) {
+            h /= 360;
+            s /= 100;
+            l /= 100;
+            
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+            const m = l - c / 2;
+            let r = 0, g = 0, b = 0;
+            
+            if (0 <= h && h < 1) {
+                r = c; g = x; b = 0;
+            } else if (1 <= h && h < 2) {
+                r = x; g = c; b = 0;
+            } else if (2 <= h && h < 3) {
+                r = 0; g = c; b = x;
+            } else if (3 <= h && h < 4) {
+                r = 0; g = x; b = c;
+            } else if (4 <= h && h < 5) {
+                r = x; g = 0; b = c;
+            } else if (5 <= h && h < 6) {
+                r = c; g = 0; b = x;
+            }
+            
+            const rHex = Math.round((r + m) * 255).toString(16).padStart(2, '0');
+            const gHex = Math.round((g + m) * 255).toString(16).padStart(2, '0');
+            const bHex = Math.round((b + m) * 255).toString(16).padStart(2, '0');
+            
+            return '#' + rHex + gHex + bHex;
+        }
+
         function closeModal() {
             const modal = document.getElementById('dtmc-token-modal');
             modal.style.display = 'none';
@@ -868,6 +1432,14 @@
             document.getElementById('token-value').value = '';
             document.getElementById('token-value-custom').value = '';
             document.getElementById('token-value-simple').value = '';
+            
+            // Reset color picker inputs if they exist
+            const hexInput = document.getElementById('dtmc-hex-input');
+            if (hexInput) {
+                hexInput.value = '';
+                document.getElementById('dtmc-opacity-input').value = '100';
+                document.getElementById('dtmc-color-format').value = 'hex';
+            }
             
             // Reset color swatch selection
             document.querySelectorAll('.dtmc-color-swatch').forEach(s => s.classList.remove('selected'));
@@ -1368,7 +1940,7 @@
             }
             
             // Exclude button areas (right side, last 60px)
-            if (x > header.x + header.width - 60) {
+            if (x > header.x + header.width - 100) {
                 return false;
             }
             
