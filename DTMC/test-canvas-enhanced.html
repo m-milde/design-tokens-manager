@@ -72,7 +72,7 @@
             <button id="dtmc-export-btn" class="dtmc-btn primary">Export JSON</button>
             <button id="dtmc-save-btn" class="dtmc-btn secondary">Save Session</button>
             <button id="dtmc-load-btn" class="dtmc-btn secondary">Load Session</button>
-            <button id="dtmc-test-icon-btn" class="dtmc-btn primary" onclick="initIconSystem()">Load Icons</button>
+
         </div>
             <canvas id="dtmc-canvas"></canvas>
             
@@ -84,22 +84,74 @@
                 <button id="dtmc-delete-token-btn" class="dtmc-floating-btn" title="Delete token entirely">
                     <span class="material-icons">close</span>
                 </button>
+                <button id="dtmc-remove-from-group-btn" class="dtmc-floating-btn" title="Remove from group" style="display: none;">
+                    <span class="material-icons">group_remove</span>
+                </button>
+            </div>
+            
+            <!-- Group Creation Menu (shows when multiple nodes selected) -->
+            <div id="dtmc-group-menu" class="dtmc-group-menu" style="display: none;">
+                <button id="dtmc-create-group-btn" class="dtmc-group-btn" title="Create New Group">
+                    <span class="material-icons">group_work</span>
+                    Create Group
+                </button>
+            </div>
+            
+            <!-- Group Management Menu (shows when right-clicking on groups) -->
+            <div id="dtmc-group-management-menu" class="dtmc-group-menu" style="display: none;">
+                <button id="dtmc-rename-group-btn" class="dtmc-group-btn" title="Rename Group">
+                    <span class="material-icons">edit</span>
+                    Rename
+                </button>
+                <button id="dtmc-ungroup-btn" class="dtmc-group-btn" title="Ungroup">
+                    <span class="material-icons">group_off</span>
+                    Ungroup
+                </button>
+            </div>
+            
+                        <!-- Group Header Controls are canvas-rendered, no HTML needed -->
+            
+            <!-- Group Rename Modal -->
+            <div id="dtmc-rename-group-modal" class="dtmc-modal-overlay" style="display: none;">
+                <div class="dtmc-modal">
+                    <div class="dtmc-modal-header">
+                        <h3 class="dtmc-modal-title">Rename Group</h3>
+                        <p class="dtmc-modal-subtitle">Enter a new name for your group</p>
+                    </div>
+                    
+                    <div class="dtmc-form-group">
+                        <label for="group-new-name" class="dtmc-form-label">Group Name</label>
+                        <input type="text" id="group-new-name" class="dtmc-form-input" placeholder="Enter new group name">
+                    </div>
+                    
+                    <div class="dtmc-modal-footer">
+                        <button id="dtmc-rename-cancel-btn" class="dtmc-modal-btn cancel">Cancel</button>
+                        <button id="dtmc-rename-confirm-btn" class="dtmc-modal-btn create">Rename</button>
+                    </div>
+                </div>
             </div>
             
             <!-- Mini-map for navigation -->
             <div class="dtmc-minimap">
-                <div class="dtmc-zoom-controls">
-                    <button id="dtmc-zoom-out-btn" class="dtmc-btn secondary">-</button>
-                    <span id="dtmc-zoom-level">100%</span>
-                    <button id="dtmc-zoom-in-btn" class="dtmc-btn secondary">+</button>
-                    <button id="dtmc-reset-zoom-btn" class="dtmc-btn secondary">Reset</button>
-                </div>
-                <div class="dtmc-minimap-header">
-                    <span>Mini-map</span>
-                    <button id="dtmc-minimap-toggle" class="dtmc-btn secondary">Toggle</button>
+                <div class="d-flex">
+                    <div class="dtmc-minimap-header">
+                        <button id="dtmc-minimap-toggle" class="dtmc-btn secondary">Toggle</button>
+                    </div>
+                    <div class="dtmc-zoom-controls">
+                        <button id="dtmc-zoom-out-btn" class="dtmc-btn secondary">-</button>
+                        <span id="dtmc-zoom-level">100%</span>
+                        <button id="dtmc-zoom-in-btn" class="dtmc-btn secondary">+</button>
+                        <button id="dtmc-reset-zoom-btn" class="dtmc-btn secondary">Reset</button>
+                    </div>
                 </div>
                 <canvas id="dtmc-minimap-canvas" width="200" height="150"></canvas>
             </div>
+            
+            <!-- Show Mini-map Button (appears when mini-map is hidden) -->
+            <button id="dtmc-minimap-show-btn" class="dtmc-minimap-show-btn" style="display: none;">
+                <span class="dtmc-minimap-show-icon">🗺️</span>
+                <span class="dtmc-minimap-show-text">Show Map</span>
+            </button>
         </div>
     </div>
 
@@ -283,6 +335,25 @@
         const canvas = document.getElementById('dtmc-canvas');
         const ctx = canvas.getContext('2d');
         
+        // Polyfill for roundRect if not supported
+        if (!ctx.roundRect) {
+            ctx.roundRect = function(x, y, width, height, radius) {
+                if (width < 2 * radius) radius = width / 2;
+                if (height < 2 * radius) radius = height / 2;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+            };
+        }
+        
         // Constants
         const SOCKET_RADIUS = 9; // 18px diameter = 9px radius
         const NODE_WIDTH = 200;
@@ -295,6 +366,7 @@
         let connections = [];
         let selectedNode = null;
         let selectedConnection = null;
+        let selectedNodes = []; // Multi-selection array
         let isDragging = false;
         let isPanning = false;
         let panOffset = { x: 0, y: 0 };
@@ -306,6 +378,7 @@
         let endSocket = null;
         let selectedTokenType = 'color';
         let selectedLayer = null;
+        let groups = []; // Array to store groups
         let tokens = {
             primitive: [],
             base: [],
@@ -315,6 +388,10 @@
         let undoStack = [];
         let dragPreview = null;
         let draggedToken = null;
+        let isDraggingGroup = false; // New: track if dragging a group
+        let draggedGroup = null; // New: track which group is being dragged
+        let isDraggingGroupedNode = false; // New: track if dragging a grouped node
+        let draggedGroupedNode = null; // New: track which grouped node is being dragged
 
         // Initialize
         function init() {
@@ -328,6 +405,7 @@
             setupEventListeners();
             setupSidebar();
             loadSampleTokens();
+            loadSampleNodes(); // Load sample nodes for testing
             resizeCanvas();
             updateZoomDisplay();
             render();
@@ -372,6 +450,16 @@
             // Mini-map controls
             document.getElementById('dtmc-minimap-toggle').addEventListener('click', toggleMiniMap);
             
+            // Show mini-map button
+            document.getElementById('dtmc-minimap-show-btn').addEventListener('click', () => {
+                const minimap = document.querySelector('.dtmc-minimap');
+                const showBtn = document.getElementById('dtmc-minimap-show-btn');
+                
+                minimap.classList.remove('hidden');
+                showBtn.style.display = 'none';
+                renderMiniMap();
+            });
+            
             // Mini-map click navigation
             document.getElementById('dtmc-minimap-canvas').addEventListener('click', handleMiniMapClick);
             
@@ -390,6 +478,87 @@
             // Floating menu button events
             document.getElementById('dtmc-delete-node-btn').addEventListener('click', deleteNodeFromCanvas);
             document.getElementById('dtmc-delete-token-btn').addEventListener('click', deleteTokenEntirely);
+            
+            // Group menu button events
+            document.getElementById('dtmc-create-group-btn').addEventListener('click', createGroup);
+            
+            // Remove from group button event
+            document.getElementById('dtmc-remove-from-group-btn').addEventListener('click', () => {
+                const menu = document.getElementById('dtmc-floating-menu');
+                const nodeIndex = parseInt(menu.dataset.nodeId);
+                if (nodeIndex >= 0 && nodeIndex < nodes.length) {
+                    const node = nodes[nodeIndex];
+                    if (node.groupId) {
+                        removeNodeFromGroup(node, node.groupId);
+                        hideFloatingMenu();
+                    }
+                }
+            });
+            
+            // Group management menu button events
+            document.getElementById('dtmc-rename-group-btn').addEventListener('click', () => {
+                const menu = document.getElementById('dtmc-group-management-menu');
+                const groupId = parseInt(menu.dataset.groupId);
+                if (groupId) {
+                    renameGroup(groupId);
+                    hideGroupManagementMenu();
+                }
+            });
+            
+            document.getElementById('dtmc-ungroup-btn').addEventListener('click', () => {
+                const menu = document.getElementById('dtmc-group-management-menu');
+                const groupId = parseInt(menu.dataset.groupId);
+                if (groupId) {
+                    ungroupNodes(groupId);
+                    hideGroupManagementMenu();
+                }
+            });
+            
+                        // Note: Group header buttons are canvas-rendered and handled in mouse events
+            // No HTML event listeners needed for canvas buttons
+            
+            // Group rename modal event listeners
+            document.getElementById('dtmc-rename-confirm-btn').addEventListener('click', () => {
+                const modal = document.getElementById('dtmc-rename-group-modal');
+                const nameInput = document.getElementById('group-new-name');
+                const groupId = parseInt(modal.dataset.groupId);
+                
+                if (groupId && nameInput) {
+                    const newName = nameInput.value.trim();
+                    if (newName) {
+                        const group = groups.find(g => g.id === groupId);
+                        if (group) {
+                            group.name = newName;
+                            console.log(`✅ Renamed group to: ${group.name}`);
+                            render();
+                        }
+                    }
+                }
+                
+                // Hide modal
+                modal.style.display = 'none';
+            });
+            
+            document.getElementById('dtmc-rename-cancel-btn').addEventListener('click', () => {
+                const modal = document.getElementById('dtmc-rename-group-modal');
+                modal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            document.getElementById('dtmc-rename-group-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'dtmc-rename-group-modal') {
+                    e.target.style.display = 'none';
+                }
+            });
+            
+            // Handle Enter key in rename input
+            document.getElementById('group-new-name').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('dtmc-rename-confirm-btn').click();
+                } else if (e.key === 'Escape') {
+                    document.getElementById('dtmc-rename-cancel-btn').click();
+                }
+            });
             
             // Right-click to show floating menu (with proper preventDefault)
             console.log('🔧 Adding contextmenu event listener to canvas for floating menu');
@@ -478,6 +647,53 @@
             tokens.specific = [];
             
             renderSidebar();
+        }
+        
+        // Load sample nodes for testing groups
+        function loadSampleNodes() {
+            // Create some sample nodes
+            const sampleNodes = [
+                {
+                    id: Date.now() + 1,
+                    x: 100,
+                    y: 100,
+                    name: 'primary-blue',
+                    value: '#4a90e2',
+                    type: 'color',
+                    layer: 'primitive',
+                    originalValue: '#4a90e2'
+                },
+                {
+                    id: Date.now() + 2,
+                    x: 350,
+                    y: 100,
+                    name: 'secondary-purple',
+                    value: '#805ad5',
+                    type: 'color',
+                    layer: 'primitive',
+                    originalValue: '#805ad5'
+                },
+                {
+                    id: Date.now() + 3,
+                    x: 600,
+                    y: 100,
+                    name: 'font-size-base',
+                    value: '16px',
+                    type: 'number',
+                    layer: 'primitive',
+                    originalValue: '16px'
+                }
+            ];
+            
+            nodes.push(...sampleNodes);
+            
+            // Create a sample group
+            setTimeout(() => {
+                // Select the first two nodes
+                selectedNodes = [nodes[0], nodes[1]];
+                createGroup();
+                console.log('✅ Sample group created with 2 nodes');
+            }, 1000);
         }
 
         // Render sidebar
@@ -710,6 +926,66 @@
                 return;
             }
             
+            // Check if clicking on group buttons first
+            const clickedGroupButton = getGroupButtonAtPoint(x, y);
+            if (clickedGroupButton) {
+                console.log('Clicked on group button:', clickedGroupButton.button, 'for group:', clickedGroupButton.group.name);
+                
+                if (clickedGroupButton.button === 'rename') {
+                    renameGroup(clickedGroupButton.group.id);
+                    return;
+                } else if (clickedGroupButton.button === 'ungroup') {
+                    ungroupNodes(clickedGroupButton.group.id);
+                    return;
+                }
+            }
+            
+            // Check if clicking on the group arrow (for collapse/expand)
+            for (const group of groups) {
+                if (isPointOnGroupArrow(x, y, group)) {
+                    console.log('Clicked on group arrow:', group.name);
+                    
+                    // Disable right-click context menu on group arrow
+                    if (e.button === 2) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    // Left-click on arrow toggles collapse/expand
+                    toggleGroupCollapse(group.id);
+                    return;
+                }
+            }
+            
+            // Check if clicking on the group header draggable area (between arrow and buttons)
+            for (const group of groups) {
+                if (isPointInGroupHeaderDraggableArea(x, y, group)) {
+                    console.log('Starting to drag group from header:', group.name);
+                    
+                    // Disable right-click context menu on group header
+                    if (e.button === 2) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    // Left-click starts group dragging
+                    isDraggingGroup = true;
+                    draggedGroup = group;
+                    lastMousePos = { x: e.clientX, y: e.clientY };
+                    
+                    // Reset individual node dragging states
+                    isDragging = false;
+                    selectedNode = null;
+                    isDraggingGroupedNode = false;
+                    draggedGroupedNode = null;
+                    
+                    return;
+                }
+            }
+            
+            // Note: Group body is no longer draggable - only header dragging is allowed
+            // This allows full interaction with bubbles and connections within the group
+            
             // Check if clicking on a connection line
             const clickedConnection = getConnectionAtPoint(x, y);
             if (clickedConnection) {
@@ -718,6 +994,7 @@
                 // Select the connection (will be drawn in red)
                 selectedConnection = clickedConnection;
                 selectedNode = null; // Deselect any selected node
+                selectedNodes = []; // Clear multi-selection
                 
                 // Re-render to show selected connection
                 render();
@@ -727,23 +1004,59 @@
             // Check if clicking on a node
             const clickedNode = getNodeAtPoint(x, y);
             if (clickedNode) {
-                selectedNode = clickedNode;
+                // Check if this node is in a collapsed group
+                if (clickedNode.groupId) {
+                    const group = groups.find(g => g.id === clickedNode.groupId);
+                    if (group && group.isCollapsed) {
+                        // Don't allow interaction with nodes in collapsed groups
+                        console.log('Cannot interact with node in collapsed group:', clickedNode.name);
+                        return;
+                    }
+                }
+                
+                // Handle multi-selection with Ctrl key
+                if (e.ctrlKey || e.metaKey) {
+                    if (selectedNodes.includes(clickedNode)) {
+                        // Remove from selection if already selected
+                        const index = selectedNodes.indexOf(clickedNode);
+                        selectedNodes.splice(index, 1);
+                        selectedNode = null;
+                    } else {
+                        // Add to selection
+                        selectedNodes.push(clickedNode);
+                        selectedNode = clickedNode;
+                    }
+                    console.log(`🔍 Multi-selection: ${selectedNodes.length} nodes selected`);
+                } else {
+                    // Single selection (clear multi-selection)
+                    selectedNodes = [clickedNode];
+                    selectedNode = clickedNode;
+                }
+                
                 selectedConnection = null; // Deselect any selected connection
                 
                 // Only start dragging if it's a left click (not right click for context menu)
                 if (e.button === 0) { // Left click
                     isDragging = true;
+                    
+                    // Reset group dragging states when starting to drag a node
+                    isDraggingGroup = false;
+                    draggedGroup = null;
+                    
                     lastMousePos = { x: e.clientX, y: e.clientY };
                     // Hide floating menu when starting to drag
                     hideFloatingMenu();
                 }
+                
+                render(); // Re-render to show selection
                 return;
             }
             
             // Deselect if clicking on empty space
-            if (selectedNode || selectedConnection) {
+            if (selectedNode || selectedConnection || selectedNodes.length > 0) {
                 selectedNode = null;
                 selectedConnection = null;
+                selectedNodes = [];
                 render();
             }
             
@@ -766,10 +1079,60 @@
                 return;
             }
             
+            if (isDraggingGroup && draggedGroup) {
+                // Handle group dragging
+                const deltaX = e.clientX - lastMousePos.x;
+                const deltaY = e.clientY - lastMousePos.y;
+                
+                // Move the entire group and all its nodes
+                draggedGroup.bounds.x += deltaX;
+                draggedGroup.bounds.y += deltaY;
+                
+                // Move all nodes in the group
+                draggedGroup.nodes.forEach(node => {
+                    node.x += deltaX;
+                    node.y += deltaY;
+                });
+                
+                // Update header bounds
+                if (draggedGroup.bounds.headerBounds) {
+                    draggedGroup.bounds.headerBounds.x += deltaX;
+                    draggedGroup.bounds.headerBounds.y += deltaY;
+                }
+                
+                // Update button bounds
+                if (draggedGroup.renameButtonBounds) {
+                    draggedGroup.renameButtonBounds.x += deltaX;
+                    draggedGroup.renameButtonBounds.y += deltaY;
+                }
+                if (draggedGroup.ungroupButtonBounds) {
+                    draggedGroup.ungroupButtonBounds.x += deltaX;
+                    draggedGroup.ungroupButtonBounds.y += deltaY;
+                }
+                
+                lastMousePos = { x: e.clientX, y: e.clientY };
+                console.log(`Group ${draggedGroup.name} moved to (${draggedGroup.bounds.x}, ${draggedGroup.bounds.y})`);
+                
+                render();
+                return;
+            }
+            
             if (isDragging && selectedNode) {
                 const deltaX = e.clientX - lastMousePos.x;
                 const deltaY = e.clientY - lastMousePos.y;
                 
+                // Check if this is a grouped node
+                if (selectedNode.groupId) {
+                    const group = groups.find(g => g.id === selectedNode.groupId);
+                    if (group && !group.isCollapsed) {
+                        // Start dragging grouped node (only if group is expanded)
+                        isDraggingGroupedNode = true;
+                        draggedGroupedNode = selectedNode;
+                        draggedGroup = group;
+                    }
+                }
+                
+                // Move only the selected node (not the entire group)
                 selectedNode.x += deltaX;
                 selectedNode.y += deltaY;
                 
@@ -778,6 +1141,11 @@
                 // Ensure connections are updated when node moves
                 console.log(`Node ${selectedNode.name} moved to (${selectedNode.x}, ${selectedNode.y})`);
                 console.log(`Active connections: ${connections.length}`);
+                
+                // If dragging a grouped node, update group bounds
+                if (isDraggingGroupedNode && draggedGroup) {
+                    updateGroupBounds(draggedGroup.id);
+                }
                 
                 render();
                 return;
@@ -861,9 +1229,21 @@
                 return;
             }
             
+            // Reset all dragging states
             isDragging = false;
+            isDraggingGroup = false;
+            isDraggingGroupedNode = false;
             isPanning = false;
             selectedNode = null;
+            
+            // Save state if group was dragged
+            if (draggedGroup) {
+                saveState();
+                console.log(`✅ Saved state after moving group: ${draggedGroup.name}`);
+            }
+            
+            draggedGroup = null;
+            draggedGroupedNode = null;
         }
 
         function handleWheel(e) {
@@ -904,6 +1284,95 @@
                 }
             }
             return null;
+        }
+        
+        // Get group at specific point
+        function getGroupAtPoint(x, y) {
+            for (let i = groups.length - 1; i >= 0; i--) {
+                const group = groups[i];
+                if (group.clickBounds && 
+                    x >= group.clickBounds.x && x <= group.clickBounds.x + group.clickBounds.width &&
+                    y >= group.clickBounds.y && y <= group.clickBounds.y + group.clickBounds.height) {
+                    return group;
+                }
+            }
+            return null;
+        }
+        
+        // Get group header at specific point
+        function getGroupHeaderAtPoint(x, y) {
+            for (let i = groups.length - 1; i >= 0; i--) {
+                const group = groups[i];
+                if (group.bounds && group.bounds.headerBounds && 
+                    x >= group.bounds.headerBounds.x && x <= group.bounds.headerBounds.x + group.bounds.headerBounds.width &&
+                    y >= group.bounds.headerBounds.y && y <= group.bounds.headerBounds.y + group.bounds.headerBounds.height) {
+                    return { group, isHeader: true };
+                }
+            }
+            return null;
+        }
+        
+        // Check if clicking specifically on the arrow area (for collapse/expand)
+        function isPointOnGroupArrow(x, y, group) {
+            if (!group.bounds || !group.bounds.headerBounds) return false;
+            
+            const header = group.bounds.headerBounds;
+            
+            // Check if point is within header bounds
+            if (x < header.x || x > header.x + header.width ||
+                y < header.y || y > header.y + header.height) {
+                return false;
+            }
+            
+            // Arrow area is the left side, first 30px
+            return x < header.x + 30;
+        }
+        
+        // Get group button at specific point
+        function getGroupButtonAtPoint(x, y) {
+            for (let i = groups.length - 1; i >= 0; i--) {
+                const group = groups[i];
+                
+                // Check rename button
+                if (group.renameButtonBounds && 
+                    x >= group.renameButtonBounds.x && x <= group.renameButtonBounds.x + group.renameButtonBounds.width &&
+                    y >= group.renameButtonBounds.y && y <= group.renameButtonBounds.y + group.renameButtonBounds.height) {
+                    return { group, button: 'rename' };
+                }
+                
+                // Check ungroup button
+                if (group.ungroupButtonBounds && 
+                    x >= group.ungroupButtonBounds.x && x <= group.ungroupButtonBounds.x + group.ungroupButtonBounds.width &&
+                    y >= group.ungroupButtonBounds.y && y <= group.ungroupButtonBounds.y + group.ungroupButtonBounds.height) {
+                    return { group, button: 'ungroup' };
+                }
+            }
+            return null;
+        }
+        
+        // Check if a point is within the group header's draggable area (between arrow and buttons)
+        function isPointInGroupHeaderDraggableArea(x, y, group) {
+            if (!group.bounds || !group.bounds.headerBounds) return false;
+            
+            const header = group.bounds.headerBounds;
+            
+            // Check if point is within header bounds
+            if (x < header.x || x > header.x + header.width ||
+                y < header.y || y > header.y + header.height) {
+                return false;
+            }
+            
+            // Exclude arrow area (left side, first 30px)
+            if (x < header.x + 30) {
+                return false;
+            }
+            
+            // Exclude button areas (right side, last 60px)
+            if (x > header.x + header.width - 60) {
+                return false;
+            }
+            
+            return true;
         }
 
         function getSocketAtPoint(x, y) {
@@ -1008,6 +1477,442 @@
             }
         }
 
+        // ===== GROUP MANAGEMENT FUNCTIONS =====
+        
+        // Create a new group from selected nodes
+        function createGroup() {
+            if (selectedNodes.length < 2) {
+                console.log('❌ Need at least 2 nodes to create a group');
+                return;
+            }
+            
+            const groupId = Date.now();
+            const group = {
+                id: groupId,
+                name: `Group ${groups.length + 1}`,
+                nodes: [...selectedNodes],
+                bounds: calculateGroupBounds(selectedNodes),
+                isCollapsed: false, // New: collapse/expand state
+                originalBounds: null, // New: store original bounds for restore
+                headerBounds: null // New: store header bounds for click detection
+            };
+            
+            // Add group reference to nodes
+            selectedNodes.forEach(node => {
+                node.groupId = groupId;
+            });
+            
+            groups.push(group);
+            console.log(`✅ Created group: ${group.name} with ${selectedNodes.length} nodes`);
+            
+            // Clear selection and re-render
+            selectedNodes = [];
+            selectedNode = null;
+            render();
+        }
+        
+        // Calculate bounds for a group
+        function calculateGroupBounds(nodes) {
+            if (nodes.length === 0) return null;
+            
+            let minX = Math.min(...nodes.map(n => n.x));
+            let maxX = Math.max(...nodes.map(n => n.x + NODE_WIDTH));
+            let minY = Math.min(...nodes.map(n => n.y));
+            let maxY = Math.max(...nodes.map(n => n.y + NODE_HEIGHT));
+            
+            const bounds = {
+                x: minX - 20, // Padding
+                y: minY - 20,
+                width: maxX - minX + 40,
+                height: maxY - minY + 40
+            };
+            
+            // Calculate header bounds (overlapping the top of the group)
+            bounds.headerBounds = {
+                x: bounds.x + 10,
+                y: bounds.y - 15,
+                width: bounds.width - 20,
+                height: 30
+            };
+            
+            return bounds;
+        }
+        
+        // Ungroup nodes
+        function ungroupNodes(groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            // Remove group reference from nodes
+            group.nodes.forEach(node => {
+                delete node.groupId;
+            });
+            
+            // Remove group
+            const groupIndex = groups.findIndex(g => g.id === groupId);
+            groups.splice(groupIndex, 1);
+            
+            console.log(`✅ Ungrouped: ${group.name}`);
+            render();
+        }
+        
+        // Add node to existing group
+        function addNodeToGroup(node, groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            node.groupId = groupId;
+            group.nodes.push(node);
+            updateGroupBounds(groupId);
+            
+            console.log(`✅ Added node ${node.name} to group ${group.name}`);
+            render();
+        }
+        
+        // Update group bounds when nodes change
+        function updateGroupBounds(groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            // Store current bounds before updating
+            const oldBounds = { ...group.bounds };
+            
+            // Calculate new bounds based on current node positions
+            const newBounds = calculateGroupBounds(group.nodes);
+            
+            // If group was collapsed, maintain collapsed state but update position
+            if (group.isCollapsed) {
+                // Update original bounds to reflect new node positions
+                group.originalBounds = { ...newBounds };
+                
+                // Force collapsed dimensions to be small and center on new node positions
+                const centerX = newBounds.x + newBounds.width / 2;
+                const centerY = newBounds.y + newBounds.height / 2;
+                const collapsedWidth = 200; // Fixed width
+                const collapsedHeight = 80;  // Fixed height
+                
+                group.bounds = {
+                    x: centerX - collapsedWidth / 2,
+                    y: centerY - collapsedHeight / 2,
+                    width: collapsedWidth,
+                    height: collapsedHeight
+                };
+                
+                // Update header bounds for collapsed state
+                group.bounds.headerBounds = {
+                    x: group.bounds.x + 10,
+                    y: group.bounds.y - 15,
+                    width: group.bounds.width - 20,
+                    height: 30
+                };
+            } else {
+                // Group is expanded, use full bounds
+                group.bounds = newBounds;
+            }
+            
+            console.log(`Updated group bounds for ${group.name}:`, {
+                old: oldBounds,
+                new: group.bounds,
+                collapsed: group.isCollapsed
+            });
+            
+            render();
+        }
+        
+        // Remove node from group
+        function removeNodeFromGroup(node, groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            delete node.groupId;
+            const nodeIndex = group.nodes.findIndex(n => n.id === node.id);
+            if (nodeIndex >= 1) {
+                group.nodes.splice(nodeIndex, 1);
+            }
+            
+            // If group has less than 2 nodes, remove it
+            if (group.nodes.length < 2) {
+                const groupIndex = groups.findIndex(g => g.id === groupId);
+                groups.splice(groupIndex, 1);
+                console.log(`✅ Removed group ${group.name} (too few nodes)`);
+            } else {
+                updateGroupBounds(groupId);
+                console.log(`✅ Removed node ${node.name} from group ${group.name}`);
+            }
+            
+            render();
+        }
+        
+        // Toggle group collapse/expand
+        function toggleGroupCollapse(groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            if (group.isCollapsed) {
+                // Expand group
+                group.isCollapsed = false;
+                group.bounds = group.originalBounds || calculateGroupBounds(group.nodes);
+                group.originalBounds = null;
+                console.log(`✅ Expanded group: ${group.name}`);
+            } else {
+                // Collapse group with max-width constraint
+                group.originalBounds = { ...group.bounds };
+                const centerX = group.bounds.x + group.bounds.width / 2;
+                const centerY = group.bounds.y + group.bounds.height / 2;
+                
+                // Force collapsed dimensions to be small
+                const collapsedWidth = 200; // Fixed width
+                const collapsedHeight = 80;  // Fixed height
+                
+                group.bounds = {
+                    x: centerX - collapsedWidth / 2,
+                    y: centerY - collapsedHeight / 2,
+                    width: collapsedWidth,
+                    height: collapsedHeight
+                };
+                group.isCollapsed = true;
+                console.log(`✅ Collapsed group: ${group.name} to ${collapsedWidth}x${collapsedHeight}`);
+            }
+            
+            // Update header bounds for the new state
+            if (group.bounds) {
+                group.bounds.headerBounds = {
+                    x: group.bounds.x + 10,
+                    y: group.bounds.y - 15,
+                    width: group.bounds.width - 20,
+                    height: 30
+                };
+            }
+            
+            render();
+        }
+        
+        // Rename group
+        function renameGroup(groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            // Show the rename modal
+            const modal = document.getElementById('dtmc-rename-group-modal');
+            const nameInput = document.getElementById('group-new-name');
+            
+            if (!modal || !nameInput) {
+                console.error('Rename modal elements not found');
+                return;
+            }
+            
+            // Set current group name in input
+            nameInput.value = group.name;
+            
+            // Store the group ID for the confirm button
+            modal.dataset.groupId = groupId;
+            
+            // Show modal
+            modal.style.display = 'flex';
+            
+            // Focus on input
+            nameInput.focus();
+            nameInput.select();
+            
+            console.log(`Opening rename modal for group: ${group.name}`);
+        }
+        
+        // ===== GROUP RENDERING FUNCTIONS =====
+        
+        // Draw all groups on the canvas
+        function drawGroups() {
+            groups.forEach(group => {
+                if (group.bounds) {
+                    // Check if this group is being dragged
+                    const isBeingDragged = isDraggingGroup && draggedGroup && draggedGroup.id === group.id;
+                    
+                    // Draw group boundary with different styling when dragging
+                    if (isBeingDragged) {
+                        ctx.strokeStyle = '#f59e0b'; // Orange border when dragging
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([8, 4]); // Different dash pattern when dragging
+                    } else {
+                        ctx.strokeStyle = '#3b82f6'; // Blue border
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]); // Normal dashed line
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.roundRect(group.bounds.x, group.bounds.y, group.bounds.width, group.bounds.height, 10);
+                    ctx.stroke();
+                    
+                    // Reset line dash
+                    ctx.setLineDash([]);
+                    
+                    // Draw group header (dark grey bar overlapping the top)
+                    const headerBounds = group.bounds.headerBounds;
+                    if (headerBounds) {
+                        // Header background
+                        ctx.fillStyle = '#374151'; // Dark grey
+                        ctx.beginPath();
+                        ctx.roundRect(headerBounds.x, headerBounds.y, headerBounds.width, headerBounds.height, 8);
+                        ctx.fill();
+                        
+                        // Header border
+                        ctx.strokeStyle = '#4b5563';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.roundRect(headerBounds.x, headerBounds.y, headerBounds.width, headerBounds.height, 8);
+                        ctx.stroke();
+                        
+                        // Arrow indicator (right-pointing for expanded, down for collapsed)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '16px Sora, sans-serif';
+                        ctx.textAlign = 'center';
+                        const arrow = group.isCollapsed ? '▶' : '▼';
+                        ctx.fillText(arrow, headerBounds.x + 20, headerBounds.y + 20);
+                        
+                        // Group name
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '14px Sora, sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(group.name, headerBounds.x + 35, headerBounds.y + 20);
+                        
+                        // Token count
+                        ctx.fillStyle = '#9ca3af';
+                        ctx.font = '12px Sora, sans-serif';
+                        const countText = `(${group.nodes.length})`;
+                        const countWidth = ctx.measureText(countText).width;
+                        ctx.fillText(countText, headerBounds.x + headerBounds.width - countWidth - 10, headerBounds.y + 20);
+                        
+                        // Visual indicator for draggable area (subtle background)
+                        const draggableAreaX = headerBounds.x + 30;
+                        const draggableAreaWidth = headerBounds.width - 90; // Between arrow (30px) and buttons (60px)
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)'; // Very subtle white overlay
+                        ctx.beginPath();
+                        ctx.roundRect(draggableAreaX, headerBounds.y + 2, draggableAreaWidth, headerBounds.height - 4, 4);
+                        ctx.fill();
+                        
+                        // Action buttons (rename and ungroup)
+                        const buttonSize = 20;
+                        const buttonSpacing = 5;
+                        const buttonY = headerBounds.y + 5;
+                        
+                        // Rename button
+                        const renameX = headerBounds.x + headerBounds.width - 60;
+                        ctx.fillStyle = '#6b7280';
+                        ctx.beginPath();
+                        ctx.roundRect(renameX, buttonY, buttonSize, buttonSize, 4);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '12px Sora, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('✏', renameX + buttonSize/2, buttonY + buttonSize/2 + 4);
+                        
+                        // Ungroup button
+                        const ungroupX = renameX - buttonSize - buttonSpacing;
+                        ctx.fillStyle = '#6b7280';
+                        ctx.beginPath();
+                        ctx.roundRect(ungroupX, buttonY, buttonSize, buttonSize, 4);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '12px Sora, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('⊘', ungroupX + buttonSize/2, buttonY + buttonSize/2 + 4);
+                        
+                        // Store button bounds for click detection
+                        group.renameButtonBounds = {
+                            x: renameX,
+                            y: buttonY,
+                            width: buttonSize,
+                            height: buttonSize
+                        };
+                        group.ungroupButtonBounds = {
+                            x: ungroupX,
+                            y: buttonY,
+                            width: buttonSize,
+                            height: buttonSize
+                        };
+                    }
+                    
+                    // If group is collapsed, draw token information on the collapsed group body
+                    if (group.isCollapsed) {
+                        // Draw collapsed group content
+                        ctx.fillStyle = 'rgba(59, 130, 246, 0.1)'; // Light blue background
+                        ctx.beginPath();
+                        ctx.roundRect(group.bounds.x + 5, group.bounds.y + 5, group.bounds.width - 10, group.bounds.height - 10, 8);
+                        ctx.fill();
+                        
+                        // Draw group name in the center
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.font = '14px Sora, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(group.name, group.bounds.x + group.bounds.width / 2, group.bounds.y + group.bounds.height / 2 - 5);
+                        
+                        // Draw token count and connection info
+                        ctx.fillStyle = '#6b7280';
+                        ctx.font = '12px Sora, sans-serif';
+                        ctx.textAlign = 'center';
+                        
+                        // Count connected tokens
+                        const connectedTokens = group.nodes.filter(node => {
+                            return connections.some(conn => 
+                                (conn.startNode.id === node.id || conn.endNode.id === node.id) &&
+                                (conn.startNode.groupId === group.id || conn.endNode.groupId === group.id)
+                            );
+                        }).length;
+                        
+                        const infoText = `${group.nodes.length} tokens${connectedTokens > 0 ? ` (${connectedTokens} connected)` : ''}`;
+                        ctx.fillText(infoText, group.bounds.x + group.bounds.width / 2, group.bounds.y + group.bounds.height / 2 + 10);
+                    }
+                    
+                    // Store group bounds for click detection
+                    group.clickBounds = {
+                        x: group.bounds.x,
+                        y: group.bounds.y,
+                        width: group.bounds.width,
+                        height: group.bounds.height
+                    };
+                }
+            });
+        }
+        
+        // Update group menu visibility based on selection
+        function updateGroupMenu() {
+            const groupMenu = document.getElementById('dtmc-group-menu');
+            if (!groupMenu) return;
+            
+            if (selectedNodes.length >= 2) {
+                // Position group menu above the selection
+                const centerX = selectedNodes.reduce((sum, node) => sum + node.x + NODE_WIDTH / 2, 0) / selectedNodes.length;
+                const minY = Math.min(...selectedNodes.map(node => node.y));
+                
+                const menuX = centerX * zoomLevel + panOffset.x;
+                const menuY = (minY - 10) * zoomLevel + panOffset.y - 80;
+                
+                groupMenu.style.left = menuX + 'px';
+                groupMenu.style.top = menuY + 'px';
+                groupMenu.style.display = 'flex';
+            } else {
+                groupMenu.style.display = 'none';
+            }
+        }
+        
+        // Show group management menu
+        function showGroupManagementMenu(x, y, group) {
+            const menu = document.getElementById('dtmc-group-management-menu');
+            if (!menu) return;
+            
+            menu.style.left = (x - 90) + 'px'; // Center the menu
+            menu.style.top = (y - 40) + 'px';
+            menu.style.display = 'flex';
+            menu.dataset.groupId = group.id;
+        }
+        
+        // Hide group management menu
+        function hideGroupManagementMenu() {
+            const menu = document.getElementById('dtmc-group-management-menu');
+            if (menu) {
+                menu.style.display = 'none';
+                menu.dataset.groupId = '';
+            }
+        }
+        
         // ===== FLOATING MENU FUNCTIONS =====
         
         // Show floating menu at specified position
@@ -1048,6 +1953,12 @@
             
             // Store reference to the node for delete operations
             menu.dataset.nodeId = nodes.indexOf(node);
+            
+            // Show/hide remove from group button based on node's group status
+            const removeFromGroupBtn = document.getElementById('dtmc-remove-from-group-btn');
+            if (removeFromGroupBtn) {
+                removeFromGroupBtn.style.display = node.groupId ? 'flex' : 'none';
+            }
             
             console.log(`🎯 Floating menu shown for node: ${node.name}`);
             console.log('🔍 Menu display style after setting:', menu.style.display);
@@ -1164,15 +2075,35 @@
             ctx.translate(panOffset.x, panOffset.y);
             ctx.scale(zoomLevel, zoomLevel);
             
-            // Draw connections first
+            // Draw groups first (behind everything)
+            drawGroups();
+            
+            // Draw connections (hide connections when groups are collapsed)
             console.log(`Rendering ${connections.length} connections`);
             connections.forEach((connection, index) => {
+                // Check if both nodes are in the same collapsed group
+                const startGroup = groups.find(g => g.id === connection.startNode.groupId);
+                const endGroup = groups.find(g => g.id === connection.endNode.groupId);
+                
+                // Don't draw connections if both nodes are in the same collapsed group
+                if (startGroup && endGroup && startGroup.id === endGroup.id && startGroup.isCollapsed) {
+                    console.log(`Skipping connection ${index + 1} (both nodes in collapsed group): ${connection.startNode.name} → ${connection.endNode.name}`);
+                    return;
+                }
+                
                 console.log(`Drawing connection ${index + 1}: ${connection.startNode.name} → ${connection.endNode.name}`);
                 drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
             });
             
-            // Draw nodes on top
+            // Draw nodes on top (always draw them, but handle grouped nodes differently)
             nodes.forEach(node => {
+                if (node.groupId) {
+                    const group = groups.find(g => g.id === node.groupId);
+                    if (group && group.isCollapsed) {
+                        // Don't draw nodes in collapsed groups
+                        return;
+                    }
+                }
                 drawNode(node);
             });
             
@@ -1183,11 +2114,18 @@
             if (minimap && !minimap.classList.contains('hidden')) {
                 renderMiniMap();
             }
+            
+            // Show/hide group menu based on selection
+            updateGroupMenu();
         }
 
         function drawNode(node) {
-            // Check if node is selected
+            // Check if node is selected (single or multi-selection)
             const isSelected = selectedNode && selectedNode.id === node.id;
+            const isMultiSelected = selectedNodes.some(n => n.id === node.id);
+            
+            // Check if this is a grouped node being dragged
+            const isGroupedNodeBeingDragged = isDraggingGroupedNode && draggedGroupedNode && draggedGroupedNode.id === node.id;
             
             // Get CSS variables for bubble styling
             const bubbleBgColor = getCSSVariable('--dtmc-bubble-bg-color');
@@ -1200,8 +2138,15 @@
             
             // Draw node background with CSS-controlled styling
             ctx.fillStyle = bubbleBgColor;
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = isSelected ? 3 : 2;
+            
+            // Different border styling for grouped nodes being dragged
+            if (isGroupedNodeBeingDragged) {
+                ctx.strokeStyle = '#f59e0b'; // Orange border when dragging grouped node
+                ctx.lineWidth = 3;
+            } else {
+                ctx.strokeStyle = isSelected || isMultiSelected ? '#3b82f6' : '#475569';
+                ctx.lineWidth = isSelected || isMultiSelected ? 2 : 2;
+            }
             
             // Apply backdrop blur effect (simulated with shadow)
             ctx.shadowColor = bubbleShadowColor;
@@ -1549,9 +2494,34 @@
             const connectionUnderMouse = getConnectionAtPoint(x, y);
             if (connectionUnderMouse) {
                 canvas.style.cursor = 'pointer';
-            } else {
-                canvas.style.cursor = 'grab';
+                return;
             }
+            
+            // Check if hovering over a group header's draggable area
+            for (const group of groups) {
+                if (isPointInGroupHeaderDraggableArea(x, y, group)) {
+                    canvas.style.cursor = 'grab';
+                    return;
+                }
+            }
+            
+            // Check if hovering over the group arrow
+            for (const group of groups) {
+                if (isPointOnGroupArrow(x, y, group)) {
+                    canvas.style.cursor = 'pointer';
+                    return;
+                }
+            }
+            
+            // Check if hovering over group buttons
+            const groupButton = getGroupButtonAtPoint(x, y);
+            if (groupButton) {
+                canvas.style.cursor = 'pointer';
+                return;
+            }
+            
+            // Default cursor
+            canvas.style.cursor = 'grab';
         }
 
         // Zoom control functions
@@ -1616,9 +2586,16 @@
         // Mini-map functionality
         function toggleMiniMap() {
             const minimap = document.querySelector('.dtmc-minimap');
+            const showBtn = document.getElementById('dtmc-minimap-show-btn');
+            
             minimap.classList.toggle('hidden');
             
-            if (!minimap.classList.contains('hidden')) {
+            if (minimap.classList.contains('hidden')) {
+                // Show the "Show Map" button when mini-map is hidden
+                showBtn.style.display = 'flex';
+            } else {
+                // Hide the "Show Map" button when mini-map is visible
+                showBtn.style.display = 'none';
                 renderMiniMap();
             }
         }
@@ -2118,6 +3095,8 @@
         
         // Initialize when page loads
         window.onload = init;
+        
+
     </script>
 </body>
 </html>

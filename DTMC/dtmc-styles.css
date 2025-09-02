@@ -493,7 +493,73 @@ body {
   transform: translateY(-2px);
 }
 
+/* ===== GROUP MENU ===== */
+.dtmc-group-menu {
+  position: absolute;
+  padding: var(--dtmc-spacing-sm);
+  box-shadow: var(--dtmc-shadow-xl);
+  backdrop-filter: blur(10px);
+  z-index: var(--dtmc-z-dropdown);
+  display: none;
+  min-width: auto;
+  transform: translateY(20px) translateX(-50%);
+  opacity: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dtmc-spacing-sm);
+  margin: 0;
+  left: 0;
+  top: 0;
+}
 
+.dtmc-group-btn {
+display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dtmc-spacing-sm);
+  padding: var(--dtmc-spacing-xs) var(--dtmc-spacing-sm);
+  background: var(--dtmc-neutral-800);
+  color: var(--dtmc-neutral-100);
+  border: 1px solid var(--dtmc-neutral-700);
+  border-radius: 100px;
+  font-size: var(--dtmc-font-size-sm);
+  font-weight: var(--dtmc-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--dtmc-transition-normal);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.dtmc-group-btn:hover {
+  background: var(--dtmc-primary-500);
+  transform: translateY(-2px);
+}
+
+/* ===== GROUP HEADER CONTROLS ===== */
+/* Note: Group header controls are canvas-rendered, no CSS needed */
+
+/* ===== GROUP RENAME INPUT ===== */
+.dtmc-group-rename-input {
+  position: absolute;
+  background: var(--dtmc-neutral-100);
+  border: 2px solid var(--dtmc-primary-500);
+  border-radius: var(--dtmc-radius-sm);
+  padding: var(--dtmc-spacing-xs) var(--dtmc-spacing-sm);
+  font-size: var(--dtmc-font-size-sm);
+  font-family: var(--dtmc-font-family);
+  color: var(--dtmc-neutral-900);
+  z-index: var(--dtmc-z-modal);
+  outline: none;
+  box-shadow: var(--dtmc-shadow-lg);
+}
+
+.dtmc-group-rename-input:focus {
+  border-color: var(--dtmc-primary-400);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
 
 /* ===== ZOOM CONTROLS ===== */
 .dtmc-zoom-controls {
@@ -503,9 +569,9 @@ body {
   margin-left: auto;
 }
 
-.dtmc-zoom-controls .dtmc-btn {
-  padding: var(--dtmc-spacing-sm) var(--dtmc-spacing-md);
-  min-width: 32px;
+.dtmc-zoom-controls .dtmc-btn,
+.dtmc-minimap-header .dtmc-btn{
+  padding: var(--dtmc-spacing-xs);
 }
 
 #dtmc-zoom-level {
@@ -568,6 +634,42 @@ body {
 
 .dtmc-minimap.hidden {
   display: none;
+}
+
+/* ===== SHOW MINI-MAP BUTTON ===== */
+.dtmc-minimap-show-btn {
+  position: absolute;
+  bottom: var(--dtmc-spacing-xl);
+  right: var(--dtmc-spacing-xl);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--dtmc-neutral-600);
+  border-radius: var(--dtmc-radius-lg);
+  padding: var(--dtmc-spacing-md) var(--dtmc-spacing-lg);
+  backdrop-filter: blur(10px);
+  z-index: var(--dtmc-z-dropdown);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--dtmc-spacing-sm);
+  color: var(--dtmc-neutral-200);
+  font-size: var(--dtmc-font-size-sm);
+  font-weight: var(--dtmc-font-weight-medium);
+  transition: all 0.2s ease;
+}
+
+.dtmc-minimap-show-btn:hover {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: var(--dtmc-neutral-500);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dtmc-minimap-show-icon {
+  font-size: var(--dtmc-font-size-lg);
+}
+
+.dtmc-minimap-show-text {
+  white-space: nowrap;
 }
 
 /* ===== MODAL STYLES ===== */
@@ -949,6 +1051,10 @@ body {
 }
 
 /* ===== UTILITY CLASSES ===== */
+.dtmc-d-flex {
+  display: flex;
+}
+
 .dtmc-hidden {
   display: none !important;
 }
