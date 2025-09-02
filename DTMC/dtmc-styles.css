@@ -292,6 +292,12 @@ body {
   margin-bottom: var(--dtmc-spacing-md);
 }
 
+.dtmc-layer-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--dtmc-spacing-sm);
+}
+
 .dtmc-layer-title {
   color: var(--dtmc-neutral-200);
   font-size: var(--dtmc-font-size-md);
@@ -326,6 +332,58 @@ body {
   box-shadow: var(--dtmc-shadow-md);
 }
 
+/* ===== COLLAPSE BUTTON ===== */
+.dtmc-collapse-btn {
+  background: transparent;
+  border: none;
+  color: var(--dtmc-neutral-400);
+  cursor: pointer;
+  padding: var(--dtmc-spacing-xs);
+  border-radius: var(--dtmc-radius-sm);
+  transition: all var(--dtmc-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.dtmc-collapse-btn:hover {
+  background: var(--dtmc-neutral-700);
+  color: var(--dtmc-neutral-200);
+}
+
+.dtmc-collapse-icon {
+  font-size: 18px;
+  transition: transform var(--dtmc-transition-normal);
+}
+
+.dtmc-collapse-btn.collapsed .dtmc-collapse-icon {
+  transform: rotate(-90deg);
+}
+
+/* ===== COLLAPSED STATE ===== */
+.dtmc-tokens-list.collapsed {
+  display: none;
+}
+
+/* ===== DRAG PREVIEW ===== */
+.dtmc-drag-preview {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  background: var(--dtmc-neutral-800);
+  border: 1px solid var(--dtmc-neutral-600);
+  border-radius: var(--dtmc-radius-md);
+  padding: var(--dtmc-spacing-sm);
+  color: var(--dtmc-neutral-100);
+  font-size: var(--dtmc-font-size-sm);
+  font-weight: var(--dtmc-font-weight-medium);
+  pointer-events: none;
+  z-index: var(--dtmc-z-tooltip);
+  box-shadow: var(--dtmc-shadow-lg);
+}
+
 /* ===== TOKEN ITEMS ===== */
 .dtmc-token-item {
   background: var(--dtmc-neutral-800);
@@ -348,6 +406,18 @@ body {
   cursor: grabbing;
 }
 
+.dtmc-token-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--dtmc-spacing-sm);
+}
+
+.dtmc-token-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .dtmc-token-name {
   color: var(--dtmc-neutral-100);
   font-weight: var(--dtmc-font-weight-semibold);
@@ -359,6 +429,49 @@ body {
   color: var(--dtmc-neutral-400);
   font-size: var(--dtmc-font-size-sm);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.dtmc-token-actions {
+  display: flex;
+  gap: var(--dtmc-spacing-xs);
+  opacity: 0;
+  transition: opacity var(--dtmc-transition-normal);
+}
+
+.dtmc-token-item:hover .dtmc-token-actions {
+  opacity: 1;
+}
+
+.dtmc-token-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--dtmc-neutral-400);
+  cursor: pointer;
+  padding: var(--dtmc-spacing-xs);
+  border-radius: var(--dtmc-radius-sm);
+  transition: all var(--dtmc-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.dtmc-token-action-btn:hover {
+  background: var(--dtmc-neutral-600);
+  color: var(--dtmc-neutral-200);
+}
+
+.dtmc-rename-btn:hover {
+  color: var(--dtmc-primary-400);
+}
+
+.dtmc-delete-btn:hover {
+  color: var(--dtmc-danger-400);
+}
+
+.dtmc-token-action-btn .material-icons {
+  font-size: 16px;
 }
 
 .dtmc-token-type {

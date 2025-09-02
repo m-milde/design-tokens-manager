@@ -33,7 +33,12 @@
 
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
-                    <span class="dtmc-layer-title">Primitive</span>
+                    <div class="dtmc-layer-header-left">
+                        <button class="dtmc-collapse-btn" data-layer="primitive" title="Collapse/Expand">
+                            <span class="material-icons dtmc-collapse-icon">expand_more</span>
+                        </button>
+                        <span class="dtmc-layer-title">Primitive</span>
+                    </div>
                     <button class="dtmc-add-btn" data-layer="primitive">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="primitive-tokens"></div>
@@ -41,7 +46,12 @@
 
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
-                    <span class="dtmc-layer-title">Base</span>
+                    <div class="dtmc-layer-header-left">
+                        <button class="dtmc-collapse-btn" data-layer="base" title="Collapse/Expand">
+                            <span class="material-icons dtmc-collapse-icon">expand_more</span>
+                        </button>
+                        <span class="dtmc-layer-title">Base</span>
+                    </div>
                     <button class="dtmc-add-btn" data-layer="base">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="base-tokens"></div>
@@ -49,7 +59,12 @@
 
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
-                    <span class="dtmc-layer-title">Semantic</span>
+                    <div class="dtmc-layer-header-left">
+                        <button class="dtmc-collapse-btn" data-layer="semantic" title="Collapse/Expand">
+                            <span class="material-icons dtmc-collapse-icon">expand_more</span>
+                        </button>
+                        <span class="dtmc-layer-title">Semantic</span>
+                    </div>
                     <button class="dtmc-add-btn" data-layer="semantic">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="semantic-tokens"></div>
@@ -57,7 +72,12 @@
 
             <div class="dtmc-layer-section">
                 <div class="dtmc-layer-header">
-                    <span class="dtmc-layer-title">Specific</span>
+                    <div class="dtmc-layer-header-left">
+                        <button class="dtmc-collapse-btn" data-layer="specific" title="Collapse/Expand">
+                            <span class="material-icons dtmc-collapse-icon">expand_more</span>
+                        </button>
+                        <span class="dtmc-layer-title">Specific</span>
+                    </div>
                     <button class="dtmc-add-btn" data-layer="specific">+</button>
                 </div>
                 <div class="dtmc-tokens-list" id="specific-tokens"></div>
@@ -441,6 +461,9 @@
             console.log('🔧 Canvas element:', canvas);
             console.log('🔧 Canvas element found:', !!canvas);
             
+            // Initialize drag preview
+            dragPreview = document.getElementById('dtmc-drag-preview');
+            
             setupEventListeners();
             setupSidebar();
             loadSampleTokens();
@@ -665,6 +688,25 @@
                     openModal();
                 });
             });
+
+            // Collapse/expand buttons
+            document.querySelectorAll('.dtmc-collapse-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const layer = btn.dataset.layer;
+                    const tokensList = document.getElementById(`${layer}-tokens`);
+                    const isCollapsed = tokensList.classList.contains('collapsed');
+                    
+                    if (isCollapsed) {
+                        // Expand
+                        tokensList.classList.remove('collapsed');
+                        btn.classList.remove('collapsed');
+                    } else {
+                        // Collapse
+                        tokensList.classList.add('collapsed');
+                        btn.classList.add('collapsed');
+                    }
+                });
+            });
         }
 
         // Load sample tokens
@@ -759,8 +801,20 @@
             div.dataset.tokenLayer = layer;
             
             div.innerHTML = `
-                <div class="dtmc-token-name">${token.name}</div>
-                <div class="dtmc-token-value">${token.value}</div>
+                <div class="dtmc-token-content">
+                    <div class="dtmc-token-info">
+                        <div class="dtmc-token-name">${token.name}</div>
+                        <div class="dtmc-token-value">${token.value}</div>
+                    </div>
+                    <div class="dtmc-token-actions">
+                        <button class="dtmc-token-action-btn dtmc-rename-btn" title="Rename token">
+                            <span class="material-icons">edit</span>
+                        </button>
+                        <button class="dtmc-token-action-btn dtmc-delete-btn" title="Delete token">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                </div>
             `;
             
             div.addEventListener('dragstart', (e) => {
@@ -774,7 +828,92 @@
                 dragPreview.style.display = 'none';
             });
             
+            // Add event listeners for action buttons
+            const renameBtn = div.querySelector('.dtmc-rename-btn');
+            const deleteBtn = div.querySelector('.dtmc-delete-btn');
+            
+            renameBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                renameToken(token, layer);
+            });
+            
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteToken(token, layer);
+            });
+            
             return div;
+        }
+
+        // Rename token function
+        function renameToken(token, layer) {
+            const newName = prompt(`Rename token "${token.name}":`, token.name);
+            
+            if (newName && newName.trim() && newName !== token.name) {
+                const trimmedName = newName.trim();
+                
+                // Check if name already exists in the same layer
+                const existingToken = tokens[layer].find(t => t.name === trimmedName);
+                if (existingToken) {
+                    alert(`Token name "${trimmedName}" already exists in the ${layer} layer.`);
+                    return;
+                }
+                
+                const oldName = token.name;
+                token.name = trimmedName;
+                
+                // Update any nodes that reference this token
+                nodes.forEach(node => {
+                    if (node.layer === layer && node.name === oldName) {
+                        node.name = trimmedName;
+                    }
+                });
+                
+                // Update any connections that reference this token
+                connections.forEach(connection => {
+                    if (connection.fromNode === oldName && connection.fromLayer === layer) {
+                        connection.fromNode = trimmedName;
+                    }
+                    if (connection.toNode === oldName && connection.toLayer === layer) {
+                        connection.toNode = trimmedName;
+                    }
+                });
+                
+                // Save state and re-render
+                saveState();
+                renderSidebar();
+                render();
+                
+                console.log(`✅ Token renamed: ${oldName} → ${trimmedName}`);
+            }
+        }
+
+        // Delete token function
+        function deleteToken(token, layer) {
+            const confirmDelete = confirm(`Are you sure you want to delete the token "${token.name}" from the ${layer} layer?\n\nThis will also remove any nodes and connections associated with this token.`);
+            
+            if (confirmDelete) {
+                // Remove token from tokens array
+                tokens[layer] = tokens[layer].filter(t => t.name !== token.name);
+                
+                // Remove any nodes with this token
+                const nodesToRemove = nodes.filter(node => node.layer === layer && node.name === token.name);
+                nodesToRemove.forEach(node => {
+                    // Remove connections involving this node
+                    connections = connections.filter(conn => 
+                        !(conn.fromNode === node.name && conn.fromLayer === layer) &&
+                        !(conn.toNode === node.name && conn.toLayer === layer)
+                    );
+                });
+                nodes = nodes.filter(node => !(node.layer === layer && node.name === token.name));
+                
+                // Save state and re-render
+                saveState();
+                renderSidebar();
+                render();
+                
+                console.log(`✅ Token "${token.name}" deleted from ${layer} layer`);
+            }
         }
 
         // Open modal for token creation
