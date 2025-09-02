@@ -31,12 +31,13 @@
                 <button class="dtmc-type-btn" data-type="boolean">Boolean</button>
             </div>
 
-            <div class="dtmc-layer-section">
+            <div class="dtmc-layer-section dtmc-primitive-layers">
                 <div class="dtmc-layer-header">
                     <div class="dtmc-layer-header-left">
                         <button class="dtmc-collapse-btn" data-layer="primitive" title="Collapse/Expand">
                             <span class="material-icons dtmc-collapse-icon">expand_more</span>
                         </button>
+                        <span class="dtmc-token-type-indicator"></span>
                         <span class="dtmc-layer-title">Primitive</span>
                     </div>
                     <button class="dtmc-add-btn" data-layer="primitive">+</button>
@@ -44,12 +45,13 @@
                 <div class="dtmc-tokens-list" id="primitive-tokens"></div>
             </div>
 
-            <div class="dtmc-layer-section">
+            <div class="dtmc-layer-section dtmc-base-layers">
                 <div class="dtmc-layer-header">
                     <div class="dtmc-layer-header-left">
                         <button class="dtmc-collapse-btn" data-layer="base" title="Collapse/Expand">
                             <span class="material-icons dtmc-collapse-icon">expand_more</span>
                         </button>
+                        <span class="dtmc-token-type-indicator"></span>
                         <span class="dtmc-layer-title">Base</span>
                     </div>
                     <button class="dtmc-add-btn" data-layer="base">+</button>
@@ -57,12 +59,13 @@
                 <div class="dtmc-tokens-list" id="base-tokens"></div>
             </div>
 
-            <div class="dtmc-layer-section">
+            <div class="dtmc-layer-section dtmc-semantic-layers">
                 <div class="dtmc-layer-header">
                     <div class="dtmc-layer-header-left">
                         <button class="dtmc-collapse-btn" data-layer="semantic" title="Collapse/Expand">
                             <span class="material-icons dtmc-collapse-icon">expand_more</span>
                         </button>
+                        <span class="dtmc-token-type-indicator"></span>
                         <span class="dtmc-layer-title">Semantic</span>
                     </div>
                     <button class="dtmc-add-btn" data-layer="semantic">+</button>
@@ -70,12 +73,13 @@
                 <div class="dtmc-tokens-list" id="semantic-tokens"></div>
             </div>
 
-            <div class="dtmc-layer-section">
+            <div class="dtmc-layer-section dtmc-specific-layers">
                 <div class="dtmc-layer-header">
                     <div class="dtmc-layer-header-left">
                         <button class="dtmc-collapse-btn" data-layer="specific" title="Collapse/Expand">
                             <span class="material-icons dtmc-collapse-icon">expand_more</span>
                         </button>
+                        <span class="dtmc-token-type-indicator"></span>
                         <span class="dtmc-layer-title">Specific</span>
                     </div>
                     <button class="dtmc-add-btn" data-layer="specific">+</button>
@@ -105,7 +109,7 @@
                     <span class="material-icons">close</span>
                 </button>
                 <button id="dtmc-remove-from-group-btn" class="dtmc-floating-btn" title="Remove from group" style="display: none;">
-                    <span class="material-icons">group_remove</span>
+                    <span class="material-icons">person_remove</span>
                 </button>
             </div>
             
