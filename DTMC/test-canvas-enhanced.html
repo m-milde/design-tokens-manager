@@ -526,12 +526,7 @@
 
         // Initialize
         function init() {
-            console.log('🎯 DTMC Enhanced Interactive Sidebar System Loaded!');
-            console.log('Features: Enhanced Modal, Color Palette, Reference System, Token Types, Layers, Drag & Drop, Zoom Controls, Mini-map, Connection Labels');
-            console.log('Keyboard Shortcuts: Ctrl+M (Toggle Mini-map), Ctrl+0 (Reset Zoom), Delete/Backspace (Delete Connections)');
-            
-            console.log('🔧 Canvas element:', canvas);
-            console.log('🔧 Canvas element found:', !!canvas);
+
             
             // Initialize drag preview
             dragPreview = document.getElementById('dtmc-drag-preview');
@@ -558,7 +553,7 @@
 
         // Setup event listeners
         function setupEventListeners() {
-            console.log('🔧 setupEventListeners function called');
+
             
             // Canvas events
             canvas.addEventListener('mousedown', handleMouseDown);
@@ -569,8 +564,7 @@
             // Control buttons
             document.getElementById('dtmc-clear-btn').addEventListener('click', clearAll);
             document.getElementById('dtmc-undo-btn').addEventListener('click', () => {
-                console.log('🔘 Undo button clicked!');
-                console.log('Undo stack length:', undoStack.length);
+
                 undo();
             });
             document.getElementById('dtmc-export-btn').addEventListener('click', exportJSON);
@@ -674,7 +668,7 @@
                         const group = groups.find(g => g.id === groupId);
                         if (group) {
                             group.name = newName;
-                            console.log(`✅ Renamed group to: ${group.name}`);
+
                             render();
                         }
                     }
@@ -740,9 +734,7 @@
             });
             
             // Right-click to show floating menu (with proper preventDefault)
-            console.log('🔧 Adding contextmenu event listener to canvas for floating menu');
             canvas.addEventListener('contextmenu', (e) => {
-                console.log('🔍 Right-click detected on canvas');
                 e.preventDefault(); // Prevent browser context menu on canvas
                 e.stopPropagation(); // Stop event bubbling
                 
@@ -750,16 +742,11 @@
                 const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
                 const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
                 
-                console.log('🔍 Canvas coordinates:', { x, y });
-                
                 const clickedNode = getNodeAtPoint(x, y);
-                console.log('🔍 Clicked node:', clickedNode);
                 
                 if (clickedNode) {
-                    console.log('🔍 Calling showFloatingMenu for node:', clickedNode.name);
                     showFloatingMenu(x, y, clickedNode);
                 } else {
-                    console.log('🔍 No node clicked, hiding menu');
                     hideFloatingMenu();
                 }
             });
@@ -791,17 +778,14 @@
                     document.querySelectorAll('.dtmc-type-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     selectedTokenType = btn.dataset.type;
-                    console.log('Selected token type:', selectedTokenType);
+
                 });
             });
 
             // Add token buttons
             document.querySelectorAll('.dtmc-add-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    console.log('🔘 Add button clicked!');
-                    console.log('Button dataset:', btn.dataset);
                     selectedLayer = btn.dataset.layer;
-                    console.log('Selected layer set to:', selectedLayer);
                     openModal();
                 });
             });
@@ -908,7 +892,7 @@
                 // Select the first two nodes
                 selectedNodes = [nodes[0], nodes[1]];
                 createGroup();
-                console.log('✅ Sample group created with 2 nodes');
+
             }, 1000);
         }
 
@@ -988,7 +972,7 @@
             `;
             
             div.addEventListener('dragstart', (e) => {
-                console.log('🚀 Dragstart event triggered', { target: e.target, tokenName: token.name });
+
                 
                 // Add dragging class
                 div.classList.add('dragging');
@@ -1002,22 +986,14 @@
                                    e.target.getAttribute('data-is-drag-handle') === 'true' ||
                                    e.target.closest('[data-is-drag-handle="true"]') !== null;
                 
-                console.log('🔍 Is drag handle?', isDragHandle, 'Target:', e.target, 'Target classes:', e.target.className, 'Text content:', e.target.textContent);
-                console.log('🔍 Drag handle detection details:', {
-                    closest: e.target.closest('.dtmc-token-drag-handle'),
-                    hasClass: e.target.classList.contains('dtmc-token-drag-handle'),
-                    isMaterialIcon: e.target.classList.contains('material-icons'),
-                    textContent: e.target.textContent.trim(),
-                    dataAttribute: e.target.getAttribute('data-is-drag-handle'),
-                    closestDataAttribute: e.target.closest('[data-is-drag-handle="true"]')
-                });
+
                 
                 if (isDragHandle) {
                     // For reordering within sidebar
                     draggedToken = { ...token, layer, isReorder: true };
                     e.dataTransfer.setData('text/plain', JSON.stringify(draggedToken));
                     e.dataTransfer.effectAllowed = 'move';
-                    console.log('🔄 Starting reorder drag for:', token.name, 'Data:', draggedToken);
+
                 } else {
                     // For dragging to canvas
                     draggedToken = { ...token, layer, isReorder: false };
@@ -1031,7 +1007,7 @@
                         console.warn('⚠️ Drag preview not available, using default drag image');
                     }
                     
-                    console.log('🎨 Starting canvas drag for:', token.name, 'Data:', draggedToken);
+
                 }
             });
             
@@ -1045,17 +1021,12 @@
             div.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 
-                console.log('🔄 Dragover event', { 
-                    targetToken: div.dataset.tokenName, 
-                    draggedToken: draggedToken ? draggedToken.name : 'none',
-                    isReorder: draggedToken ? draggedToken.isReorder : false,
-                    layers: draggedToken ? `${draggedToken.layer} === ${div.dataset.tokenLayer}` : 'no drag'
-                });
+
                 
                 // Check if we have a dragged token and it's a reorder operation
                 if (draggedToken && draggedToken.isReorder && draggedToken.layer === div.dataset.tokenLayer) {
                     e.dataTransfer.dropEffect = 'move';
-                    console.log('✅ Valid drop target for reorder');
+
                     
                     // Add visual feedback for drop zones
                     const afterElement = getDragAfterElement(div.parentNode, e.clientY);
@@ -1066,12 +1037,6 @@
                     } else {
                         div.parentNode.insertBefore(dragging, afterElement);
                     }
-                } else {
-                    console.log('❌ Invalid drop target', { 
-                        hasDraggedToken: !!draggedToken,
-                        isReorder: draggedToken ? draggedToken.isReorder : false,
-                        sameLayer: draggedToken ? draggedToken.layer === div.dataset.tokenLayer : false
-                    });
                 }
             });
             
@@ -1092,20 +1057,15 @@
                 e.preventDefault();
                 div.classList.remove('drag-over');
                 
-                console.log('🎯 Drop event triggered', { 
-                    targetToken: div.dataset.tokenName,
-                    draggedToken: draggedToken ? draggedToken.name : 'none',
-                    isReorder: draggedToken ? draggedToken.isReorder : false,
-                    layer: div.dataset.tokenLayer
-                });
+
                 
                 // Check if we have a dragged token and it's a reorder operation
                 if (draggedToken && draggedToken.isReorder && draggedToken.layer === div.dataset.tokenLayer) {
                     const targetTokenName = div.dataset.tokenName;
-                    console.log('🎯 Dropping token for reorder:', draggedToken.name, 'onto:', targetTokenName);
+
                     reorderTokens(draggedToken, targetTokenName, div.dataset.tokenLayer);
                 } else {
-                    console.log('❌ Drop ignored - not a valid reorder operation');
+
                 }
             });
             
@@ -1115,7 +1075,7 @@
                 document.querySelectorAll('.drag-over').forEach(el => {
                     el.classList.remove('drag-over');
                 });
-                console.log('🏁 Drag end event');
+
             });
             
             // Add event listeners for action buttons
@@ -1146,11 +1106,11 @@
             dragHandle.style.cursor = 'grab';
             dragHandle.draggable = true;
             
-            console.log('🔧 Drag handle setup for token:', token.name, 'Handle element:', dragHandle);
+
             
             // Add specific event listeners for drag handle
             dragHandle.addEventListener('dragstart', (e) => {
-                console.log('🖱️ Drag handle dragstart - setting reorder flag');
+
                 
                 // Set the reorder flag directly
                 draggedToken = { ...token, layer, isReorder: true };
@@ -1160,7 +1120,7 @@
                 // Add dragging class
                 div.classList.add('dragging');
                 
-                console.log('🔄 Starting reorder drag for:', token.name, 'Data:', draggedToken);
+
                 
                 // Stop propagation to prevent parent from handling this
                 e.stopPropagation();
@@ -1168,17 +1128,17 @@
             
             dragHandle.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
-                console.log('🖱️ Drag handle mousedown');
+
             });
             
             dragHandle.addEventListener('click', (e) => {
                 e.stopPropagation();
-                console.log('🖱️ Drag handle clicked');
+
             });
             
             dragHandle.addEventListener('dragend', (e) => {
                 div.classList.remove('dragging');
-                console.log('🏁 Drag handle drag end');
+
             });
             
             // Add click handler for token selection
@@ -1207,26 +1167,25 @@
                         // Remove from selection
                         selectedSidebarTokens.splice(existingIndex, 1);
                         div.classList.remove('selected');
-                        console.log(`❌ Removed ${token.name} from selection`);
+
                     } else {
                         // Add to selection
                         selectedSidebarTokens.push(tokenInfo);
                         div.classList.add('selected');
-                        console.log(`✅ Added ${token.name} to selection`);
+
                     }
                 } else {
                     // Single selection - clear others and select this one
                     clearSidebarTokenSelection();
                     selectedSidebarTokens = [{ token, layer }];
                     div.classList.add('selected');
-                    console.log(`🎯 Single selected ${token.name}`);
+
                 }
                 
                 // Re-render to show group creation button if applicable
                 renderSidebar();
                 
-                console.log(`🔍 Sidebar token selection: ${selectedSidebarTokens.length} tokens selected`);
-                console.log('Selected tokens:', selectedSidebarTokens.map(t => `${t.layer}.${t.token.name}`));
+
             });
             
             return div;
@@ -1339,7 +1298,7 @@
                     tokenGroups[layer][newName.trim()] = group;
                     
                     renderSidebar();
-                    console.log(`✅ Token group renamed: ${groupName} → ${newName.trim()}`);
+
                 }
             }
         }
@@ -1357,7 +1316,7 @@
                 delete tokenGroups[layer][groupName];
                 
                 renderSidebar();
-                console.log(`✅ Ungrouped ${group.tokens.length} tokens from group: ${groupName}`);
+
             }
         }
 
@@ -1408,7 +1367,7 @@
             // Re-render
             renderSidebar();
             
-            console.log(`✅ Created token group "${groupName.trim()}" with ${group.tokens.length} tokens in ${layer} layer`);
+
         }
 
         // Helper function to get the element after which to insert the dragged element
@@ -1429,13 +1388,13 @@
 
         // Function to reorder tokens within the same layer
         function reorderTokens(draggedToken, targetTokenName, layer) {
-            console.log('🔄 ReorderTokens called:', { draggedToken: draggedToken.name, targetTokenName, layer });
+
             
             const layerTokens = tokens[layer];
             const draggedIndex = layerTokens.findIndex(t => t.name === draggedToken.name);
             const targetIndex = layerTokens.findIndex(t => t.name === targetTokenName);
             
-            console.log('🔍 Indices:', { draggedIndex, targetIndex, layerTokens: layerTokens.map(t => t.name) });
+
             
             if (draggedIndex === -1 || targetIndex === -1) {
                 console.error('Token not found for reordering', { draggedIndex, targetIndex });
@@ -1444,7 +1403,7 @@
             
             // Don't reorder if it's the same position
             if (draggedIndex === targetIndex) {
-                console.log('📍 Same position, no reorder needed');
+
                 return;
             }
             
@@ -1459,7 +1418,7 @@
             renderSidebar();
             render();
             
-            console.log(`✅ Token reordered: ${draggedToken.name} moved from position ${draggedIndex + 1} to ${targetIndex + 1} in ${layer} layer`);
+
         }
 
         // Edit token function - opens modal for editing name and value
@@ -1491,7 +1450,7 @@
             nameInput.focus();
             nameInput.select();
             
-            console.log(`Opening edit modal for token: ${token.name}`);
+
         }
         
         // Update token function - called when user confirms edit
@@ -1565,7 +1524,7 @@
             // Close modal
             modal.style.display = 'none';
             
-            console.log(`✅ Token updated: ${oldName} → ${newName} (${newValue})`);
+
         }
 
         // Delete token function
@@ -1592,15 +1551,13 @@
                 renderSidebar();
                 render();
                 
-                console.log(`✅ Token "${token.name}" deleted from ${layer} layer`);
+
             }
         }
 
         // Open modal for token creation
         function openModal() {
-            console.log('🔍 Opening modal...');
-            console.log('Selected token type:', selectedTokenType);
-            console.log('Selected layer:', selectedLayer);
+
             
             const modal = document.getElementById('dtmc-token-modal');
             const modalTitle = document.querySelector('.dtmc-modal-title');
@@ -1615,7 +1572,7 @@
                 return;
             }
             
-            console.log('✅ Modal and title found');
+
             
             // Update modal title
             modalTitle.textContent = `Create New ${selectedTokenType.charAt(0).toUpperCase() + selectedTokenType.slice(1)} Token`;
@@ -1638,7 +1595,7 @@
                 }, 100);
             }
             
-            console.log('🎉 Modal opened successfully!');
+
         }
 
         // Show appropriate value section based on token type and layer
@@ -2025,7 +1982,7 @@
             document.getElementById('dtmc-eyedropper-btn').addEventListener('click', function() {
                 // Note: Eyedropper API is limited in web browsers
                 // This is a placeholder for future implementation
-                console.log('Eyedropper tool clicked - feature coming soon');
+
             });
         }
 
@@ -2300,7 +2257,7 @@
             // Update any existing nodes with this token
             updateNodesWithToken(newToken);
             
-            console.log(`Created ${selectedLayer} token:`, newToken);
+
         }
 
         // Mouse event handlers
@@ -2321,7 +2278,7 @@
             // Check if clicking on group buttons first
             const clickedGroupButton = getGroupButtonAtPoint(x, y);
             if (clickedGroupButton) {
-                console.log('Clicked on group button:', clickedGroupButton.button, 'for group:', clickedGroupButton.group.name);
+
                 
                 if (clickedGroupButton.button === 'rename') {
                     renameGroup(clickedGroupButton.group.id);
@@ -2335,7 +2292,7 @@
             // Check if clicking on the group arrow (for collapse/expand)
             for (const group of groups) {
                 if (isPointOnGroupArrow(x, y, group)) {
-                    console.log('Clicked on group arrow:', group.name);
+
                     
                     // Disable right-click context menu on group arrow
                     if (e.button === 2) {
@@ -2352,7 +2309,7 @@
             // Check if clicking on the group header draggable area (between arrow and buttons)
             for (const group of groups) {
                 if (isPointInGroupHeaderDraggableArea(x, y, group)) {
-                    console.log('Starting to drag group from header:', group.name);
+    
                     
                     // Disable right-click context menu on group header
                     if (e.button === 2) {
@@ -2381,7 +2338,7 @@
             // Check if clicking on a connection line
             const clickedConnection = getConnectionAtPoint(x, y);
             if (clickedConnection) {
-                console.log('Clicked on connection:', clickedConnection);
+
                 
                 // Select the connection (will be drawn in red)
                 selectedConnection = clickedConnection;
@@ -2401,7 +2358,7 @@
                     const group = groups.find(g => g.id === clickedNode.groupId);
                     if (group && group.isCollapsed) {
                         // Don't allow interaction with nodes in collapsed groups
-                        console.log('Cannot interact with node in collapsed group:', clickedNode.name);
+
                         return;
                     }
                 }
@@ -2418,7 +2375,7 @@
                         selectedNodes.push(clickedNode);
                         selectedNode = clickedNode;
                     }
-                    console.log(`🔍 Multi-selection: ${selectedNodes.length} nodes selected`);
+
                 } else {
                     // Single selection (clear multi-selection)
                     selectedNodes = [clickedNode];
@@ -2456,7 +2413,7 @@
                 selectedConnection = null;
                 selectedNodes = [];
                 
-                console.log('🎯 Started rectangle lasso selection');
+
                 return;
             }
             
@@ -2519,7 +2476,7 @@
                 }
                 
                 lastMousePos = { x: e.clientX, y: e.clientY };
-                console.log(`Group ${draggedGroup.name} moved to (${draggedGroup.bounds.x}, ${draggedGroup.bounds.y})`);
+
                 
                 render();
                 return;
@@ -2547,8 +2504,7 @@
                 lastMousePos = { x: e.clientX, y: e.clientY };
                 
                 // Ensure connections are updated when node moves
-                console.log(`Node ${selectedNode.name} moved to (${selectedNode.x}, ${selectedNode.y})`);
-                console.log(`Active connections: ${connections.length}`);
+
                 
                 // If dragging a grouped node, update group bounds
                 if (isDraggingGroupedNode && draggedGroup) {
@@ -2603,7 +2559,7 @@
                         // Store original value if not already stored
                         if (!socketInfo.node.originalValue) {
                             socketInfo.node.originalValue = socketInfo.node.value;
-                            console.log(`Stored original value for ${socketInfo.node.name}: ${socketInfo.node.originalValue}`);
+
                         }
                         
                         const connection = {
@@ -2626,13 +2582,13 @@
                         const targetToken = tokens[targetLayer]?.find(t => t.name === socketInfo.node.name);
                         if (targetToken) {
                             targetToken.value = referencePath;
-                            console.log(`Updated token ${targetLayer}.${socketInfo.node.name} to: ${referencePath}`);
+
                         }
                         
                         // Re-render sidebar to show updated values
                         renderSidebar();
                         
-                        console.log(`Reference created: ${connectionStart.name} → ${socketInfo.node.name} with path: ${referencePath}`);
+
                     } else {
                         console.warn('Invalid connection: Can only connect output to input sockets');
                     }
@@ -2670,7 +2626,7 @@
             // Save state if group was dragged
             if (draggedGroup) {
                 saveState();
-                console.log(`✅ Saved state after moving group: ${draggedGroup.name}`);
+
             }
             
             draggedGroup = null;
@@ -3021,7 +2977,7 @@
         // Create a new group from selected nodes
         function createGroup() {
             if (selectedNodes.length < 2) {
-                console.log('❌ Need at least 2 nodes to create a group');
+
                 return;
             }
             
@@ -3042,7 +2998,7 @@
             });
             
             groups.push(group);
-            console.log(`✅ Created group: ${group.name} with ${selectedNodes.length} nodes`);
+
             
             // Clear selection and re-render
             selectedNodes = [];
@@ -3091,7 +3047,7 @@
             const groupIndex = groups.findIndex(g => g.id === groupId);
             groups.splice(groupIndex, 1);
             
-            console.log(`✅ Ungrouped: ${group.name}`);
+
             render();
         }
         
@@ -3104,7 +3060,7 @@
             group.nodes.push(node);
             updateGroupBounds(groupId);
             
-            console.log(`✅ Added node ${node.name} to group ${group.name}`);
+
             render();
         }
         
@@ -3149,11 +3105,7 @@
                 group.bounds = newBounds;
             }
             
-            console.log(`Updated group bounds for ${group.name}:`, {
-                old: oldBounds,
-                new: group.bounds,
-                collapsed: group.isCollapsed
-            });
+
             
             render();
         }
@@ -3173,10 +3125,10 @@
             if (group.nodes.length < 2) {
                 const groupIndex = groups.findIndex(g => g.id === groupId);
                 groups.splice(groupIndex, 1);
-                console.log(`✅ Removed group ${group.name} (too few nodes)`);
+
             } else {
                 updateGroupBounds(groupId);
-                console.log(`✅ Removed node ${node.name} from group ${group.name}`);
+
             }
             
             render();
@@ -3192,7 +3144,7 @@
                 group.isCollapsed = false;
                 group.bounds = group.originalBounds || calculateGroupBounds(group.nodes);
                 group.originalBounds = null;
-                console.log(`✅ Expanded group: ${group.name}`);
+    
             } else {
                 // Collapse group with max-width constraint
                 group.originalBounds = { ...group.bounds };
@@ -3210,7 +3162,7 @@
                     height: collapsedHeight
                 };
                 group.isCollapsed = true;
-                console.log(`✅ Collapsed group: ${group.name} to ${collapsedWidth}x${collapsedHeight}`);
+
             }
             
             // Update header bounds for the new state
@@ -3253,7 +3205,7 @@
             nameInput.focus();
             nameInput.select();
             
-            console.log(`Opening rename modal for group: ${group.name}`);
+
         }
         
         // ===== GROUP RENDERING FUNCTIONS =====
@@ -3458,10 +3410,10 @@
         
         // Show floating menu at specified position
         function showFloatingMenu(x, y, node) {
-            console.log('🔍 showFloatingMenu called with:', { x, y, node: node.name });
+
             
             const menu = document.getElementById('dtmc-floating-menu');
-            console.log('🔍 Menu element found:', menu);
+
             
             if (!menu) {
                 console.error('❌ Menu element not found!');
@@ -3474,19 +3426,7 @@
             const menuX = bubbleCenterX * zoomLevel + panOffset.x - menuWidth / 2 + (NODE_WIDTH * 0.5);
             const menuY = (node.y - 10) * zoomLevel + panOffset.y - 80; // 10px above bubble, accounting for menu height
             
-            console.log('🔍 Positioning debug:', {
-                nodeX: node.x,
-                nodeY: node.y,
-                NODE_WIDTH,
-                NODE_HEIGHT,
-                bubbleCenterX,
-                zoomLevel,
-                panOffsetX: panOffset.x,
-                panOffsetY: panOffset.y,
-                menuWidth,
-                calculatedMenuX: menuX,
-                calculatedMenuY: menuY
-            });
+
             
             menu.style.left = menuX + 'px';
             menu.style.top = menuY + 'px';
@@ -3501,8 +3441,7 @@
                 removeFromGroupBtn.style.display = node.groupId ? 'flex' : 'none';
             }
             
-            console.log(`🎯 Floating menu shown for node: ${node.name}`);
-            console.log('🔍 Menu display style after setting:', menu.style.display);
+
         }
         
         // Hide floating menu
@@ -3521,7 +3460,7 @@
             
             if (nodeIndex >= 0 && nodeIndex < nodes.length) {
                 const node = nodes[nodeIndex];
-                console.log(`🗑️ Deleting node from canvas: ${node.name}`);
+
                 
                 // Remove all connections involving this node
                 connections = connections.filter(conn => 
@@ -3536,7 +3475,7 @@
                 render();
                 hideFloatingMenu();
                 
-                console.log(`✅ Node ${node.name} deleted from canvas`);
+
             }
         }
         
@@ -3547,7 +3486,7 @@
             
             if (nodeIndex >= 0 && nodeIndex < nodes.length) {
                 const node = nodes[nodeIndex];
-                console.log(`🗑️ Deleting token entirely: ${node.name}`);
+
                 
                 // Remove all connections involving this node
                 connections = connections.filter(conn => 
@@ -3561,7 +3500,7 @@
                 const layer = node.layer;
                 if (tokens[layer]) {
                     tokens[layer] = tokens[layer].filter(t => t.name !== node.name);
-                    console.log(`🗑️ Removed token ${node.name} from ${layer} layer`);
+
                 }
                 
                 // Save state and re-render
@@ -3570,7 +3509,7 @@
                 renderSidebar();
                 hideFloatingMenu();
                 
-                console.log(`✅ Token ${node.name} deleted entirely`);
+
             }
         }
 
@@ -3605,7 +3544,7 @@
             saveState();
             render();
             
-            console.log('Created node from token:', newNode);
+
         });
 
         // Rendering functions
@@ -3620,7 +3559,7 @@
             drawGroups();
             
             // Draw connections (consolidate when groups are collapsed)
-            console.log(`Rendering ${connections.length} connections`);
+
             drawConnectionsWithGroupConsolidation();
             
             // Draw nodes on top (always draw them, but handle grouped nodes differently)
@@ -3718,7 +3657,7 @@
             
             // Debug: Log text wrapping info
             if (wrappedLines.length > 1) {
-                console.log(`Text wrapped for ${node.name}:`, wrappedLines);
+
             }
             
             wrappedLines.forEach((line, index) => {
@@ -3833,7 +3772,7 @@
             if (nodesInLasso.length > 0) {
                 selectedNodes = nodesInLasso;
                 selectedNode = nodesInLasso[0]; // Set primary selection
-                console.log(`🎯 Rectangle lasso selected ${nodesInLasso.length} nodes`);
+
             }
         }
         
@@ -3961,7 +3900,7 @@
                 
                 // Debug: Log value text wrapping info
                 if (wrappedValueLines.length > 1) {
-                    console.log(`Value text wrapped for ${node.name}:`, wrappedValueLines);
+
                 }
                 
                 wrappedValueLines.forEach((line, index) => {
@@ -3985,7 +3924,7 @@
                 
                 // Debug: Log value text wrapping info
                 if (wrappedValueLines.length > 1) {
-                    console.log(`Value text wrapped for ${node.name}:`, wrappedValueLines);
+
                 }
                 
                 wrappedValueLines.forEach((line, index) => {
@@ -4160,7 +4099,7 @@
                 
                 // Skip connections within the same collapsed group
                 if (startGroup && endGroup && startGroup.id === endGroup.id && startGroup.isCollapsed) {
-                    console.log(`Skipping connection ${index + 1} (both nodes in collapsed group): ${connection.startNode.name} → ${connection.endNode.name}`);
+
                     return;
                 }
                 
@@ -4201,11 +4140,11 @@
                 if (group.connections.length === 1) {
                     // Single connection - draw normally
                     const connection = group.connections[0];
-                    console.log(`Drawing single connection: ${connection.startNode.name} → ${connection.endNode.name}`);
+
                     drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
                 } else {
                     // Multiple connections - draw consolidated
-                    console.log(`Drawing consolidated connection: ${group.connections.length} connections from ${group.sourceNode.name} to ${group.targetNode.name}`);
+
                     drawConsolidatedConnection(group);
                 }
             });
@@ -4328,18 +4267,17 @@
         }
 
         function undo() {
-            console.log('🔄 Undo function called');
-            console.log('Current undo stack length:', undoStack.length);
+
             
             if (undoStack.length > 0) {
                 const previousState = undoStack.pop();
-                console.log('✅ Restoring previous state:', previousState);
+
                 nodes = previousState.nodes;
                 connections = previousState.connections;
                 render();
-                console.log('🎉 Undo completed');
+
             } else {
-                console.log('⚠️ Nothing to undo');
+
             }
         }
 
@@ -4392,14 +4330,7 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            console.log('📤 Exported JSON with:', {
-                tokens: Object.values(tokens).flat().length,
-                nodes: nodes.length,
-                connections: connections.length,
-                groups: groups.length,
-                panOffset: panOffset,
-                zoomLevel: zoomLevel
-            });
+
         }
 
         // Update nodes when tokens change
@@ -4407,7 +4338,7 @@
             nodes.forEach(node => {
                 if (node.name === token.name && node.layer === selectedLayer) {
                     node.value = token.value;
-                    console.log(`Updated existing node: ${node.name} with value: ${node.value}`);
+
                 }
             });
             render();
@@ -4714,7 +4645,7 @@
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedConnection) {
                 e.preventDefault(); // Prevent default browser behavior
                 
-                console.log(`Delete key pressed for connection`);
+
                 
                 // Show confirmation dialog
                 const startName = selectedConnection.startNode.name;
@@ -4722,10 +4653,10 @@
                 const confirmMessage = `Are you sure you want to delete the connection from "${startName}" to "${endName}"?\n\nThis will restore the original value of "${endName}".`;
                 
                 if (confirm(confirmMessage)) {
-                    console.log(`User confirmed deletion of connection`);
+
                     deleteSelectedConnection();
                 } else {
-                    console.log(`User cancelled deletion of connection`);
+
                 }
                 return;
             }
@@ -4752,9 +4683,7 @@
             const startName = selectedConnection.startNode.name;
             const endName = selectedConnection.endNode.name;
             
-            console.log(`Deleting connection from ${startName} to ${endName}`);
-            console.log(`Target node ${endName} current value: ${selectedConnection.endNode.value}`);
-            console.log(`Target node ${endName} original value: ${selectedConnection.endNode.originalValue}`);
+
             
             // Remove the connection
             const connectionIndex = connections.findIndex(conn => 
@@ -4766,7 +4695,7 @@
             
             if (connectionIndex !== -1) {
                 connections.splice(connectionIndex, 1);
-                console.log(`Removed connection`);
+
             }
             
             // Restore the original value of the target node
@@ -4783,7 +4712,7 @@
                 
                 // Also restore the corresponding token in the tokens object
                 targetToken.value = targetNode.originalValue;
-                console.log(`Restored token ${targetLayer}.${targetNode.name}: ${oldValue} → ${targetNode.originalValue}`);
+
                 
                 // Update sidebar
                 renderSidebar();
@@ -4800,7 +4729,7 @@
             // Re-render
             render();
             
-            console.log(`Successfully deleted connection from ${startName} to ${endName}`);
+
         }
 
         // ===== SAVE/LOAD SESSION FUNCTIONS =====
@@ -4903,7 +4832,7 @@
             // Show success message
             showNotification(`Session "${sessionName}" saved successfully!`, 'success');
             
-            console.log(`Session "${sessionName}" saved with ${nodes.length} nodes and ${connections.length} connections`);
+
         }
         
         // Show load session modal
