@@ -918,12 +918,27 @@
                 const container = document.getElementById(`${layer}-tokens`);
                 container.innerHTML = '';
                 
+                // Add group creation button at the top if multiple tokens are selected
+                if (selectedSidebarTokens.length >= 2 && selectedSidebarTokens.every(t => t.layer === layer)) {
+                    const groupButton = createGroupCreationButton(layer);
+                    container.appendChild(groupButton);
+                }
+                
                 // Get tokens that are not in any group
                 const ungroupedTokens = tokens[layer].filter(token => !token.groupId);
                 
                 // Render ungrouped tokens first
                 ungroupedTokens.forEach(token => {
                     const tokenElement = createTokenElement(token, layer);
+                    
+                    // Check if this token is selected and add the selected class
+                    const isSelected = selectedSidebarTokens.some(t => 
+                        t.token.name === token.name && t.layer === layer
+                    );
+                    if (isSelected) {
+                        tokenElement.classList.add('selected');
+                    }
+                    
                     container.appendChild(tokenElement);
                 });
                 
@@ -933,12 +948,6 @@
                     const groupElement = createTokenGroupElement(group, layer);
                     container.appendChild(groupElement);
                 });
-                
-                // Add group creation button if multiple tokens are selected
-                if (selectedSidebarTokens.length >= 2 && selectedSidebarTokens.every(t => t.layer === layer)) {
-                    const groupButton = createGroupCreationButton(layer);
-                    container.appendChild(groupButton);
-                }
             });
         }
 
@@ -1198,22 +1207,26 @@
                         // Remove from selection
                         selectedSidebarTokens.splice(existingIndex, 1);
                         div.classList.remove('selected');
+                        console.log(`❌ Removed ${token.name} from selection`);
                     } else {
                         // Add to selection
                         selectedSidebarTokens.push(tokenInfo);
                         div.classList.add('selected');
+                        console.log(`✅ Added ${token.name} to selection`);
                     }
                 } else {
                     // Single selection - clear others and select this one
                     clearSidebarTokenSelection();
                     selectedSidebarTokens = [{ token, layer }];
                     div.classList.add('selected');
+                    console.log(`🎯 Single selected ${token.name}`);
                 }
                 
                 // Re-render to show group creation button if applicable
                 renderSidebar();
                 
                 console.log(`🔍 Sidebar token selection: ${selectedSidebarTokens.length} tokens selected`);
+                console.log('Selected tokens:', selectedSidebarTokens.map(t => `${t.layer}.${t.token.name}`));
             });
             
             return div;
@@ -1221,6 +1234,7 @@
 
         // Clear sidebar token selection
         function clearSidebarTokenSelection() {
+            // Remove visual selection from all currently selected tokens
             selectedSidebarTokens.forEach(({ token, layer }) => {
                 const tokenElement = document.querySelector(`[data-token-name="${token.name}"][data-token-layer="${layer}"]`);
                 if (tokenElement) {
@@ -1258,6 +1272,15 @@
                 <div class="dtmc-token-group-content ${isCollapsed ? 'collapsed' : ''}">
                     ${group.tokens.map(token => {
                         const tokenElement = createTokenElement(token, layer);
+                        
+                        // Check if this token is selected and add the selected class
+                        const isSelected = selectedSidebarTokens.some(t => 
+                            t.token.name === token.name && t.layer === layer
+                        );
+                        if (isSelected) {
+                            tokenElement.classList.add('selected');
+                        }
+                        
                         return tokenElement.outerHTML;
                     }).join('')}
                 </div>
