@@ -486,6 +486,12 @@
         let panOffset = { x: 0, y: 0 };
         let lastMousePos = { x: 0, y: 0 };
         let zoomLevel = 1.0;               // Current zoom level
+        
+        // Lasso selection variables
+        let isLassoSelecting = false;
+        let lassoStartPoint = { x: 0, y: 0 };
+        let lassoCurrentPoint = { x: 0, y: 0 };
+        let lassoPath = [];
         let isConnecting = false;
         let connectionStart = null;
         let startSocket = null;
@@ -3269,7 +3275,7 @@
                 ctx.lineWidth = 3;
             } else {
                 ctx.strokeStyle = isSelected || isMultiSelected ? '#3b82f6' : '#475569';
-                ctx.lineWidth = isSelected || isMultiSelected ? 2 : 2;
+                ctx.lineWidth = isSelected || isMultiSelected ? 2 : 1;
             }
             
             // Apply backdrop blur effect (simulated with shadow)
@@ -3684,7 +3690,20 @@
             const data = {
                 tokens: tokens,
                 nodes: nodes,
-                connections: connections
+                connections: connections,
+                groups: groups,
+                panOffset: panOffset,
+                zoomLevel: zoomLevel,
+                selectedLayer: selectedLayer,
+                selectedTokenType: selectedTokenType,
+                metadata: {
+                    version: '4.3',
+                    exportDate: new Date().toISOString(),
+                    totalTokens: Object.values(tokens).flat().length,
+                    totalNodes: nodes.length,
+                    totalConnections: connections.length,
+                    totalGroups: groups.length
+                }
             };
             
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -3694,6 +3713,15 @@
             a.download = 'dtmc-enhanced-tokens.json';
             a.click();
             URL.revokeObjectURL(url);
+            
+            console.log('📤 Exported JSON with:', {
+                tokens: Object.values(tokens).flat().length,
+                nodes: nodes.length,
+                connections: connections.length,
+                groups: groups.length,
+                panOffset: panOffset,
+                zoomLevel: zoomLevel
+            });
         }
 
         // Update nodes when tokens change
@@ -4400,8 +4428,9 @@
             const nodeCount = jsonData.nodes ? jsonData.nodes.length : 0;
             const connectionCount = jsonData.connections ? jsonData.connections.length : 0;
             const tokenCount = jsonData.tokens ? Object.values(jsonData.tokens).flat().length : 0;
+            const groupCount = jsonData.groups ? jsonData.groups.length : 0;
             
-            const confirmMessage = `Load JSON file "${fileName}"?\n\nThis will replace your current setup with:\n• ${tokenCount} tokens\n• ${nodeCount} nodes\n• ${connectionCount} connections`;
+            const confirmMessage = `Load JSON file "${fileName}"?\n\nThis will replace your current setup with:\n• ${tokenCount} tokens\n• ${nodeCount} nodes\n• ${connectionCount} connections\n• ${groupCount} groups`;
             
             if (!confirm(confirmMessage)) {
                 return;
@@ -4476,10 +4505,19 @@
                     zoomLevel = jsonData.zoomLevel;
                 }
                 
+                // Load UI state
+                if (jsonData.selectedLayer) {
+                    selectedLayer = jsonData.selectedLayer;
+                }
+                if (jsonData.selectedTokenType) {
+                    selectedTokenType = jsonData.selectedTokenType;
+                }
+                
                 // Clear selections
                 selectedNode = null;
                 selectedConnection = null;
                 selectedNodes = [];
+                hoveredConnection = null;
                 
                 // Update UI
                 renderSidebar();
@@ -4489,7 +4527,7 @@
                 // Show success message
                 showNotification(`JSON file "${fileName}" loaded successfully!`, 'success');
                 
-                console.log(`JSON file loaded: ${tokenCount} tokens, ${nodeCount} nodes, ${connectionCount} connections`);
+                console.log(`JSON file loaded: ${tokenCount} tokens, ${nodeCount} nodes, ${connectionCount} connections, ${groupCount} groups`);
                 
             } catch (error) {
                 console.error('Error loading JSON file:', error);
@@ -4507,9 +4545,10 @@
             const hasTokens = jsonData.tokens && typeof jsonData.tokens === 'object';
             const hasNodes = jsonData.nodes && Array.isArray(jsonData.nodes);
             const hasConnections = jsonData.connections && Array.isArray(jsonData.connections);
+            const hasGroups = jsonData.groups && Array.isArray(jsonData.groups);
             
             // At least one of these should be present
-            return hasTokens || hasNodes || hasConnections;
+            return hasTokens || hasNodes || hasConnections || hasGroups;
         }
         
         // Show notification message

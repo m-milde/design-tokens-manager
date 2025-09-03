@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 16px;
+      background: #f8f8f8;
+    }
+    .container {
+      max-width: 100%;
+    }
+    h2 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    button {
+      background: #18A0FB;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background: #0084D6;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .message {
+      margin-top: 12px;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .success {
+      background: #E8F5E8;
+      color: #2D7D2D;
+      border: 1px solid #8BC34A;
+    }
+    .error {
+      background: #FFEBEE;
+      color: #C62828;
+      border: 1px solid #EF5350;
+    }
+    .example {
+      margin-top: 12px;
+      font-size: 11px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Import Design Tokens</h2>
+    
+    <div class="input-group">
+      <label for="jsonInput">Paste your design tokens JSON:</label>
+      <textarea 
+        id="jsonInput" 
+        placeholder='{"tokens": {"primitive": [{"name": "primary-blue", "value": "#4a90e2", "type": "color"}], "base": [{"name": "color-brand-default", "value": "{primitive.primary-blue}", "type": "color"}]}}'
+      ></textarea>
+    </div>
+    
+    <button id="importBtn">Import Tokens</button>
+    
+    <div id="message" class="message" style="display: none;"></div>
+    
+    <div class="example">
+      <strong>Example structure:</strong> Use categories like "primitive", "base", "semantic", "specific" and reference other tokens with {category.token-name} syntax.
+    </div>
+  </div>
+
+  <script>
+    const importBtn = document.getElementById('importBtn');
+    const jsonInput = document.getElementById('jsonInput');
+    const messageDiv = document.getElementById('message');
+
+    importBtn.addEventListener('click', () => {
+      const jsonData = jsonInput.value.trim();
+      
+      if (!jsonData) {
+        showMessage('Please enter JSON data', 'error');
+        return;
+      }
+
+      try {
+        // Validate JSON
+        JSON.parse(jsonData);
+        
+        // Send to plugin code
+        parent.postMessage({
+          pluginMessage: {
+            type: 'import-tokens',
+            jsonData: jsonData
+          }
+        }, '*');
+        
+        importBtn.disabled = true;
+        importBtn.textContent = 'Importing...';
+        
+      } catch (error) {
+        showMessage('Invalid JSON format', 'error');
+      }
+    });
+
+    // Listen for messages from plugin code
+    window.addEventListener('message', (event) => {
+      const msg = event.data.pluginMessage;
+      
+      if (msg && msg.type === 'success') {
+        showMessage(msg.message, 'success');
+        importBtn.disabled = false;
+        importBtn.textContent = 'Import Tokens';
+      } else if (msg && msg.type === 'error') {
+        showMessage(msg.message, 'error');
+        importBtn.disabled = false;
+        importBtn.textContent = 'Import Tokens';
+      }
+    });
+
+    function showMessage(text, type) {
+      messageDiv.textContent = text;
+      messageDiv.className = 'message ' + type;
+      messageDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        messageDiv.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

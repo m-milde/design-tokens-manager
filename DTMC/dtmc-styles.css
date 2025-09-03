@@ -189,7 +189,7 @@
   
   /* Connections */
   --dtmc-connection-color: var(--dtmc-neutral-600);
-  --dtmc-connection-selected-color: #3b82f6;
+  --dtmc-connection-selected-color: var(--dtmc-danger-600);
   --dtmc-connection-width: 3px;
   --dtmc-connection-selected-width: 5px;
   --dtmc-connection-preview-color: rgba(255, 255, 255, 0.5);

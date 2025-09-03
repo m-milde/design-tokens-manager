@@ -30,6 +30,14 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Optimized Rendering**: Debounced rendering prevents performance issues
 - **Context Preservation**: Canvas context state is properly managed
 
+### **💾 Enhanced JSON Export & Import**
+- **Complete State Export**: Includes tokens, nodes, connections, groups, and UI state
+- **Canvas Position**: Saves pan offset and zoom level for exact restoration
+- **Group Preservation**: All bubble groups are saved and restored with their relationships
+- **UI State**: Remembers selected layer and token type for seamless workflow
+- **Metadata Tracking**: Export includes version, date, and statistics
+- **Backward Compatibility**: Can load older JSON files without groups or UI state
+
 ### **🎛️ Enhanced Sidebar Management**
 - **Collapsible Panels**: Expand/collapse token type panels (Primitive, Base, Semantic, Specific)
 - **Smooth Animations**: Arrow rotation and panel transitions
@@ -193,7 +201,8 @@ DTMC/
 3. **Create Tokens**: Use the enhanced modal to create your first tokens
 4. **Build System**: Drag tokens to canvas and connect them
 5. **Navigate**: Use zoom controls and mini-map for large systems
-6. **Export JSON**: Save your design system for use in other tools
+6. **Export JSON**: Save your complete design system including groups and canvas state
+7. **Load JSON**: Restore your design system exactly as you left it
 
 ## 🔍 **Troubleshooting**
 
@@ -207,6 +216,9 @@ DTMC/
 - **Color Picker Issues**: Verify browser console for color conversion errors
 - **Drag & Drop Not Working**: Ensure you're dragging from the correct area (handle vs content)
 - **Bubble Jumping**: Should be fixed in v4.3, check console for rendering errors
+- **Groups Not Loading**: Check that JSON file contains groups array and node references are valid
+- **Canvas Position Not Restored**: Verify JSON contains panOffset and zoomLevel properties
+- **Export Issues**: Check browser console for export errors and ensure all data is valid
 
 ### **Browser Compatibility**
 - **Modern Browsers**: Chrome, Firefox, Safari, Edge (latest versions)
@@ -226,7 +238,20 @@ DTMC/
     "specific": [...]
   },
   "nodes": [...],
-  "connections": [...]
+  "connections": [...],
+  "groups": [...],
+  "panOffset": { "x": 0, "y": 0 },
+  "zoomLevel": 1.0,
+  "selectedLayer": "primitive",
+  "selectedTokenType": "color",
+  "metadata": {
+    "version": "4.3",
+    "exportDate": "2024-01-01T00:00:00.000Z",
+    "totalTokens": 10,
+    "totalNodes": 5,
+    "totalConnections": 3,
+    "totalGroups": 1
+  }
 }
 ```
 
