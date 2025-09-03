@@ -1789,3 +1789,173 @@ display: flex;
   --dtmc-socket-size: 12px;
   --dtmc-socket-radius: 6px;
 }
+
+/* ========================================
+   Token Groups in Sidebar
+   ======================================== */
+
+/* Token Group Container */
+.dtmc-token-group {
+  margin-bottom: 8px;
+  border: 1px solid var(--dtmc-neutral-600);
+  border-radius: 8px;
+  background: var(--dtmc-neutral-800);
+  overflow: hidden;
+}
+
+/* Token Group Header */
+.dtmc-token-group-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--dtmc-neutral-700);
+  border-bottom: 1px solid var(--dtmc-neutral-600);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dtmc-token-group-header:hover {
+  background: var(--dtmc-neutral-650);
+}
+
+/* Token Group Toggle Button */
+.dtmc-token-group-toggle {
+  background: none;
+  border: none;
+  color: var(--dtmc-neutral-300);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.dtmc-token-group-toggle:hover {
+  background: var(--dtmc-neutral-600);
+  color: var(--dtmc-neutral-100);
+}
+
+.dtmc-token-group-icon {
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
+/* Token Group Name */
+.dtmc-token-group-name {
+  font-weight: 500;
+  color: var(--dtmc-neutral-100);
+  flex: 1;
+  font-size: 14px;
+}
+
+/* Token Group Count */
+.dtmc-token-group-count {
+  color: var(--dtmc-neutral-400);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+/* Token Group Actions */
+.dtmc-token-group-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.dtmc-token-group-header:hover .dtmc-token-group-actions {
+  opacity: 1;
+}
+
+.dtmc-token-group-actions button {
+  background: none;
+  border: none;
+  color: var(--dtmc-neutral-400);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.dtmc-token-group-actions button:hover {
+  background: var(--dtmc-neutral-600);
+  color: var(--dtmc-neutral-100);
+}
+
+/* Token Group Content */
+.dtmc-token-group-content {
+  padding: 8px;
+  transition: all 0.3s ease;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.dtmc-token-group-content.collapsed {
+  max-height: 0;
+  padding: 0 8px;
+}
+
+/* Create Group Button */
+.dtmc-create-group-button {
+  margin-top: 8px;
+  padding: 8px;
+}
+
+.dtmc-create-group-btn {
+  width: 100%;
+  background: var(--dtmc-primary-600);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.dtmc-create-group-btn:hover {
+  background: var(--dtmc-primary-700);
+  transform: translateY(-1px);
+}
+
+.dtmc-create-group-btn:active {
+  transform: translateY(0);
+}
+
+/* Selected Token Styling */
+.dtmc-token-item.selected {
+  border: 2px solid #3b82f6 !important;
+  background: var(--dtmc-neutral-800);
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.dtmc-token-item.selected .dtmc-token-name {
+  color: var(--dtmc-neutral-100);
+}
+
+.dtmc-token-item.selected .dtmc-token-value {
+  color: var(--dtmc-neutral-300);
+}
+
+/* Token Group Styling Variations */
+.dtmc-token-group[data-layer="primitive"] {
+  border-color: var(--dtmc-primitive-start);
+}
+
+.dtmc-token-group[data-layer="base"] {
+  border-color: var(--dtmc-base-start);
+}
+
+.dtmc-token-group[data-layer="semantic"] {
+  border-color: var(--dtmc-semantic-start);
+}
+
+.dtmc-token-group[data-layer="specific"] {
+  border-color: var(--dtmc-specific-start);
+}

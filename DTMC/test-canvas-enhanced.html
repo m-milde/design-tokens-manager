@@ -505,6 +505,17 @@
             semantic: [],
             specific: []
         };
+        
+        // Token sub-groups within layers
+        let tokenGroups = {
+            primitive: {},
+            base: {},
+            semantic: {},
+            specific: {}
+        };
+        
+        // Selected tokens for grouping (Ctrl+click selection)
+        let selectedSidebarTokens = [];
         let undoStack = [];
         let dragPreview = null;
         let draggedToken = null;
@@ -907,10 +918,27 @@
                 const container = document.getElementById(`${layer}-tokens`);
                 container.innerHTML = '';
                 
-                tokens[layer].forEach(token => {
+                // Get tokens that are not in any group
+                const ungroupedTokens = tokens[layer].filter(token => !token.groupId);
+                
+                // Render ungrouped tokens first
+                ungroupedTokens.forEach(token => {
                     const tokenElement = createTokenElement(token, layer);
                     container.appendChild(tokenElement);
                 });
+                
+                // Render token groups
+                Object.keys(tokenGroups[layer]).forEach(groupName => {
+                    const group = tokenGroups[layer][groupName];
+                    const groupElement = createTokenGroupElement(group, layer);
+                    container.appendChild(groupElement);
+                });
+                
+                // Add group creation button if multiple tokens are selected
+                if (selectedSidebarTokens.length >= 2 && selectedSidebarTokens.every(t => t.layer === layer)) {
+                    const groupButton = createGroupCreationButton(layer);
+                    container.appendChild(groupButton);
+                }
             });
         }
 
@@ -1144,7 +1172,220 @@
                 console.log('🏁 Drag handle drag end');
             });
             
+            // Add click handler for token selection
+            div.addEventListener('click', (e) => {
+                // Don't trigger selection if clicking on action buttons
+                if (e.target.closest('.dtmc-token-action-btn')) {
+                    return;
+                }
+                
+                // Don't trigger selection if clicking on drag handle
+                if (e.target.closest('.dtmc-token-drag-handle')) {
+                    return;
+                }
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Handle Ctrl+click for multi-selection
+                if (e.ctrlKey || e.metaKey) {
+                    const tokenInfo = { token, layer };
+                    const existingIndex = selectedSidebarTokens.findIndex(t => 
+                        t.token.name === token.name && t.layer === layer
+                    );
+                    
+                    if (existingIndex >= 0) {
+                        // Remove from selection
+                        selectedSidebarTokens.splice(existingIndex, 1);
+                        div.classList.remove('selected');
+                    } else {
+                        // Add to selection
+                        selectedSidebarTokens.push(tokenInfo);
+                        div.classList.add('selected');
+                    }
+                } else {
+                    // Single selection - clear others and select this one
+                    clearSidebarTokenSelection();
+                    selectedSidebarTokens = [{ token, layer }];
+                    div.classList.add('selected');
+                }
+                
+                // Re-render to show group creation button if applicable
+                renderSidebar();
+                
+                console.log(`🔍 Sidebar token selection: ${selectedSidebarTokens.length} tokens selected`);
+            });
+            
             return div;
+        }
+
+        // Clear sidebar token selection
+        function clearSidebarTokenSelection() {
+            selectedSidebarTokens.forEach(({ token, layer }) => {
+                const tokenElement = document.querySelector(`[data-token-name="${token.name}"][data-token-layer="${layer}"]`);
+                if (tokenElement) {
+                    tokenElement.classList.remove('selected');
+                }
+            });
+            selectedSidebarTokens = [];
+        }
+
+        // Create token group element
+        function createTokenGroupElement(group, layer) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'dtmc-token-group';
+            groupDiv.dataset.groupName = group.name;
+            groupDiv.dataset.layer = layer;
+            
+            const isCollapsed = group.isCollapsed || false;
+            
+            groupDiv.innerHTML = `
+                <div class="dtmc-token-group-header">
+                    <button class="dtmc-token-group-toggle" data-group="${group.name}" data-layer="${layer}">
+                        <span class="material-icons dtmc-token-group-icon">${isCollapsed ? 'chevron_right' : 'expand_more'}</span>
+                    </button>
+                    <span class="dtmc-token-group-name">${group.name}</span>
+                    <span class="dtmc-token-group-count">(${group.tokens.length})</span>
+                    <div class="dtmc-token-group-actions">
+                        <button class="dtmc-token-group-rename" title="Rename group">
+                            <span class="material-icons">edit</span>
+                        </button>
+                        <button class="dtmc-token-group-ungroup" title="Ungroup tokens">
+                            <span class="material-icons">group_off</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="dtmc-token-group-content ${isCollapsed ? 'collapsed' : ''}">
+                    ${group.tokens.map(token => {
+                        const tokenElement = createTokenElement(token, layer);
+                        return tokenElement.outerHTML;
+                    }).join('')}
+                </div>
+            `;
+            
+            // Add event listeners
+            const toggleBtn = groupDiv.querySelector('.dtmc-token-group-toggle');
+            const renameBtn = groupDiv.querySelector('.dtmc-token-group-rename');
+            const ungroupBtn = groupDiv.querySelector('.dtmc-token-group-ungroup');
+            
+            toggleBtn.addEventListener('click', () => toggleTokenGroup(group.name, layer));
+            renameBtn.addEventListener('click', () => renameTokenGroup(group.name, layer));
+            ungroupBtn.addEventListener('click', () => ungroupTokens(group.name, layer));
+            
+            return groupDiv;
+        }
+
+        // Create group creation button
+        function createGroupCreationButton(layer) {
+            const buttonDiv = document.createElement('div');
+            buttonDiv.className = 'dtmc-create-group-button';
+            
+            buttonDiv.innerHTML = `
+                <button class="dtmc-create-group-btn" data-layer="${layer}">
+                    <span class="material-icons">group_work</span>
+                    Create Group (${selectedSidebarTokens.length} tokens)
+                </button>
+            `;
+            
+            const button = buttonDiv.querySelector('.dtmc-create-group-btn');
+            button.addEventListener('click', () => createTokenGroup(layer));
+            
+            return buttonDiv;
+        }
+
+        // Toggle token group collapse/expand
+        function toggleTokenGroup(groupName, layer) {
+            const group = tokenGroups[layer][groupName];
+            if (group) {
+                group.isCollapsed = !group.isCollapsed;
+                renderSidebar();
+            }
+        }
+
+        // Rename token group
+        function renameTokenGroup(groupName, layer) {
+            const newName = prompt('Enter new group name:', groupName);
+            if (newName && newName !== groupName && newName.trim()) {
+                const group = tokenGroups[layer][groupName];
+                if (group) {
+                    // Update group name
+                    group.name = newName.trim();
+                    
+                    // Update token group reference
+                    delete tokenGroups[layer][groupName];
+                    tokenGroups[layer][newName.trim()] = group;
+                    
+                    renderSidebar();
+                    console.log(`✅ Token group renamed: ${groupName} → ${newName.trim()}`);
+                }
+            }
+        }
+
+        // Ungroup tokens
+        function ungroupTokens(groupName, layer) {
+            const group = tokenGroups[layer][groupName];
+            if (group) {
+                // Remove groupId from all tokens in the group
+                group.tokens.forEach(token => {
+                    delete token.groupId;
+                });
+                
+                // Remove the group
+                delete tokenGroups[layer][groupName];
+                
+                renderSidebar();
+                console.log(`✅ Ungrouped ${group.tokens.length} tokens from group: ${groupName}`);
+            }
+        }
+
+        // Create token group
+        function createTokenGroup(layer) {
+            if (selectedSidebarTokens.length < 2) {
+                alert('Please select at least 2 tokens to create a group.');
+                return;
+            }
+            
+            // Check if all selected tokens are from the same layer
+            if (!selectedSidebarTokens.every(t => t.layer === layer)) {
+                alert('All selected tokens must be from the same layer.');
+                return;
+            }
+            
+            const groupName = prompt('Enter group name:', 'New Group');
+            if (!groupName || !groupName.trim()) {
+                return;
+            }
+            
+            // Check if group name already exists
+            if (tokenGroups[layer][groupName.trim()]) {
+                alert('A group with this name already exists in this layer.');
+                return;
+            }
+            
+            // Create the group
+            const groupId = Date.now();
+            const group = {
+                id: groupId,
+                name: groupName.trim(),
+                tokens: selectedSidebarTokens.map(t => t.token),
+                isCollapsed: false
+            };
+            
+            // Add groupId to tokens
+            group.tokens.forEach(token => {
+                token.groupId = groupId;
+            });
+            
+            // Add group to tokenGroups
+            tokenGroups[layer][groupName.trim()] = group;
+            
+            // Clear selection
+            clearSidebarTokenSelection();
+            
+            // Re-render
+            renderSidebar();
+            
+            console.log(`✅ Created token group "${groupName.trim()}" with ${group.tokens.length} tokens in ${layer} layer`);
         }
 
         // Helper function to get the element after which to insert the dragged element
@@ -4083,14 +4324,24 @@
             if (confirm('Are you sure you want to clear all nodes and connections?')) {
                 nodes = [];
                 connections = [];
+                groups = [];
+                tokenGroups = {
+                    primitive: {},
+                    base: {},
+                    semantic: {},
+                    specific: {}
+                };
+                selectedSidebarTokens = [];
                 undoStack = [];
                 render();
+                renderSidebar();
             }
         }
 
         function exportJSON() {
             const data = {
                 tokens: tokens,
+                tokenGroups: tokenGroups,
                 nodes: nodes,
                 connections: connections,
                 groups: groups,
@@ -4100,9 +4351,10 @@
                 selectedTokenType: selectedTokenType,
                 selectedNodes: selectedNodes.map(node => node.id), // Export selected node IDs
                 metadata: {
-                    version: '4.3',
+                    version: '4.5',
                     exportDate: new Date().toISOString(),
                     totalTokens: Object.values(tokens).flat().length,
+                    totalTokenGroups: Object.values(tokenGroups).flatMap(layer => Object.keys(layer)).length,
                     totalNodes: nodes.length,
                     totalConnections: connections.length,
                     totalGroups: groups.length
@@ -4850,6 +5102,24 @@
                         base: jsonData.tokens.base || [],
                         semantic: jsonData.tokens.semantic || [],
                         specific: jsonData.tokens.specific || []
+                    };
+                }
+                
+                // Load token groups
+                if (jsonData.tokenGroups) {
+                    tokenGroups = {
+                        primitive: jsonData.tokenGroups.primitive || {},
+                        base: jsonData.tokenGroups.base || {},
+                        semantic: jsonData.tokenGroups.semantic || {},
+                        specific: jsonData.tokenGroups.specific || {}
+                    };
+                } else {
+                    // Initialize empty token groups if not present
+                    tokenGroups = {
+                        primitive: {},
+                        base: {},
+                        semantic: {},
+                        specific: {}
                     };
                 }
                 

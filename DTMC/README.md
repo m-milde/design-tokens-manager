@@ -2,7 +2,7 @@
 
 A powerful, interactive web-based tool for creating, managing, and visualizing design token systems with hierarchical relationships and visual connections.
 
-## ✨ **Latest Features (v4.5)**
+## ✨ **Latest Features (v4.6)**
 
 ### **🎯 Drag & Drop Improvements**
 - **Smart Reordering**: Drag tokens by their handle (six-dot icon) to reorder within the sidebar
@@ -36,6 +36,14 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Cleaner Interface**: Reduces visual clutter when groups are collapsed
 - **Thicker Lines**: Consolidated connections use slightly thicker lines for visibility
 - **Click Detection**: Consolidated connections are fully interactive and selectable
+
+### **🗂️ Sidebar Token Sub-Grouping**
+- **Layer Sub-Groups**: Create sub-groups within token layers (e.g., "colors", "spacing", "sizes")
+- **Ctrl+Click Selection**: Hold Ctrl and click multiple tokens to select them for grouping
+- **Collapsible Groups**: Token groups can be collapsed/expanded to save space
+- **Group Management**: Rename, ungroup, and manage token groups with hover actions
+- **Visual Organization**: Color-coded group borders matching layer themes
+- **Persistent Storage**: Token groups are saved and restored in JSON exports
 
 ### **💾 Enhanced JSON Export & Import**
 - **Complete State Export**: Includes tokens, nodes, connections, groups, and UI state
@@ -146,6 +154,14 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 5. **Visual Feedback**: Action buttons appear on hover with smooth transitions
 6. **Automatic Updates**: All related nodes and connections update automatically
 
+### **Token Sub-Grouping**
+1. **Select Tokens**: Hold Ctrl and click multiple tokens in the same layer
+2. **Create Group**: Click "Create Group" button that appears when 2+ tokens are selected
+3. **Name Group**: Enter a descriptive name (e.g., "colors", "spacing", "sizes")
+4. **Manage Groups**: Hover over group header to see rename/ungroup options
+5. **Collapse Groups**: Click arrow button to collapse/expand token groups
+6. **Ungroup Tokens**: Click ungroup button to return tokens to ungrouped state
+
 ### **Managing Connections**
 1. **Drag from Output Socket**: Start from green (right/bottom) socket
 2. **Connect to Input Socket**: Drop on red (left/top) socket
@@ -177,8 +193,9 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Ctrl+0**: Reset zoom to 100%
 - **Ctrl+M**: Toggle mini-map
 - **Delete/Backspace**: Delete selected connection (when connection is selected)
-- **Ctrl+Click**: Multi-select bubbles
+- **Ctrl+Click**: Multi-select bubbles on canvas
 - **Alt+Drag**: Rectangle selection around bubbles
+- **Ctrl+Click (Sidebar)**: Multi-select tokens for grouping
 
 ## 🔧 **Technical Architecture**
 
@@ -210,7 +227,7 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 
 ```
 DTMC/
-├── test-canvas-enhanced.html    # Main application file (v4.5)
+├── test-canvas-enhanced.html    # Main application file (v4.6)
 ├── dtmc-styles.css             # Enhanced styling with text wrapping support
 ├── README.md                    # This documentation
 ├── TECHNICAL.md                 # Technical implementation details
@@ -267,6 +284,12 @@ DTMC/
     "semantic": [...],
     "specific": [...]
   },
+  "tokenGroups": {
+    "primitive": {},
+    "base": {},
+    "semantic": { "colors": {...}, "spacing": {...} },
+    "specific": {}
+  },
   "nodes": [...],
   "connections": [...],
   "groups": [...],
@@ -276,9 +299,10 @@ DTMC/
   "selectedTokenType": "color",
   "selectedNodes": [1234567890, 1234567891],
   "metadata": {
-    "version": "4.3",
+    "version": "4.5",
     "exportDate": "2024-01-01T00:00:00.000Z",
     "totalTokens": 10,
+    "totalTokenGroups": 2,
     "totalNodes": 5,
     "totalConnections": 3,
     "totalGroups": 1
@@ -350,4 +374,4 @@ This is an open-source project designed for design system professionals. Feel fr
 
 ---
 
-**DTMC v4.5** - Enhanced Design Tokens Map Creator with Smart Group Connection Consolidation
+**DTMC v4.6** - Enhanced Design Tokens Map Creator with Sidebar Token Sub-Grouping
