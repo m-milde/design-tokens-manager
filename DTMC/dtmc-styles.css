@@ -1099,6 +1099,13 @@ display: flex;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
+.dtmc-color-swatches {
+  display: flex;
+  gap: var(--dtmc-spacing-sm);
+  margin-top: var(--dtmc-spacing-md);
+  flex-wrap: wrap;
+}
+
 /* ===== ENHANCED COLOR PICKER ===== */
 .dtmc-color-picker-container {
   display: flex;

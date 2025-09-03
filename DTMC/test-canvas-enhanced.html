@@ -478,6 +478,8 @@
         let connections = [];
         let selectedNode = null;
         let selectedConnection = null;
+        let hoveredConnection = null;
+        let hoverRenderTimeout = null;
         let selectedNodes = []; // Multi-selection array
         let isDragging = false;
         let isPanning = false;
@@ -1949,17 +1951,18 @@
             const m = l - c / 2;
             let r = 0, g = 0, b = 0;
             
-            if (0 <= h && h < 1) {
+            // Fixed hue ranges for proper color conversion
+            if (0 <= h && h < 1/6) {
                 r = c; g = x; b = 0;
-            } else if (1 <= h && h < 2) {
+            } else if (1/6 <= h && h < 2/6) {
                 r = x; g = c; b = 0;
-            } else if (2 <= h && h < 3) {
+            } else if (2/6 <= h && h < 3/6) {
                 r = 0; g = c; b = x;
-            } else if (3 <= h && h < 4) {
+            } else if (3/6 <= h && h < 4/6) {
                 r = 0; g = x; b = c;
-            } else if (4 <= h && h < 5) {
+            } else if (4/6 <= h && h < 5/6) {
                 r = x; g = 0; b = c;
-            } else if (5 <= h && h < 6) {
+            } else if (5/6 <= h && h < 1) {
                 r = c; g = 0; b = x;
             }
             
@@ -3291,10 +3294,37 @@
             // Node content
             ctx.textAlign = 'center';
             
-            // Token name with CSS-controlled styling
+            // Token name with CSS-controlled styling and text wrapping
             ctx.fillStyle = bubbleNameColor;
             ctx.font = `${bubbleNameFontSize} Sora, system-ui, sans-serif`;
-            ctx.fillText(node.name, node.x + NODE_WIDTH / 2, node.y + bubbleNameYOffset);
+            ctx.textAlign = 'center';
+            
+            // Wrap text if it's too long
+            const maxWidth = NODE_WIDTH - 20; // 10px padding on each side
+            const wrappedLines = wrapText(ctx, node.name, maxWidth, 10);
+            
+            // Draw each line
+            const lineHeight = 16; // Adjust based on font size
+            const startY = node.y + bubbleNameYOffset - ((wrappedLines.length - 1) * lineHeight / 2);
+            
+            // Debug: Log text wrapping info
+            if (wrappedLines.length > 1) {
+                console.log(`Text wrapped for ${node.name}:`, wrappedLines);
+            }
+            
+            wrappedLines.forEach((line, index) => {
+                // Ensure text stays within bubble bounds
+                const textX = node.x + NODE_WIDTH / 2;
+                const textY = startY + (index * lineHeight);
+                
+                // Check if text would go outside bubble bounds
+                const textWidth = ctx.measureText(line).width;
+                if (textWidth > maxWidth) {
+                    console.warn(`Text still too wide: "${line}" (${textWidth}px > ${maxWidth}px)`);
+                }
+                
+                ctx.fillText(line, textX, textY);
+            });
             
             // Token value in black background container
             drawValueContainer(node);
@@ -3410,13 +3440,49 @@
                 ctx.fillStyle = valueTextColor;
                 ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
                 ctx.textAlign = 'center';
-                ctx.fillText(node.value, textX, containerY + containerHeight/2 + 4);
+                
+                // Wrap value text if needed
+                const maxValueWidth = NODE_WIDTH - colorSquareSize - 20; // Account for color square and padding
+                const wrappedValueLines = wrapText(ctx, node.value, maxValueWidth, 10);
+                const valueLineHeight = 12;
+                const valueStartY = containerY + containerHeight/2 - ((wrappedValueLines.length - 1) * valueLineHeight / 2);
+                
+                // Debug: Log value text wrapping info
+                if (wrappedValueLines.length > 1) {
+                    console.log(`Value text wrapped for ${node.name}:`, wrappedValueLines);
+                }
+                
+                wrappedValueLines.forEach((line, index) => {
+                    const textWidth = ctx.measureText(line).width;
+                    if (textWidth > maxValueWidth) {
+                        console.warn(`Value text still too wide: "${line}" (${textWidth}px > ${maxValueWidth}px)`);
+                    }
+                    ctx.fillText(line, textX, valueStartY + (index * valueLineHeight));
+                });
             } else {
-                // Draw value text normally (centered)
+                // Draw value text normally (centered) with wrapping
                 ctx.fillStyle = valueTextColor;
                 ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
                 ctx.textAlign = 'center';
-                ctx.fillText(node.value, node.x + NODE_WIDTH / 2, containerY + containerHeight/2 + 4);
+                
+                // Wrap value text if needed
+                const maxValueWidth = NODE_WIDTH - 20; // 10px padding on each side
+                const wrappedValueLines = wrapText(ctx, node.value, maxValueWidth, 10);
+                const valueLineHeight = 12;
+                const valueStartY = containerY + containerHeight/2 - ((wrappedValueLines.length - 1) * valueLineHeight / 2);
+                
+                // Debug: Log value text wrapping info
+                if (wrappedValueLines.length > 1) {
+                    console.log(`Value text wrapped for ${node.name}:`, wrappedValueLines);
+                }
+                
+                wrappedValueLines.forEach((line, index) => {
+                    const textWidth = ctx.measureText(line).width;
+                    if (textWidth > maxValueWidth) {
+                        console.warn(`Value text still too wide: "${line}" (${textWidth}px > ${maxValueWidth}px)`);
+                    }
+                    ctx.fillText(line, node.x + NODE_WIDTH / 2, valueStartY + (index * valueLineHeight));
+                });
             }
         }
         
@@ -3563,8 +3629,12 @@
             );
             ctx.stroke();
             
-            // Draw connection label
-            drawConnectionLabel(startPoint, endPoint, startNode, endNode);
+            // Draw connection label only if this connection is being hovered
+            if (hoveredConnection && 
+                hoveredConnection.startNode.id === startNode.id && 
+                hoveredConnection.endNode.id === endNode.id) {
+                drawConnectionLabel(startPoint, endPoint, startNode, endNode);
+            }
         }
 
         // Utility functions
@@ -3647,7 +3717,32 @@
             const connectionUnderMouse = getConnectionAtPoint(x, y);
             if (connectionUnderMouse) {
                 canvas.style.cursor = 'pointer';
+                // Only update and re-render if the hovered connection changed
+                if (!hoveredConnection || 
+                    hoveredConnection.startNode.id !== connectionUnderMouse.startNode.id || 
+                    hoveredConnection.endNode.id !== connectionUnderMouse.endNode.id) {
+                    hoveredConnection = connectionUnderMouse;
+                    // Debounce the render to prevent rapid re-renders
+                    if (hoverRenderTimeout) {
+                        clearTimeout(hoverRenderTimeout);
+                    }
+                    hoverRenderTimeout = setTimeout(() => {
+                        render(); // Re-render to show the label
+                    }, 16); // ~60fps
+                }
                 return;
+            } else {
+                // Clear hovered connection if not hovering over any connection
+                if (hoveredConnection) {
+                    hoveredConnection = null;
+                    // Debounce the render to prevent rapid re-renders
+                    if (hoverRenderTimeout) {
+                        clearTimeout(hoverRenderTimeout);
+                    }
+                    hoverRenderTimeout = setTimeout(() => {
+                        render(); // Re-render to hide the label
+                    }, 16); // ~60fps
+                }
             }
             
             // Check if hovering over a group header's draggable area
@@ -3708,8 +3803,55 @@
             zoomDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
         }
 
+        // Helper function to wrap text within a given width
+        function wrapText(ctx, text, maxWidth, padding = 10) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = words[0] || '';
+
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                const testLine = currentLine + " " + word;
+                const width = ctx.measureText(testLine).width;
+                if (width < maxWidth - (padding * 2)) {
+                    currentLine = testLine;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            
+            // Handle very long words that exceed the width
+            const finalLines = [];
+            for (const line of lines) {
+                if (ctx.measureText(line).width > maxWidth - (padding * 2)) {
+                    // Break long words
+                    let remainingText = line;
+                    while (remainingText.length > 0) {
+                        let breakPoint = remainingText.length;
+                        while (breakPoint > 0 && ctx.measureText(remainingText.substring(0, breakPoint)).width > maxWidth - (padding * 2)) {
+                            breakPoint--;
+                        }
+                        if (breakPoint === 0) breakPoint = 1; // Prevent infinite loop
+                        finalLines.push(remainingText.substring(0, breakPoint));
+                        remainingText = remainingText.substring(breakPoint);
+                    }
+                } else {
+                    finalLines.push(line);
+                }
+            }
+            
+            return finalLines;
+        }
+
         // Draw connection labels
         function drawConnectionLabel(startPoint, endPoint, startNode, endNode) {
+            // Save the current canvas context state
+            ctx.save();
+            
             // Calculate label position (middle of the connection)
             const labelX = (startPoint.x + endPoint.x) / 2;
             const labelY = (startPoint.y + endPoint.y) / 2;
@@ -3734,6 +3876,9 @@
             // Draw label text
             ctx.fillStyle = '#ffffff';
             ctx.fillText(labelText, labelX, labelY);
+            
+            // Restore the canvas context state
+            ctx.restore();
         }
 
         // Mini-map functionality

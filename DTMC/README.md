@@ -2,7 +2,33 @@
 
 A powerful, interactive web-based tool for creating, managing, and visualizing design token systems with hierarchical relationships and visual connections.
 
-## ✨ **Latest Features (v4.2)**
+## ✨ **Latest Features (v4.3)**
+
+### **🎯 Drag & Drop Improvements**
+- **Smart Reordering**: Drag tokens by their handle (six-dot icon) to reorder within the sidebar
+- **Canvas Dragging**: Drag tokens from their content area to place them on the canvas
+- **Dual Functionality**: Both reordering and canvas dragging work independently
+- **Visual Feedback**: Proper cursor changes and drag previews for each operation
+
+### **🎨 Enhanced Color Picker**
+- **Accurate Color Selection**: Fixed HSL to hex conversion for proper color matching
+- **Visual Consistency**: Selected colors now match what you see in the picker
+- **Improved Algorithm**: Enhanced color calculation with proper hue range mapping
+- **Debug Logging**: Console logging for troubleshooting color issues
+
+### **📝 Smart Text Wrapping**
+- **Automatic Wrapping**: Long text automatically wraps to multiple lines within bubbles
+- **10px Padding**: Text wraps when it reaches 10px from bubble borders
+- **Word Breaking**: Handles very long words that don't have spaces
+- **Multi-line Support**: Both token names and values support text wrapping
+- **Centered Layout**: Multi-line text is properly centered within bubbles
+
+### **🔗 Hover-Only Connection Labels**
+- **Clean Interface**: Connection wire labels are hidden by default
+- **Hover to Reveal**: Labels only appear when hovering over connection wires
+- **Stable Layout**: No more bubble jumping when hovering over connections
+- **Optimized Rendering**: Debounced rendering prevents performance issues
+- **Context Preservation**: Canvas context state is properly managed
 
 ### **🎛️ Enhanced Sidebar Management**
 - **Collapsible Panels**: Expand/collapse token type panels (Primitive, Base, Semantic, Specific)
@@ -90,10 +116,11 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 
 ### **Managing Tokens in Sidebar**
 1. **Collapse Panels**: Click arrow buttons to hide/show token type panels
-2. **Rename Tokens**: Hover over token, click edit icon, enter new name
-3. **Delete Tokens**: Hover over token, click delete icon, confirm deletion
-4. **Visual Feedback**: Action buttons appear on hover with smooth transitions
-5. **Automatic Updates**: All related nodes and connections update automatically
+2. **Reorder Tokens**: Drag tokens by their drag handle (six-dot icon) to reorder within the same layer
+3. **Rename Tokens**: Hover over token, click edit icon, enter new name
+4. **Delete Tokens**: Hover over token, click delete icon, confirm deletion
+5. **Visual Feedback**: Action buttons appear on hover with smooth transitions
+6. **Automatic Updates**: All related nodes and connections update automatically
 
 ### **Managing Connections**
 1. **Drag from Output Socket**: Start from green (right/bottom) socket
@@ -110,6 +137,8 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Zoom**: Use mouse wheel or zoom controls
 - **Mini-map**: Click to navigate, Ctrl+M to toggle
 - **Collapse Sidebar**: Use arrow buttons to organize token panels
+- **Hover Connection Labels**: Hover over connection wires to see relationship labels
+- **Text Wrapping**: Long token names and values automatically wrap within bubbles
 
 ### **Keyboard Shortcuts**
 - **Ctrl+0**: Reset zoom to 100%
@@ -125,6 +154,9 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Undo Stack**: History for undo/redo functionality
 - **Zoom Level**: Current canvas zoom factor (0.5x - 3.0x)
 - **Pan Offset**: Canvas panning position
+- **Hovered Connection**: Currently hovered connection for label display
+- **Hover Render Timeout**: Debounced rendering for hover interactions
+- **Dragged Token**: Current token being dragged for reordering
 
 ### **Event System**
 - **Mouse Events**: Click, drag, hover detection, wheel zoom
@@ -143,7 +175,8 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 
 ```
 DTMC/
-├── test-canvas-enhanced.html    # Main application file (v4.1)
+├── test-canvas-enhanced.html    # Main application file (v4.3)
+├── dtmc-styles.css             # Enhanced styling with text wrapping support
 ├── README.md                    # This documentation
 ├── TECHNICAL.md                 # Technical implementation details
 ├── UPGRADE-GUIDE.md            # Manual upgrade instructions
@@ -170,6 +203,10 @@ DTMC/
 - **Values Not Restoring**: Check that tokens have original values stored
 - **Zoom Issues**: Use reset zoom button or Ctrl+0 shortcut
 - **Mini-map Not Showing**: Press Ctrl+M or click toggle button
+- **Text Not Wrapping**: Check console for text wrapping debug messages
+- **Color Picker Issues**: Verify browser console for color conversion errors
+- **Drag & Drop Not Working**: Ensure you're dragging from the correct area (handle vs content)
+- **Bubble Jumping**: Should be fixed in v4.3, check console for rendering errors
 
 ### **Browser Compatibility**
 - **Modern Browsers**: Chrome, Firefox, Safari, Edge (latest versions)
@@ -243,8 +280,12 @@ This is an open-source project designed for design system professionals. Feel fr
 ### **New JavaScript Functions**
 - **`renameToken(token, layer)`**: Handles token renaming with validation
 - **`deleteToken(token, layer)`**: Handles token deletion with cleanup
+- **`wrapText(ctx, text, maxWidth, padding)`**: Smart text wrapping with word breaking
+- **`reorderTokens(draggedToken, targetTokenName, layer)`**: Handles token reordering in sidebar
+- **`updateColorPickerFromHex(hex, updateInputs)`**: Enhanced color picker with proper HSL conversion
+- **`hslToHex(h, s, l)`**: Fixed HSL to hex conversion with proper hue ranges
 - **Collapse/Expand Logic**: Toggle functionality for panel visibility
-- **Enhanced Event Handling**: Improved drag preview initialization
+- **Enhanced Event Handling**: Improved drag preview initialization and hover detection
 
 ### **State Management Updates**
 - **Token Validation**: Prevents duplicate names within layers
@@ -253,4 +294,4 @@ This is an open-source project designed for design system professionals. Feel fr
 
 ---
 
-**DTMC v4.2** - Enhanced Design Tokens Map Creator with Advanced Sidebar Management & Token Controls
+**DTMC v4.3** - Enhanced Design Tokens Map Creator with Smart Drag & Drop, Text Wrapping & Hover Labels
