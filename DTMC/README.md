@@ -2,7 +2,7 @@
 
 A powerful, interactive web-based tool for creating, managing, and visualizing design token systems with hierarchical relationships and visual connections.
 
-## ✨ **Latest Features (v4.3)**
+## ✨ **Latest Features (v4.4)**
 
 ### **🎯 Drag & Drop Improvements**
 - **Smart Reordering**: Drag tokens by their handle (six-dot icon) to reorder within the sidebar
@@ -35,8 +35,17 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Canvas Position**: Saves pan offset and zoom level for exact restoration
 - **Group Preservation**: All bubble groups are saved and restored with their relationships
 - **UI State**: Remembers selected layer and token type for seamless workflow
+- **Selection State**: Preserves selected nodes for continued work
 - **Metadata Tracking**: Export includes version, date, and statistics
 - **Backward Compatibility**: Can load older JSON files without groups or UI state
+
+### **🎯 Advanced Bubble Selection System**
+- **Single Selection**: Click any bubble to select it with 2px blue border
+- **Multi-Selection**: Hold Ctrl/Cmd and click multiple bubbles to select them
+- **Rectangle Selection**: Hold Alt and drag to draw a rectangular selection area around multiple bubbles
+- **Visual Feedback**: Selected bubbles show clear 2px blue borders
+- **Smart Deselection**: Click on empty canvas or other bubbles to deselect
+- **Selection Persistence**: Selected bubbles are saved and restored in JSON exports
 
 ### **🎛️ Enhanced Sidebar Management**
 - **Collapsible Panels**: Expand/collapse token type panels (Primitive, Base, Semantic, Specific)
@@ -148,10 +157,19 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Hover Connection Labels**: Hover over connection wires to see relationship labels
 - **Text Wrapping**: Long token names and values automatically wrap within bubbles
 
+### **Bubble Selection**
+- **Single Selection**: Click any bubble to select it (2px blue border)
+- **Multi-Selection**: Hold Ctrl/Cmd and click multiple bubbles
+- **Rectangle Selection**: Hold Alt and drag to draw rectangular selection area around bubbles
+- **Deselect**: Click on empty canvas or other bubbles
+- **Visual Feedback**: Selected bubbles show clear blue borders
+
 ### **Keyboard Shortcuts**
 - **Ctrl+0**: Reset zoom to 100%
 - **Ctrl+M**: Toggle mini-map
 - **Delete/Backspace**: Delete selected connection (when connection is selected)
+- **Ctrl+Click**: Multi-select bubbles
+- **Alt+Drag**: Rectangle selection around bubbles
 
 ## 🔧 **Technical Architecture**
 
@@ -183,7 +201,7 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 
 ```
 DTMC/
-├── test-canvas-enhanced.html    # Main application file (v4.3)
+├── test-canvas-enhanced.html    # Main application file (v4.4)
 ├── dtmc-styles.css             # Enhanced styling with text wrapping support
 ├── README.md                    # This documentation
 ├── TECHNICAL.md                 # Technical implementation details
@@ -219,6 +237,9 @@ DTMC/
 - **Groups Not Loading**: Check that JSON file contains groups array and node references are valid
 - **Canvas Position Not Restored**: Verify JSON contains panOffset and zoomLevel properties
 - **Export Issues**: Check browser console for export errors and ensure all data is valid
+- **Selection Not Working**: Ensure you're clicking on the bubble content area, not the border
+- **Rectangle Selection Issues**: Make sure to hold Alt key while dragging to create the selection rectangle
+- **Multi-Selection Problems**: Verify Ctrl/Cmd key is held while clicking multiple bubbles
 
 ### **Browser Compatibility**
 - **Modern Browsers**: Chrome, Firefox, Safari, Edge (latest versions)
@@ -244,6 +265,7 @@ DTMC/
   "zoomLevel": 1.0,
   "selectedLayer": "primitive",
   "selectedTokenType": "color",
+  "selectedNodes": [1234567890, 1234567891],
   "metadata": {
     "version": "4.3",
     "exportDate": "2024-01-01T00:00:00.000Z",
@@ -319,4 +341,4 @@ This is an open-source project designed for design system professionals. Feel fr
 
 ---
 
-**DTMC v4.3** - Enhanced Design Tokens Map Creator with Smart Drag & Drop, Text Wrapping & Hover Labels
+**DTMC v4.4** - Enhanced Design Tokens Map Creator with Advanced Bubble Selection & Lasso Tools

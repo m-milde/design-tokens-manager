@@ -2180,6 +2180,22 @@
                 return;
             }
             
+            // Start lasso selection if Alt key is held and clicking on empty space
+            if (e.altKey && e.button === 0) {
+                isLassoSelecting = true;
+                lassoStartPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                lassoCurrentPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                lassoPath = [{ x: e.clientX - rect.left, y: e.clientY - rect.top }]; // Keep for compatibility
+                
+                // Clear current selection
+                selectedNode = null;
+                selectedConnection = null;
+                selectedNodes = [];
+                
+                console.log('🎯 Started rectangle lasso selection');
+                return;
+            }
+            
             // Deselect if clicking on empty space
             if (selectedNode || selectedConnection || selectedNodes.length > 0) {
                 selectedNode = null;
@@ -2279,6 +2295,14 @@
                 return;
             }
             
+            // Handle lasso selection
+            if (isLassoSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                lassoCurrentPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                render();
+                return;
+            }
+            
             if (isPanning) {
                 const deltaX = e.clientX - lastMousePos.x;
                 const deltaY = e.clientY - lastMousePos.y;
@@ -2353,6 +2377,21 @@
                 isConnecting = false;
                 connectionStart = null;
                 startSocket = null;
+                render();
+                return;
+            }
+            
+            // Complete lasso selection
+            if (isLassoSelecting) {
+                // Select nodes within the rectangle
+                selectNodesInLasso();
+                
+                // Reset lasso selection
+                isLassoSelecting = false;
+                lassoPath = [];
+                lassoStartPoint = { x: 0, y: 0 };
+                lassoCurrentPoint = { x: 0, y: 0 };
+                
                 render();
                 return;
             }
@@ -3239,6 +3278,11 @@
             
             ctx.restore();
             
+            // Draw lasso selection (on top of everything)
+            if (isLassoSelecting) {
+                drawLassoSelection();
+            }
+            
             // Update mini-map if visible
             const minimap = document.querySelector('.dtmc-minimap');
             if (minimap && !minimap.classList.contains('hidden')) {
@@ -3339,9 +3383,109 @@
             drawSockets(node);
         }
         
+        // Draw lasso selection (rectangle)
+        function drawLassoSelection() {
+            if (!isLassoSelecting || lassoPath.length < 1) return;
+            
+            ctx.save();
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.1)'; // Light blue fill
+            
+            // Calculate rectangle dimensions
+            const startX = lassoStartPoint.x;
+            const startY = lassoStartPoint.y;
+            const endX = lassoCurrentPoint.x;
+            const endY = lassoCurrentPoint.y;
+            
+            const rectX = Math.min(startX, endX);
+            const rectY = Math.min(startY, endY);
+            const rectWidth = Math.abs(endX - startX);
+            const rectHeight = Math.abs(endY - startY);
+            
+            // Draw filled rectangle
+            ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+            
+            // Draw rectangle outline
+            ctx.beginPath();
+            ctx.rect(rectX, rectY, rectWidth, rectHeight);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+        
+        // Check if a point is inside the lasso rectangle
+        function isPointInLasso(x, y) {
+            if (!isLassoSelecting || lassoPath.length < 1) return false;
+            
+            // Calculate rectangle bounds
+            const startX = lassoStartPoint.x;
+            const startY = lassoStartPoint.y;
+            const endX = lassoCurrentPoint.x;
+            const endY = lassoCurrentPoint.y;
+            
+            const rectX = Math.min(startX, endX);
+            const rectY = Math.min(startY, endY);
+            const rectWidth = Math.abs(endX - startX);
+            const rectHeight = Math.abs(endY - startY);
+            
+            // Convert canvas coordinates to world coordinates
+            const worldX = (x - panOffset.x) / zoomLevel;
+            const worldY = (y - panOffset.y) / zoomLevel;
+            
+            // Check if point is inside rectangle
+            return worldX >= rectX && worldX <= rectX + rectWidth && 
+                   worldY >= rectY && worldY <= rectY + rectHeight;
+        }
+        
+        // Select nodes within lasso rectangle
+        function selectNodesInLasso() {
+            const nodesInLasso = [];
+            
+            // Calculate rectangle bounds in world coordinates
+            const startX = (lassoStartPoint.x - panOffset.x) / zoomLevel;
+            const startY = (lassoStartPoint.y - panOffset.y) / zoomLevel;
+            const endX = (lassoCurrentPoint.x - panOffset.x) / zoomLevel;
+            const endY = (lassoCurrentPoint.y - panOffset.y) / zoomLevel;
+            
+            const rectX = Math.min(startX, endX);
+            const rectY = Math.min(startY, endY);
+            const rectWidth = Math.abs(endX - startX);
+            const rectHeight = Math.abs(endY - startY);
+            
+            nodes.forEach(node => {
+                // Check if node is within the rectangle bounds
+                const nodeLeft = node.x;
+                const nodeRight = node.x + NODE_WIDTH;
+                const nodeTop = node.y;
+                const nodeBottom = node.y + NODE_HEIGHT;
+                
+                // Check for overlap between node and selection rectangle
+                if (nodeLeft < rectX + rectWidth && 
+                    nodeRight > rectX && 
+                    nodeTop < rectY + rectHeight && 
+                    nodeBottom > rectY) {
+                    nodesInLasso.push(node);
+                }
+            });
+            
+            if (nodesInLasso.length > 0) {
+                selectedNodes = nodesInLasso;
+                selectedNode = nodesInLasso[0]; // Set primary selection
+                console.log(`🎯 Rectangle lasso selected ${nodesInLasso.length} nodes`);
+            }
+        }
+        
         function drawGradientBorder(node) {
+            // Check if node is selected (single or multi-selection)
+            const isSelected = selectedNode && selectedNode.id === node.id;
+            const isMultiSelected = selectedNodes.some(n => n.id === node.id);
+            
             // Get CSS variables for border styling
-            const borderWidth = parseCSSValue(getCSSVariable('--dtmc-bubble-border-width'));
+            const baseBorderWidth = parseCSSValue(getCSSVariable('--dtmc-bubble-border-width'));
+            const borderWidth = isSelected || isMultiSelected ? 2 : baseBorderWidth; // Use 2px for selected, CSS value for unselected
             const borderRadius = parseCSSValue(getCSSVariable('--dtmc-bubble-border-radius'));
             const borderEndColor = getCSSVariable('--dtmc-bubble-border-end-color');
             
@@ -3373,22 +3517,25 @@
             // Create gradient outline by drawing the border as a stroke
             ctx.lineWidth = borderWidth;
             
-            // Create gradient for the border
-            const gradient = ctx.createLinearGradient(
-                node.x, node.y, 
-                node.x, node.y + NODE_HEIGHT / 2
-            );
-            gradient.addColorStop(0, startColor);
-            gradient.addColorStop(1, endColor);
-            
-            // Draw the border with gradient
-            ctx.strokeStyle = gradient;
+            // Use blue color for selected nodes, gradient for unselected
+            if (isSelected || isMultiSelected) {
+                ctx.strokeStyle = '#3b82f6'; // Blue for selected nodes
+            } else {
+                // Create gradient for the border
+                const gradient = ctx.createLinearGradient(
+                    node.x, node.y, 
+                    node.x, node.y + NODE_HEIGHT / 2
+                );
+                gradient.addColorStop(0, startColor);
+                gradient.addColorStop(1, endColor);
+                ctx.strokeStyle = gradient;
+            }
             ctx.beginPath();
             ctx.roundRect(node.x + borderWidth/2, node.y + borderWidth/2, NODE_WIDTH - borderWidth, NODE_HEIGHT - borderWidth, borderRadius);
             ctx.stroke();
             
             // Draw the bottom half with solid color
-            ctx.strokeStyle = borderEndColor;
+            ctx.strokeStyle = isSelected || isMultiSelected ? '#3b82f6' : borderEndColor;
             ctx.beginPath();
             ctx.moveTo(node.x + borderWidth/2, node.y + NODE_HEIGHT / 2);
             ctx.lineTo(node.x + NODE_WIDTH - borderWidth/2, node.y + NODE_HEIGHT / 2);
@@ -3696,6 +3843,7 @@
                 zoomLevel: zoomLevel,
                 selectedLayer: selectedLayer,
                 selectedTokenType: selectedTokenType,
+                selectedNodes: selectedNodes.map(node => node.id), // Export selected node IDs
                 metadata: {
                     version: '4.3',
                     exportDate: new Date().toISOString(),
@@ -4513,10 +4661,19 @@
                     selectedTokenType = jsonData.selectedTokenType;
                 }
                 
-                // Clear selections
-                selectedNode = null;
+                // Restore selected nodes
+                if (jsonData.selectedNodes && Array.isArray(jsonData.selectedNodes)) {
+                    selectedNodes = jsonData.selectedNodes.map(nodeId => 
+                        nodes.find(node => node.id === nodeId)
+                    ).filter(node => node !== undefined);
+                    selectedNode = selectedNodes.length > 0 ? selectedNodes[0] : null;
+                } else {
+                    selectedNodes = [];
+                    selectedNode = null;
+                }
+                
+                // Clear other selections
                 selectedConnection = null;
-                selectedNodes = [];
                 hoveredConnection = null;
                 
                 // Update UI
