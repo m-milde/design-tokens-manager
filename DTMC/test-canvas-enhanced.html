@@ -19,8 +19,13 @@
 </head>
 <body>
     <div class="dtmc-container">
-        <div class="dtmc-sidebar">
-            <h2>Design Tokens</h2>
+        <div class="dtmc-sidebar" id="dtmc-sidebar">
+            <div class="dtmc-sidebar-header">
+                <h2>Design Tokens</h2>
+                <button class="dtmc-sidebar-collapse-btn" id="dtmc-sidebar-collapse-btn" title="Collapse sidebar">
+                    <span class="material-icons">chevron_left</span>
+                </button>
+            </div>
             
             <div class="dtmc-token-types">
                 <button class="dtmc-type-btn active" data-type="color">Color</button>
@@ -88,6 +93,11 @@
             </div>
         </div>
 
+        <!-- Sidebar Expand Button (visible when sidebar is collapsed) -->
+        <button class="dtmc-sidebar-expand-btn" id="dtmc-sidebar-expand-btn" title="Expand sidebar" style="display: none;">
+            <span class="material-icons">chevron_right</span>
+        </button>
+
         <!-- Main Canvas Area -->
         <div class="dtmc-main">
                     <div class="dtmc-controls">
@@ -96,6 +106,10 @@
             <button id="dtmc-export-btn" class="dtmc-btn secondary" title="Export JSON">Export JSON</button>
             <button id="dtmc-save-btn" class="dtmc-btn secondary" title="Save setup">Save Session</button>
             <button id="dtmc-load-btn" class="dtmc-btn secondary" title="Load setup">Load Session</button>
+            
+            <!-- File input for loading JSON -->
+            <input type="file" id="dtmc-load-json-input" accept=".json" style="display: none;">
+            <button id="dtmc-load-json-btn" class="dtmc-btn secondary" title="Load JSON file"><span class="material-icons" style="font-size: 18px; display: inline-block; vertical-align: middle;">file_open</span></button>
 
         </div>
             <canvas id="dtmc-canvas"></canvas>
@@ -173,8 +187,8 @@
             
             <!-- Show Mini-map Button (appears when mini-map is hidden) -->
             <button id="dtmc-minimap-show-btn" class="dtmc-minimap-show-btn" style="display: none;">
-                <span class="dtmc-minimap-show-icon">🗺️</span>
-                <span class="dtmc-minimap-show-text">Show Map</span>
+                <span class="material-icons dtmc-minimap-show-icon">map</span>
+                <!-- <span class="dtmc-minimap-show-text">Show Map</span> -->
             </button>
         </div>
     </div>
@@ -513,6 +527,14 @@
             document.getElementById('dtmc-save-btn').addEventListener('click', showSaveModal);
             document.getElementById('dtmc-load-btn').addEventListener('click', showLoadModal);
             
+            // Load JSON file button
+            document.getElementById('dtmc-load-json-btn').addEventListener('click', () => {
+                document.getElementById('dtmc-load-json-input').click();
+            });
+            
+            // File input change event
+            document.getElementById('dtmc-load-json-input').addEventListener('change', handleJSONFileLoad);
+            
             // Mini-map controls
             document.getElementById('dtmc-minimap-toggle').addEventListener('click', toggleMiniMap);
             
@@ -711,14 +733,30 @@
                     }
                 });
             });
+
+            // Sidebar collapse/expand functionality
+            const sidebar = document.getElementById('dtmc-sidebar');
+            const sidebarCollapseBtn = document.getElementById('dtmc-sidebar-collapse-btn');
+            const sidebarExpandBtn = document.getElementById('dtmc-sidebar-expand-btn');
+            const mainContent = document.querySelector('.dtmc-main');
+
+            sidebarCollapseBtn.addEventListener('click', () => {
+                sidebar.classList.add('collapsed');
+                sidebarExpandBtn.style.display = 'flex';
+                mainContent.classList.add('sidebar-collapsed');
+            });
+
+            sidebarExpandBtn.addEventListener('click', () => {
+                sidebar.classList.remove('collapsed');
+                sidebarExpandBtn.style.display = 'none';
+                mainContent.classList.remove('sidebar-collapsed');
+            });
         }
 
         // Load sample tokens
         function loadSampleTokens() {
             tokens.primitive = [
-                { name: 'primary-blue', value: '#4a90e2', type: 'color' },
-                { name: 'secondary-purple', value: '#805ad5', type: 'color' },
-                { name: 'font-size-base', value: '16px', type: 'number' }
+                { name: 'primary-blue', value: '#4a90e2', type: 'color' }
             ];
             
             tokens.base = [
@@ -729,7 +767,9 @@
                 { name: 'button-bg', value: '{base.color-brand}', type: 'color' }
             ];
             
-            tokens.specific = [];
+            tokens.specific = [
+                { name: 'button-primary', value: '{semantic.button-bg}', type: 'color' }
+            ];
             
             renderSidebar();
         }
@@ -808,7 +848,13 @@
                 <div class="dtmc-token-content">
                     <div class="dtmc-token-info">
                         <div class="dtmc-token-name">${token.name}</div>
-                        <div class="dtmc-token-value">${token.value}</div>
+                        <div class="dtmc-token-value">
+                            ${layer === 'primitive' && token.type === 'color' && !token.value.startsWith('{') && !token.value.startsWith('$') ? 
+                                `<span class="dtmc-color-preview" style="background-color: ${token.value}"></span>` : 
+                                ''
+                            }
+                            ${token.value}
+                        </div>
                     </div>
                     <div class="dtmc-token-actions">
                         <button class="dtmc-token-action-btn dtmc-rename-btn" title="Rename token">
@@ -2443,13 +2489,15 @@
                     
                     // Draw group boundary with different styling when dragging
                     if (isBeingDragged) {
-                        ctx.strokeStyle = '#f59e0b'; // Orange border when dragging
-                        ctx.lineWidth = 3;
-                        ctx.setLineDash([8, 4]); // Different dash pattern when dragging
+                        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-border-dragging').trim();
+                        ctx.lineWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-line-width-dragging'));
+                        const dashDragging = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-dash-dragging'));
+                        ctx.setLineDash([dashDragging, dashDragging / 2]); // Different dash pattern when dragging
                     } else {
-                        ctx.strokeStyle = '#3b82f6'; // Blue border
-                        ctx.lineWidth = 2;
-                        ctx.setLineDash([5, 5]); // Normal dashed line
+                        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-border-normal').trim();
+                        ctx.lineWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-line-width-normal'));
+                        const dashNormal = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-dash-normal'));
+                        ctx.setLineDash([dashNormal, dashNormal]); // Normal dashed line
                     }
                     
                     ctx.beginPath();
@@ -2462,38 +2510,38 @@
                     // Draw group header (dark grey bar overlapping the top)
                     const headerBounds = group.bounds.headerBounds;
                     if (headerBounds) {
-                        // Header background
-                        ctx.fillStyle = '#374151'; // Dark grey
-                        ctx.beginPath();
-                        ctx.roundRect(headerBounds.x, headerBounds.y, headerBounds.width, headerBounds.height, 8);
-                        ctx.fill();
-                        
-                        // Header border
-                        ctx.strokeStyle = '#4b5563';
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.roundRect(headerBounds.x, headerBounds.y, headerBounds.width, headerBounds.height, 8);
-                        ctx.stroke();
-                        
-                        // Arrow indicator (right-pointing for expanded, down for collapsed)
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = '16px Sora, sans-serif';
-                        ctx.textAlign = 'center';
-                        const arrow = group.isCollapsed ? '▶' : '▼';
-                        ctx.fillText(arrow, headerBounds.x + 20, headerBounds.y + 20);
-                        
-                        // Group name
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = '14px Sora, sans-serif';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(group.name, headerBounds.x + 35, headerBounds.y + 20);
-                        
-                        // Token count
-                        ctx.fillStyle = '#9ca3af';
-                        ctx.font = '12px Sora, sans-serif';
-                        const countText = `(${group.nodes.length})`;
-                        const countWidth = ctx.measureText(countText).width;
-                        ctx.fillText(countText, headerBounds.x + headerBounds.width - countWidth - 10, headerBounds.y + 20);
+                                            // Header background
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-header-bg').trim();
+                    ctx.beginPath();
+                    ctx.roundRect(headerBounds.x, headerBounds.y, headerBounds.width, headerBounds.height, 8);
+                    ctx.fill();
+                    
+                    // Header border
+                    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-border-header').trim();
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.roundRect(headerBounds.x, headerBounds.y, headerBounds.width, headerBounds.height, 8);
+                    ctx.stroke();
+                    
+                    // Arrow indicator (right-pointing for expanded, down for collapsed)
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-header-text').trim();
+                    ctx.font = '16px Sora, sans-serif';
+                    ctx.textAlign = 'center';
+                    const arrow = group.isCollapsed ? '▶' : '▼';
+                    ctx.fillText(arrow, headerBounds.x + 20, headerBounds.y + 20);
+                    
+                    // Group name
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-header-text').trim();
+                    ctx.font = '14px Sora, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(group.name, headerBounds.x + 35, headerBounds.y + 20);
+                    
+                    // Token count
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-header-text-secondary').trim();
+                    ctx.font = '12px Sora, sans-serif';
+                    const countText = `(${group.nodes.length})`;
+                    const countWidth = ctx.measureText(countText).width;
+                    ctx.fillText(countText, headerBounds.x + headerBounds.width - countWidth - 10, headerBounds.y + 20);
                         
                         // Visual indicator for draggable area (subtle background)
                         const draggableAreaX = headerBounds.x + 30;
@@ -2510,22 +2558,22 @@
                         
                         // Rename button
                         const renameX = headerBounds.x + headerBounds.width - 60;
-                        ctx.fillStyle = '#6b7280';
+                        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-button-bg').trim();
                         ctx.beginPath();
                         ctx.roundRect(renameX, buttonY, buttonSize, buttonSize, 4);
                         ctx.fill();
-                        ctx.fillStyle = '#ffffff';
+                        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-button-text').trim();
                         ctx.font = '12px Sora, sans-serif';
                         ctx.textAlign = 'center';
                         ctx.fillText('✏', renameX + buttonSize/2, buttonY + buttonSize/2 + 4);
                         
                         // Ungroup button
                         const ungroupX = renameX - buttonSize - buttonSpacing;
-                        ctx.fillStyle = '#6b7280';
+                        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-button-bg').trim();
                         ctx.beginPath();
                         ctx.roundRect(ungroupX, buttonY, buttonSize, buttonSize, 4);
                         ctx.fill();
-                        ctx.fillStyle = '#ffffff';
+                        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--dtmc-group-button-text').trim();
                         ctx.font = '12px Sora, sans-serif';
                         ctx.textAlign = 'center';
                         ctx.fillText('⊘', ungroupX + buttonSize/2, buttonY + buttonSize/2 + 4);
@@ -2976,11 +3024,42 @@
             ctx.roundRect(containerX, containerY, containerWidth, containerHeight, containerRadius);
             ctx.fill();
             
-            // Draw value text
-            ctx.fillStyle = valueTextColor;
-            ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.fillText(node.value, node.x + NODE_WIDTH / 2, containerY + containerHeight/2 + 4);
+            // Check if this is a primitive color token with a direct hex value (not a reference)
+            const isPrimitiveColor = node.layer === 'primitive' && node.type === 'color';
+            const isDirectColorValue = isPrimitiveColor && !node.value.startsWith('{') && !node.value.startsWith('$');
+            
+            if (isDirectColorValue) {
+                // Draw color preview square
+                const colorSquareSize = 14;
+                const colorSquareX = containerX + 8;
+                const colorSquareY = containerY + (containerHeight - colorSquareSize) / 2;
+                
+                // Draw color square background
+                ctx.fillStyle = node.value;
+                ctx.beginPath();
+                ctx.roundRect(colorSquareX, colorSquareY, colorSquareSize, colorSquareSize, 3);
+                ctx.fill();
+                
+                // Draw color square border
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(colorSquareX, colorSquareY, colorSquareSize, colorSquareSize, 3);
+                ctx.stroke();
+                
+                // Adjust text position to make room for color square
+                const textX = node.x + NODE_WIDTH / 2 + colorSquareSize / 2 + 4;
+                ctx.fillStyle = valueTextColor;
+                ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(node.value, textX, containerY + containerHeight/2 + 4);
+            } else {
+                // Draw value text normally (centered)
+                ctx.fillStyle = valueTextColor;
+                ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(node.value, node.x + NODE_WIDTH / 2, containerY + containerHeight/2 + 4);
+            }
         }
         
         function drawSockets(node) {
@@ -3086,6 +3165,7 @@
             
             // Get CSS variables for connection styling
             const connectionColor = getCSSVariable('--dtmc-connection-color');
+            const connectionSelectedColor = getCSSVariable('--dtmc-connection-selected-color');
             const connectionWidth = parseCSSValue(getCSSVariable('--dtmc-connection-width'));
             const connectionSelectedWidth = parseCSSValue(getCSSVariable('--dtmc-connection-selected-width'));
             
@@ -3098,7 +3178,7 @@
             
             // Draw connections with CSS-controlled styling
             if (isSelected) {
-                ctx.strokeStyle = connectionColor;
+                ctx.strokeStyle = connectionSelectedColor;
                 ctx.lineWidth = connectionSelectedWidth;
             } else {
                 ctx.strokeStyle = connectionColor;
@@ -3782,6 +3862,151 @@
                 console.error('Error loading session:', error);
                 showNotification('Error loading session. The session data might be corrupted.', 'error');
             }
+        }
+        
+        // Handle JSON file loading
+        function handleJSONFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    loadFromJSON(jsonData, file.name);
+                } catch (error) {
+                    console.error('Error parsing JSON file:', error);
+                    showNotification('Error parsing JSON file. Please check the file format.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset file input
+            event.target.value = '';
+        }
+        
+        // Load complete state from JSON data
+        function loadFromJSON(jsonData, fileName) {
+            // Validate JSON structure
+            if (!validateJSONStructure(jsonData)) {
+                showNotification('Invalid JSON structure. Please ensure the file contains tokens, nodes, and connections.', 'error');
+                return;
+            }
+            
+            // Confirm before loading
+            const nodeCount = jsonData.nodes ? jsonData.nodes.length : 0;
+            const connectionCount = jsonData.connections ? jsonData.connections.length : 0;
+            const tokenCount = jsonData.tokens ? Object.values(jsonData.tokens).flat().length : 0;
+            
+            const confirmMessage = `Load JSON file "${fileName}"?\n\nThis will replace your current setup with:\n• ${tokenCount} tokens\n• ${nodeCount} nodes\n• ${connectionCount} connections`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            try {
+                // Clear current state
+                clearAll();
+                
+                // Load tokens
+                if (jsonData.tokens) {
+                    tokens = {
+                        primitive: jsonData.tokens.primitive || [],
+                        base: jsonData.tokens.base || [],
+                        semantic: jsonData.tokens.semantic || [],
+                        specific: jsonData.tokens.specific || []
+                    };
+                }
+                
+                // Load nodes
+                if (jsonData.nodes) {
+                    nodes = jsonData.nodes.map(node => ({
+                        ...node,
+                        // Ensure all required properties exist
+                        id: node.id || Date.now() + Math.random(),
+                        x: node.x || 100,
+                        y: node.y || 100,
+                        name: node.name || 'unnamed',
+                        value: node.value || '',
+                        type: node.type || 'color',
+                        layer: node.layer || 'primitive',
+                        originalValue: node.originalValue || node.value || ''
+                    }));
+                }
+                
+                // Load connections
+                if (jsonData.connections) {
+                    connections = jsonData.connections.map(connection => {
+                        // Find the actual node objects
+                        const startNode = nodes.find(node => node.id === connection.startNode?.id || node.name === connection.startNode?.name);
+                        const endNode = nodes.find(node => node.id === connection.endNode?.id || node.name === connection.endNode?.name);
+                        
+                        if (startNode && endNode) {
+                            return {
+                                ...connection,
+                                startNode: startNode,
+                                endNode: endNode
+                            };
+                        } else {
+                            console.warn('Could not find node references for connection:', connection);
+                            return null;
+                        }
+                    }).filter(conn => conn !== null);
+                }
+                
+                // Load groups if they exist
+                if (jsonData.groups) {
+                    groups = jsonData.groups.map(group => ({
+                        ...group,
+                        // Ensure all required properties exist
+                        id: group.id || Date.now() + Math.random(),
+                        name: group.name || 'Unnamed Group',
+                        nodes: group.nodes || []
+                    }));
+                }
+                
+                // Load canvas state
+                if (jsonData.panOffset) {
+                    panOffset = jsonData.panOffset;
+                }
+                if (jsonData.zoomLevel) {
+                    zoomLevel = jsonData.zoomLevel;
+                }
+                
+                // Clear selections
+                selectedNode = null;
+                selectedConnection = null;
+                selectedNodes = [];
+                
+                // Update UI
+                renderSidebar();
+                updateZoomDisplay();
+                render();
+                
+                // Show success message
+                showNotification(`JSON file "${fileName}" loaded successfully!`, 'success');
+                
+                console.log(`JSON file loaded: ${tokenCount} tokens, ${nodeCount} nodes, ${connectionCount} connections`);
+                
+            } catch (error) {
+                console.error('Error loading JSON file:', error);
+                showNotification('Error loading JSON file. The file might be corrupted.', 'error');
+            }
+        }
+        
+        // Validate JSON structure
+        function validateJSONStructure(jsonData) {
+            if (!jsonData || typeof jsonData !== 'object') {
+                return false;
+            }
+            
+            // Check for required structure
+            const hasTokens = jsonData.tokens && typeof jsonData.tokens === 'object';
+            const hasNodes = jsonData.nodes && Array.isArray(jsonData.nodes);
+            const hasConnections = jsonData.connections && Array.isArray(jsonData.connections);
+            
+            // At least one of these should be present
+            return hasTokens || hasNodes || hasConnections;
         }
         
         // Show notification message

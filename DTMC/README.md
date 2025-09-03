@@ -2,7 +2,20 @@
 
 A powerful, interactive web-based tool for creating, managing, and visualizing design token systems with hierarchical relationships and visual connections.
 
-## ✨ **Latest Features (v4.1)**
+## ✨ **Latest Features (v4.2)**
+
+### **🎛️ Enhanced Sidebar Management**
+- **Collapsible Panels**: Expand/collapse token type panels (Primitive, Base, Semantic, Specific)
+- **Smooth Animations**: Arrow rotation and panel transitions
+- **Space Optimization**: Hide unused panels to focus on active token types
+- **Visual Indicators**: Color-coded layer indicators for easy identification
+
+### **✏️ Token Management System**
+- **Inline Rename**: Edit token names directly from the sidebar
+- **Quick Delete**: Remove tokens with confirmation dialog
+- **Hover Actions**: Rename and delete buttons appear on token hover
+- **Comprehensive Updates**: All related nodes and connections update automatically
+- **Duplicate Prevention**: Validates token names to prevent duplicates
 
 ### **🔍 Advanced Navigation & Zoom**
 - **Canvas Zoom**: Mouse wheel zoom with smooth scaling (50% - 300%)
@@ -75,6 +88,13 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 4. **Fill Details**: Use the appropriate input section for your token type
 5. **Create Token**: Token appears in sidebar and can be dragged to canvas
 
+### **Managing Tokens in Sidebar**
+1. **Collapse Panels**: Click arrow buttons to hide/show token type panels
+2. **Rename Tokens**: Hover over token, click edit icon, enter new name
+3. **Delete Tokens**: Hover over token, click delete icon, confirm deletion
+4. **Visual Feedback**: Action buttons appear on hover with smooth transitions
+5. **Automatic Updates**: All related nodes and connections update automatically
+
 ### **Managing Connections**
 1. **Drag from Output Socket**: Start from green (right/bottom) socket
 2. **Connect to Input Socket**: Drop on red (left/top) socket
@@ -89,6 +109,7 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Delete Connections**: Select connection, press Delete/Backspace
 - **Zoom**: Use mouse wheel or zoom controls
 - **Mini-map**: Click to navigate, Ctrl+M to toggle
+- **Collapse Sidebar**: Use arrow buttons to organize token panels
 
 ### **Keyboard Shortcuts**
 - **Ctrl+0**: Reset zoom to 100%
@@ -194,6 +215,42 @@ This is an open-source project designed for design system professionals. Feel fr
 - **Suggest Improvements**: Propose new features or enhancements
 - **Share Examples**: Show how you're using DTMC in your projects
 
+## 🎨 **CSS Classes & Styling**
+
+### **New Layer-Specific Classes**
+- **`.dtmc-primitive-layers`**: Styling for primitive token layer
+- **`.dtmc-base-layers`**: Styling for base token layer  
+- **`.dtmc-semantic-layers`**: Styling for semantic token layer
+- **`.dtmc-specific-layers`**: Styling for specific token layer
+
+### **Token Management Classes**
+- **`.dtmc-token-content`**: Flexbox container for token info and actions
+- **`.dtmc-token-actions`**: Container for rename/delete buttons
+- **`.dtmc-token-action-btn`**: Base styles for action buttons
+- **`.dtmc-rename-btn`**: Blue hover color for rename button
+- **`.dtmc-delete-btn`**: Red hover color for delete button
+
+### **Collapse/Expand Classes**
+- **`.dtmc-collapse-btn`**: Collapse button styling
+- **`.dtmc-collapse-icon`**: Arrow icon with rotation animation
+- **`.dtmc-tokens-list.collapsed`**: Hidden state for collapsed panels
+
+### **Drag Preview Classes**
+- **`.dtmc-drag-preview`**: Styling for drag preview element
+
+## 🔧 **Technical Implementation**
+
+### **New JavaScript Functions**
+- **`renameToken(token, layer)`**: Handles token renaming with validation
+- **`deleteToken(token, layer)`**: Handles token deletion with cleanup
+- **Collapse/Expand Logic**: Toggle functionality for panel visibility
+- **Enhanced Event Handling**: Improved drag preview initialization
+
+### **State Management Updates**
+- **Token Validation**: Prevents duplicate names within layers
+- **Comprehensive Updates**: Updates nodes, connections, and UI simultaneously
+- **Error Handling**: User-friendly error messages and confirmations
+
 ---
 
-**DTMC v4.1** - Enhanced Design Tokens Map Creator with Advanced Navigation & Zoom Controls
+**DTMC v4.2** - Enhanced Design Tokens Map Creator with Advanced Sidebar Management & Token Controls

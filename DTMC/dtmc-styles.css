@@ -129,9 +129,30 @@
   /* Bubble Background */
   --dtmc-bubble-bg-opacity: 0.5;
   --dtmc-bubble-bg-color: rgba(0, 0, 0, var(--dtmc-bubble-bg-opacity));
-  --dtmc-bubble-blur: 25;
+  --dtmc-bubble-blur: 50;
   --dtmc-bubble-radius: 16px;
   --dtmc-bubble-shadow-color: rgba(0, 0, 0, 0.25);
+
+  /* ===== GROUP STYLES ===== */
+  /* Group Border Colors */
+  --dtmc-group-border-normal: var(--dtmc-neutral-500);
+  --dtmc-group-border-dragging: var(--dtmc-neutral-400);
+  --dtmc-group-border-header: #4b5563;
+  
+  /* Group Background Colors */
+  --dtmc-group-header-bg: #374151;
+  --dtmc-group-header-text: #ffffff;
+  --dtmc-group-header-text-secondary: #9ca3af;
+  
+  /* Group Button Colors */
+  --dtmc-group-button-bg: #6b7280;
+  --dtmc-group-button-text: #ffffff;
+  
+  /* Group Line Styles */
+  --dtmc-group-line-width-normal: 2px;
+  --dtmc-group-line-width-dragging: 3px;
+  --dtmc-group-dash-normal: 5px;
+  --dtmc-group-dash-dragging: 8px;
   
   /* Bubble Border */
   --dtmc-bubble-border-width: 1px;
@@ -167,10 +188,12 @@
   --dtmc-socket-plus-size: 4.5px;
   
   /* Connections */
-  --dtmc-connection-color: #FFFFFF;
+  --dtmc-connection-color: var(--dtmc-neutral-600);
+  --dtmc-connection-selected-color: #3b82f6;
   --dtmc-connection-width: 3px;
   --dtmc-connection-selected-width: 5px;
   --dtmc-connection-preview-color: rgba(255, 255, 255, 0.5);
+  --dtmc-connection-hover-color: #fbbf24;
 }
 
 /* ===== RESET & BASE STYLES ===== */
@@ -206,12 +229,90 @@ body {
   overflow-y: auto;
   padding-inline: 1rem;
   gap: 1rem;
+  transition: transform var(--dtmc-transition-normal);
+  position: relative;
+  z-index: var(--dtmc-z-dropdown);
+}
+
+.dtmc-sidebar.collapsed {
+  transform: translateX(-100%);
 }
 
 .dtmc-sidebar-header {
-  padding: var(--dtmc-spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--dtmc-spacing-lg) 0;
   border-bottom: 1px solid var(--dtmc-neutral-700);
+  margin-bottom: var(--dtmc-spacing-md);
+}
+
+.dtmc-sidebar-header h2 {
+  color: var(--dtmc-neutral-100);
+  font-size: var(--dtmc-font-size-xl);
+  font-weight: var(--dtmc-font-weight-bold);
+  margin: 0;
+}
+
+.dtmc-sidebar-collapse-btn {
+  background: transparent;
+  border: none;
+  color: var(--dtmc-neutral-400);
+  cursor: pointer;
+  padding: var(--dtmc-spacing-xs);
+  border-radius: var(--dtmc-radius-sm);
+  transition: all var(--dtmc-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.dtmc-sidebar-collapse-btn:hover {
+  background: var(--dtmc-neutral-700);
+  color: var(--dtmc-neutral-200);
+}
+
+.dtmc-sidebar-collapse-btn .material-icons {
+  font-size: 20px;
+  transition: transform var(--dtmc-transition-normal);
+}
+
+.dtmc-sidebar.collapsed .dtmc-sidebar-collapse-btn .material-icons {
+  transform: rotate(180deg);
+}
+
+/* Sidebar Expand Button */
+.dtmc-sidebar-expand-btn {
+  position: fixed;
+  top: var(--dtmc-spacing-lg);
+  left: var(--dtmc-spacing-lg);
   background: var(--dtmc-neutral-800);
+  border: 1px solid var(--dtmc-neutral-700);
+  border-radius: var(--dtmc-radius-md);
+  color: var(--dtmc-neutral-400);
+  cursor: pointer;
+  padding: var(--dtmc-spacing-sm);
+  transition: all var(--dtmc-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  z-index: var(--dtmc-z-dropdown);
+  box-shadow: var(--dtmc-shadow-md);
+}
+
+.dtmc-sidebar-expand-btn:hover {
+  background: var(--dtmc-neutral-700);
+  color: var(--dtmc-neutral-200);
+  transform: translateY(-1px);
+  box-shadow: var(--dtmc-shadow-lg);
+}
+
+.dtmc-sidebar-expand-btn .material-icons {
+  font-size: 20px;
 }
 
 .dtmc-sidebar-title {
@@ -451,6 +552,18 @@ body {
   color: var(--dtmc-neutral-400);
   font-size: var(--dtmc-font-size-sm);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  display: flex;
+  align-items: center;
+  gap: var(--dtmc-spacing-xs);
+}
+
+.dtmc-color-preview {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--dtmc-radius-sm);
+  border: 1px solid var(--dtmc-neutral-600);
+  flex-shrink: 0;
+  box-shadow: var(--dtmc-shadow-sm);
 }
 
 .dtmc-token-actions {
@@ -513,6 +626,11 @@ body {
   position: relative;
   background: var(--dtmc-neutral-900);
   overflow: hidden;
+  transition: margin-left var(--dtmc-transition-normal);
+}
+
+.dtmc-main.sidebar-collapsed {
+  margin-left: 0;
 }
 
 /* ===== CONTROLS ===== */

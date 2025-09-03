@@ -44,6 +44,190 @@ let selectedLayer = null;          // Current layer
 let undoStack = [];               // Undo history
 ```
 
+## 🎛️ **Enhanced Sidebar Management System (v4.2)**
+
+### **Collapsible Panel System**
+```javascript
+// Collapse/expand functionality
+document.querySelectorAll('.dtmc-collapse-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const layer = btn.dataset.layer;
+        const tokensList = document.getElementById(`${layer}-tokens`);
+        const isCollapsed = tokensList.classList.contains('collapsed');
+        
+        if (isCollapsed) {
+            // Expand
+            tokensList.classList.remove('collapsed');
+            btn.classList.remove('collapsed');
+        } else {
+            // Collapse
+            tokensList.classList.add('collapsed');
+            btn.classList.add('collapsed');
+        }
+    });
+});
+```
+
+### **Token Management Functions**
+```javascript
+// Rename token with validation
+function renameToken(token, layer) {
+    const newName = prompt(`Rename token "${token.name}":`, token.name);
+    
+    if (newName && newName.trim() && newName !== token.name) {
+        const trimmedName = newName.trim();
+        
+        // Check for duplicates
+        const existingToken = tokens[layer].find(t => t.name === trimmedName);
+        if (existingToken) {
+            alert(`Token name "${trimmedName}" already exists in the ${layer} layer.`);
+            return;
+        }
+        
+        // Update all references
+        const oldName = token.name;
+        token.name = trimmedName;
+        
+        // Update nodes and connections
+        updateTokenReferences(oldName, trimmedName, layer);
+        
+        // Re-render
+        saveState();
+        renderSidebar();
+        render();
+    }
+}
+
+// Delete token with cleanup
+function deleteToken(token, layer) {
+    const confirmDelete = confirm(`Are you sure you want to delete the token "${token.name}"?`);
+    
+    if (confirmDelete) {
+        // Remove from tokens array
+        tokens[layer] = tokens[layer].filter(t => t.name !== token.name);
+        
+        // Remove related nodes and connections
+        cleanupTokenReferences(token, layer);
+        
+        // Re-render
+        saveState();
+        renderSidebar();
+        render();
+    }
+}
+```
+
+### **Enhanced Token Element Structure**
+```javascript
+function createTokenElement(token, layer) {
+    const div = document.createElement('div');
+    div.className = 'dtmc-token-item';
+    div.draggable = true;
+    
+    div.innerHTML = `
+        <div class="dtmc-token-content">
+            <div class="dtmc-token-info">
+                <div class="dtmc-token-name">${token.name}</div>
+                <div class="dtmc-token-value">${token.value}</div>
+            </div>
+            <div class="dtmc-token-actions">
+                <button class="dtmc-token-action-btn dtmc-rename-btn" title="Rename token">
+                    <span class="material-icons">edit</span>
+                </button>
+                <button class="dtmc-token-action-btn dtmc-delete-btn" title="Delete token">
+                    <span class="material-icons">delete</span>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners for actions
+    setupTokenActionListeners(div, token, layer);
+    
+    return div;
+}
+```
+
+### **CSS Architecture for New Features**
+```css
+/* Collapsible Panel System */
+.dtmc-layer-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--dtmc-spacing-sm);
+}
+
+.dtmc-collapse-btn {
+  background: transparent;
+  border: none;
+  color: var(--dtmc-neutral-400);
+  cursor: pointer;
+  padding: var(--dtmc-spacing-xs);
+  border-radius: var(--dtmc-radius-sm);
+  transition: all var(--dtmc-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.dtmc-collapse-icon {
+  font-size: 18px;
+  transition: transform var(--dtmc-transition-normal);
+}
+
+.dtmc-collapse-btn.collapsed .dtmc-collapse-icon {
+  transform: rotate(-90deg);
+}
+
+.dtmc-tokens-list.collapsed {
+  display: none;
+}
+
+/* Token Management System */
+.dtmc-token-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--dtmc-spacing-sm);
+}
+
+.dtmc-token-actions {
+  display: flex;
+  gap: var(--dtmc-spacing-xs);
+  opacity: 0;
+  transition: opacity var(--dtmc-transition-normal);
+}
+
+.dtmc-token-item:hover .dtmc-token-actions {
+  opacity: 1;
+}
+
+.dtmc-token-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--dtmc-neutral-400);
+  cursor: pointer;
+  padding: var(--dtmc-spacing-xs);
+  border-radius: var(--dtmc-radius-sm);
+  transition: all var(--dtmc-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.dtmc-rename-btn:hover {
+  color: var(--dtmc-primary-400);
+}
+
+.dtmc-delete-btn:hover {
+  color: var(--dtmc-danger-400);
+}
+```
+
 ## 🎯 **Connection Node Management System**
 
 ### **Connection Selection & Deletion**
