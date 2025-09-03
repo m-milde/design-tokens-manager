@@ -2565,7 +2565,21 @@
         function getConnectionAtPoint(x, y) {
             const CLICK_TOLERANCE = 8; // How close to the line you need to click
             
+            // First check individual connections
             for (const connection of connections) {
+                const startGroup = groups.find(g => g.id === connection.startNode.groupId);
+                const endGroup = groups.find(g => g.id === connection.endNode.groupId);
+                
+                // Skip connections within the same collapsed group
+                if (startGroup && endGroup && startGroup.id === endGroup.id && startGroup.isCollapsed) {
+                    continue;
+                }
+                
+                // Skip if either node is in a collapsed group (will be handled by consolidated connections)
+                if ((startGroup && startGroup.isCollapsed) || (endGroup && endGroup.isCollapsed)) {
+                    continue;
+                }
+                
                 const startPoint = getSocketPosition(connection.startNode, connection.startSocket);
                 const endPoint = getSocketPosition(connection.endNode, connection.endSocket);
                 
@@ -2576,6 +2590,100 @@
                     return connection;
                 }
             }
+            
+            // Then check consolidated connections
+            return getConsolidatedConnectionAtPoint(x, y);
+        }
+        
+        // Check for clicks on consolidated connections
+        function getConsolidatedConnectionAtPoint(x, y) {
+            const CLICK_TOLERANCE = 8;
+            
+            // Group connections by their source and target (considering collapsed groups)
+            const connectionGroups = new Map();
+            
+            connections.forEach((connection) => {
+                const startGroup = groups.find(g => g.id === connection.startNode.groupId);
+                const endGroup = groups.find(g => g.id === connection.endNode.groupId);
+                
+                // Skip connections within the same collapsed group
+                if (startGroup && endGroup && startGroup.id === endGroup.id && startGroup.isCollapsed) {
+                    return;
+                }
+                
+                // Only consider connections involving collapsed groups
+                if (!((startGroup && startGroup.isCollapsed) || (endGroup && endGroup.isCollapsed))) {
+                    return;
+                }
+                
+                // Determine source and target identifiers
+                let sourceId, targetId;
+                
+                if (startGroup && startGroup.isCollapsed) {
+                    sourceId = `group_${startGroup.id}`;
+                } else {
+                    sourceId = `node_${connection.startNode.id}`;
+                }
+                
+                if (endGroup && endGroup.isCollapsed) {
+                    targetId = `group_${endGroup.id}`;
+                } else {
+                    targetId = `node_${connection.endNode.id}`;
+                }
+                
+                const connectionKey = `${sourceId}_${targetId}`;
+                
+                if (!connectionGroups.has(connectionKey)) {
+                    connectionGroups.set(connectionKey, {
+                        connections: [],
+                        sourceGroup: startGroup,
+                        targetGroup: endGroup,
+                        sourceNode: connection.startNode,
+                        targetNode: connection.endNode,
+                        startSocket: connection.startSocket,
+                        endSocket: connection.endSocket
+                    });
+                }
+                
+                connectionGroups.get(connectionKey).connections.push(connection);
+            });
+            
+            // Check each consolidated connection
+            for (const [key, group] of connectionGroups) {
+                if (group.connections.length > 1) {
+                    // Calculate consolidated connection path
+                    const { sourceGroup, targetGroup, sourceNode, targetNode, startSocket, endSocket } = group;
+                    
+                    let startPoint, endPoint;
+                    
+                    if (sourceGroup && sourceGroup.isCollapsed) {
+                        startPoint = {
+                            x: sourceGroup.bounds.x + sourceGroup.bounds.width / 2,
+                            y: sourceGroup.bounds.y + sourceGroup.bounds.height / 2
+                        };
+                    } else {
+                        startPoint = getSocketPosition(sourceNode, startSocket);
+                    }
+                    
+                    if (targetGroup && targetGroup.isCollapsed) {
+                        endPoint = {
+                            x: targetGroup.bounds.x + targetGroup.bounds.width / 2,
+                            y: targetGroup.bounds.y + targetGroup.bounds.height / 2
+                        };
+                    } else {
+                        endPoint = getSocketPosition(targetNode, endSocket);
+                    }
+                    
+                    // Calculate distance from point to curved line (approximate with straight line for simplicity)
+                    const distance = distanceToLineSegment(x, y, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+                    
+                    if (distance <= CLICK_TOLERANCE) {
+                        // Return the first connection as a representative
+                        return group.connections[0];
+                    }
+                }
+            }
+            
             return null;
         }
 
@@ -3247,22 +3355,9 @@
             // Draw groups first (behind everything)
             drawGroups();
             
-            // Draw connections (hide connections when groups are collapsed)
+            // Draw connections (consolidate when groups are collapsed)
             console.log(`Rendering ${connections.length} connections`);
-            connections.forEach((connection, index) => {
-                // Check if both nodes are in the same collapsed group
-                const startGroup = groups.find(g => g.id === connection.startNode.groupId);
-                const endGroup = groups.find(g => g.id === connection.endNode.groupId);
-                
-                // Don't draw connections if both nodes are in the same collapsed group
-                if (startGroup && endGroup && startGroup.id === endGroup.id && startGroup.isCollapsed) {
-                    console.log(`Skipping connection ${index + 1} (both nodes in collapsed group): ${connection.startNode.name} → ${connection.endNode.name}`);
-                    return;
-                }
-                
-                console.log(`Drawing connection ${index + 1}: ${connection.startNode.name} → ${connection.endNode.name}`);
-                drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
-            });
+            drawConnectionsWithGroupConsolidation();
             
             // Draw nodes on top (always draw them, but handle grouped nodes differently)
             nodes.forEach(node => {
@@ -3788,6 +3883,166 @@
                 hoveredConnection.endNode.id === endNode.id) {
                 drawConnectionLabel(startPoint, endPoint, startNode, endNode);
             }
+        }
+
+        // Draw connections with group consolidation
+        function drawConnectionsWithGroupConsolidation() {
+            // Group connections by their source and target (considering collapsed groups)
+            const connectionGroups = new Map();
+            
+            connections.forEach((connection, index) => {
+                const startGroup = groups.find(g => g.id === connection.startNode.groupId);
+                const endGroup = groups.find(g => g.id === connection.endNode.groupId);
+                
+                // Skip connections within the same collapsed group
+                if (startGroup && endGroup && startGroup.id === endGroup.id && startGroup.isCollapsed) {
+                    console.log(`Skipping connection ${index + 1} (both nodes in collapsed group): ${connection.startNode.name} → ${connection.endNode.name}`);
+                    return;
+                }
+                
+                // Determine source and target identifiers
+                let sourceId, targetId;
+                
+                if (startGroup && startGroup.isCollapsed) {
+                    sourceId = `group_${startGroup.id}`;
+                } else {
+                    sourceId = `node_${connection.startNode.id}`;
+                }
+                
+                if (endGroup && endGroup.isCollapsed) {
+                    targetId = `group_${endGroup.id}`;
+                } else {
+                    targetId = `node_${connection.endNode.id}`;
+                }
+                
+                const connectionKey = `${sourceId}_${targetId}`;
+                
+                if (!connectionGroups.has(connectionKey)) {
+                    connectionGroups.set(connectionKey, {
+                        connections: [],
+                        sourceGroup: startGroup,
+                        targetGroup: endGroup,
+                        sourceNode: connection.startNode,
+                        targetNode: connection.endNode,
+                        startSocket: connection.startSocket,
+                        endSocket: connection.endSocket
+                    });
+                }
+                
+                connectionGroups.get(connectionKey).connections.push(connection);
+            });
+            
+            // Draw consolidated connections
+            connectionGroups.forEach((group, key) => {
+                if (group.connections.length === 1) {
+                    // Single connection - draw normally
+                    const connection = group.connections[0];
+                    console.log(`Drawing single connection: ${connection.startNode.name} → ${connection.endNode.name}`);
+                    drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
+                } else {
+                    // Multiple connections - draw consolidated
+                    console.log(`Drawing consolidated connection: ${group.connections.length} connections from ${group.sourceNode.name} to ${group.targetNode.name}`);
+                    drawConsolidatedConnection(group);
+                }
+            });
+        }
+        
+        // Draw a consolidated connection representing multiple connections
+        function drawConsolidatedConnection(connectionGroup) {
+            const { sourceGroup, targetGroup, sourceNode, targetNode, startSocket, endSocket, connections } = connectionGroup;
+            
+            // Determine start and end points
+            let startPoint, endPoint;
+            
+            if (sourceGroup && sourceGroup.isCollapsed) {
+                // Start from group center
+                startPoint = {
+                    x: sourceGroup.bounds.x + sourceGroup.bounds.width / 2,
+                    y: sourceGroup.bounds.y + sourceGroup.bounds.height / 2
+                };
+            } else {
+                startPoint = getSocketPosition(sourceNode, startSocket);
+            }
+            
+            if (targetGroup && targetGroup.isCollapsed) {
+                // End at group center
+                endPoint = {
+                    x: targetGroup.bounds.x + targetGroup.bounds.width / 2,
+                    y: targetGroup.bounds.y + targetGroup.bounds.height / 2
+                };
+            } else {
+                endPoint = getSocketPosition(targetNode, endSocket);
+            }
+            
+            // Get CSS variables for connection styling
+            const connectionColor = getCSSVariable('--dtmc-connection-color');
+            const connectionWidth = parseCSSValue(getCSSVariable('--dtmc-connection-width'));
+            
+            // Draw consolidated connection with thicker line
+            ctx.strokeStyle = connectionColor;
+            ctx.lineWidth = connectionWidth * 1.5; // Make it slightly thicker
+            
+            // Create curved connection
+            const controlPoint1 = {
+                x: startPoint.x + (endPoint.x - startPoint.x) * 0.5,
+                y: startPoint.y
+            };
+            
+            const controlPoint2 = {
+                x: startPoint.x + (endPoint.x - startPoint.x) * 0.5,
+                y: endPoint.y
+            };
+            
+            ctx.beginPath();
+            ctx.moveTo(startPoint.x, startPoint.y);
+            ctx.bezierCurveTo(
+                controlPoint1.x, controlPoint1.y,
+                controlPoint2.x, controlPoint2.y,
+                endPoint.x, endPoint.y
+            );
+            ctx.stroke();
+            
+            // Draw connection count label
+            drawConsolidatedConnectionLabel(startPoint, endPoint, connections.length);
+        }
+        
+        // Draw label for consolidated connection showing count
+        function drawConsolidatedConnectionLabel(startPoint, endPoint, connectionCount) {
+            // Save the current canvas context state
+            ctx.save();
+            
+            // Calculate label position (middle of the connection)
+            const labelX = (startPoint.x + endPoint.x) / 2;
+            const labelY = (startPoint.y + endPoint.y) / 2;
+            
+            // Create label text
+            const labelText = `${connectionCount} connections`;
+            
+            // Set text style
+            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Draw label background
+            const textMetrics = ctx.measureText(labelText);
+            const padding = 4;
+            const bgWidth = textMetrics.width + padding * 2;
+            const bgHeight = 14;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(
+                labelX - bgWidth / 2,
+                labelY - bgHeight / 2,
+                bgWidth,
+                bgHeight
+            );
+            
+            // Draw label text
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(labelText, labelX, labelY);
+            
+            // Restore the canvas context state
+            ctx.restore();
         }
 
         // Utility functions

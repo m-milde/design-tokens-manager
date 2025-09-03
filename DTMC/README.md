@@ -2,7 +2,7 @@
 
 A powerful, interactive web-based tool for creating, managing, and visualizing design token systems with hierarchical relationships and visual connections.
 
-## ✨ **Latest Features (v4.4)**
+## ✨ **Latest Features (v4.5)**
 
 ### **🎯 Drag & Drop Improvements**
 - **Smart Reordering**: Drag tokens by their handle (six-dot icon) to reorder within the sidebar
@@ -29,6 +29,13 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 - **Stable Layout**: No more bubble jumping when hovering over connections
 - **Optimized Rendering**: Debounced rendering prevents performance issues
 - **Context Preservation**: Canvas context state is properly managed
+
+### **📦 Smart Group Connection Consolidation**
+- **Collapsed Group Connections**: Multiple wires from bubbles in collapsed groups merge into single wires
+- **Connection Count Labels**: Consolidated wires show "X connections" label
+- **Cleaner Interface**: Reduces visual clutter when groups are collapsed
+- **Thicker Lines**: Consolidated connections use slightly thicker lines for visibility
+- **Click Detection**: Consolidated connections are fully interactive and selectable
 
 ### **💾 Enhanced JSON Export & Import**
 - **Complete State Export**: Includes tokens, nodes, connections, groups, and UI state
@@ -145,6 +152,8 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 3. **Reference Created**: Target token shows `{layer.name}` reference path
 4. **Delete Connection**: Click connection line, press Delete, confirm deletion
 5. **Value Restored**: Target token returns to its original value
+6. **Group Connections**: When groups are collapsed, multiple connections merge into single wires
+7. **Connection Labels**: Hover over wires to see relationship details
 
 ### **Canvas Navigation**
 - **Pan**: Click and drag empty space
@@ -201,7 +210,7 @@ A powerful, interactive web-based tool for creating, managing, and visualizing d
 
 ```
 DTMC/
-├── test-canvas-enhanced.html    # Main application file (v4.4)
+├── test-canvas-enhanced.html    # Main application file (v4.5)
 ├── dtmc-styles.css             # Enhanced styling with text wrapping support
 ├── README.md                    # This documentation
 ├── TECHNICAL.md                 # Technical implementation details
@@ -341,4 +350,4 @@ This is an open-source project designed for design system professionals. Feel fr
 
 ---
 
-**DTMC v4.4** - Enhanced Design Tokens Map Creator with Advanced Bubble Selection & Lasso Tools
+**DTMC v4.5** - Enhanced Design Tokens Map Creator with Smart Group Connection Consolidation
