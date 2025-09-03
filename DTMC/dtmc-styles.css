@@ -609,6 +609,65 @@ body {
   font-size: 16px;
 }
 
+/* ===== DRAG HANDLE & DRAG STATES ===== */
+.dtmc-token-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dtmc-neutral-500);
+  cursor: grab;
+  padding: var(--dtmc-spacing-xs);
+  border-radius: var(--dtmc-radius-sm);
+  transition: all var(--dtmc-transition-normal);
+  opacity: 0;
+  margin-right: var(--dtmc-spacing-xs);
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.dtmc-token-drag-handle:hover {
+  color: var(--dtmc-neutral-300);
+  background: var(--dtmc-neutral-600);
+}
+
+.dtmc-token-drag-handle:active {
+  cursor: grabbing;
+}
+
+.dtmc-token-item:hover .dtmc-token-drag-handle {
+  opacity: 1;
+}
+
+.dtmc-token-drag-handle .material-icons {
+  font-size: 18px;
+}
+
+/* Drag states */
+.dtmc-token-item.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+  z-index: 1000;
+}
+
+.dtmc-token-item.drag-over {
+  border-color: var(--dtmc-primary-400);
+  background: var(--dtmc-primary-900);
+  box-shadow: 0 0 0 2px var(--dtmc-primary-400);
+}
+
+.dtmc-token-item.drag-over::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--dtmc-primary-400);
+  border-radius: 1px;
+}
+
 .dtmc-token-type {
   display: inline-block;
   background: var(--dtmc-neutral-600);

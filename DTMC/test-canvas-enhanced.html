@@ -383,6 +383,41 @@
         </div>
     </div>
 
+    <!-- Edit Token Modal -->
+    <div id="dtmc-edit-token-modal" class="dtmc-modal-overlay" style="display: none;">
+        <div class="dtmc-modal">
+            <div class="dtmc-modal-header">
+                <h3 class="dtmc-modal-title">Edit Token</h3>
+                <p class="dtmc-modal-subtitle">Modify token name and value</p>
+            </div>
+            <div class="dtmc-modal-body">
+                <div class="dtmc-form-group">
+                    <label for="dtmc-edit-token-name" class="dtmc-form-label">Token Name</label>
+                    <input type="text" id="dtmc-edit-token-name" class="dtmc-form-input" placeholder="Enter token name">
+                </div>
+                <div class="dtmc-form-group">
+                    <label for="dtmc-edit-token-value" class="dtmc-form-label">Token Value</label>
+                    <input type="text" id="dtmc-edit-token-value" class="dtmc-form-input" placeholder="Enter token value">
+                </div>
+                <div class="dtmc-form-group">
+                    <label for="dtmc-edit-token-type" class="dtmc-form-label">Token Type</label>
+                    <select id="dtmc-edit-token-type" class="dtmc-form-select">
+                        <option value="color">Color</option>
+                        <option value="spacing">Spacing</option>
+                        <option value="typography">Typography</option>
+                        <option value="number">Number</option>
+                        <option value="string">String</option>
+                        <option value="boolean">Boolean</option>
+                    </select>
+                </div>
+            </div>
+            <div class="dtmc-modal-footer">
+                <button id="dtmc-edit-cancel-btn" class="dtmc-modal-btn cancel">Cancel</button>
+                <button id="dtmc-edit-confirm-btn" class="dtmc-modal-btn create">Update Token</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import DTMC Icon System -->
     <script src="dtmc-icons.js"></script>
     
@@ -481,6 +516,9 @@
             
             // Initialize drag preview
             dragPreview = document.getElementById('dtmc-drag-preview');
+            if (!dragPreview) {
+                console.error('❌ Drag preview element not found');
+            }
             
             setupEventListeners();
             setupSidebar();
@@ -645,6 +683,40 @@
                     document.getElementById('dtmc-rename-confirm-btn').click();
                 } else if (e.key === 'Escape') {
                     document.getElementById('dtmc-rename-cancel-btn').click();
+                }
+            });
+            
+            // Edit token modal event listeners
+            document.getElementById('dtmc-edit-confirm-btn').addEventListener('click', () => {
+                updateToken();
+            });
+            
+            document.getElementById('dtmc-edit-cancel-btn').addEventListener('click', () => {
+                const modal = document.getElementById('dtmc-edit-token-modal');
+                modal.style.display = 'none';
+            });
+            
+            // Close edit modal when clicking outside
+            document.getElementById('dtmc-edit-token-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'dtmc-edit-token-modal') {
+                    e.target.style.display = 'none';
+                }
+            });
+            
+            // Handle Enter key in edit token inputs
+            document.getElementById('dtmc-edit-token-name').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('dtmc-edit-confirm-btn').click();
+                } else if (e.key === 'Escape') {
+                    document.getElementById('dtmc-edit-cancel-btn').click();
+                }
+            });
+            
+            document.getElementById('dtmc-edit-token-value').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('dtmc-edit-confirm-btn').click();
+                } else if (e.key === 'Escape') {
+                    document.getElementById('dtmc-edit-cancel-btn').click();
                 }
             });
             
@@ -846,6 +918,9 @@
             
             div.innerHTML = `
                 <div class="dtmc-token-content">
+                    <div class="dtmc-token-drag-handle" title="Drag to reorder">
+                        <span class="material-icons">drag_indicator</span>
+                    </div>
                     <div class="dtmc-token-info">
                         <div class="dtmc-token-name">${token.name}</div>
                         <div class="dtmc-token-value">
@@ -857,7 +932,7 @@
                         </div>
                     </div>
                     <div class="dtmc-token-actions">
-                        <button class="dtmc-token-action-btn dtmc-rename-btn" title="Rename token">
+                        <button class="dtmc-token-action-btn dtmc-rename-btn" title="Edit token">
                             <span class="material-icons">edit</span>
                         </button>
                         <button class="dtmc-token-action-btn dtmc-delete-btn" title="Delete token">
@@ -868,23 +943,150 @@
             `;
             
             div.addEventListener('dragstart', (e) => {
-                draggedToken = { ...token, layer };
-                e.dataTransfer.setData('text/plain', JSON.stringify(draggedToken));
-                dragPreview.style.display = 'block';
-                dragPreview.textContent = `${token.name} (${token.value})`;
+                console.log('🚀 Dragstart event triggered', { target: e.target, tokenName: token.name });
+                
+                // Add dragging class
+                div.classList.add('dragging');
+                
+                // Check if drag started from drag handle (for reordering) or from token content (for canvas)
+                // More robust detection of drag handle
+                const isDragHandle = e.target.closest('.dtmc-token-drag-handle') !== null ||
+                                   e.target.classList.contains('dtmc-token-drag-handle') ||
+                                   (e.target.classList.contains('material-icons') && 
+                                    e.target.textContent.trim() === 'drag_indicator') ||
+                                   e.target.getAttribute('data-is-drag-handle') === 'true' ||
+                                   e.target.closest('[data-is-drag-handle="true"]') !== null;
+                
+                console.log('🔍 Is drag handle?', isDragHandle, 'Target:', e.target, 'Target classes:', e.target.className, 'Text content:', e.target.textContent);
+                console.log('🔍 Drag handle detection details:', {
+                    closest: e.target.closest('.dtmc-token-drag-handle'),
+                    hasClass: e.target.classList.contains('dtmc-token-drag-handle'),
+                    isMaterialIcon: e.target.classList.contains('material-icons'),
+                    textContent: e.target.textContent.trim(),
+                    dataAttribute: e.target.getAttribute('data-is-drag-handle'),
+                    closestDataAttribute: e.target.closest('[data-is-drag-handle="true"]')
+                });
+                
+                if (isDragHandle) {
+                    // For reordering within sidebar
+                    draggedToken = { ...token, layer, isReorder: true };
+                    e.dataTransfer.setData('text/plain', JSON.stringify(draggedToken));
+                    e.dataTransfer.effectAllowed = 'move';
+                    console.log('🔄 Starting reorder drag for:', token.name, 'Data:', draggedToken);
+                } else {
+                    // For dragging to canvas
+                    draggedToken = { ...token, layer, isReorder: false };
+                    e.dataTransfer.setData('text/plain', JSON.stringify(draggedToken));
+                    
+                    if (dragPreview) {
+                        dragPreview.style.display = 'block';
+                        dragPreview.textContent = `${token.name} (${token.value})`;
+                        e.dataTransfer.setDragImage(dragPreview, 0, 0);
+                    } else {
+                        console.warn('⚠️ Drag preview not available, using default drag image');
+                    }
+                    
+                    console.log('🎨 Starting canvas drag for:', token.name, 'Data:', draggedToken);
+                }
             });
             
             div.addEventListener('dragend', () => {
-                dragPreview.style.display = 'none';
+                if (dragPreview) {
+                    dragPreview.style.display = 'none';
+                }
+            });
+            
+            // Add drag and drop for reordering within sidebar
+            div.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                
+                console.log('🔄 Dragover event', { 
+                    targetToken: div.dataset.tokenName, 
+                    draggedToken: draggedToken ? draggedToken.name : 'none',
+                    isReorder: draggedToken ? draggedToken.isReorder : false,
+                    layers: draggedToken ? `${draggedToken.layer} === ${div.dataset.tokenLayer}` : 'no drag'
+                });
+                
+                // Check if we have a dragged token and it's a reorder operation
+                if (draggedToken && draggedToken.isReorder && draggedToken.layer === div.dataset.tokenLayer) {
+                    e.dataTransfer.dropEffect = 'move';
+                    console.log('✅ Valid drop target for reorder');
+                    
+                    // Add visual feedback for drop zones
+                    const afterElement = getDragAfterElement(div.parentNode, e.clientY);
+                    const dragging = document.querySelector('.dragging');
+                    
+                    if (afterElement == null) {
+                        div.parentNode.appendChild(dragging);
+                    } else {
+                        div.parentNode.insertBefore(dragging, afterElement);
+                    }
+                } else {
+                    console.log('❌ Invalid drop target', { 
+                        hasDraggedToken: !!draggedToken,
+                        isReorder: draggedToken ? draggedToken.isReorder : false,
+                        sameLayer: draggedToken ? draggedToken.layer === div.dataset.tokenLayer : false
+                    });
+                }
+            });
+            
+            div.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                
+                // Check if this is a reorder operation
+                if (draggedToken && draggedToken.isReorder && draggedToken.layer === div.dataset.tokenLayer) {
+                    div.classList.add('drag-over');
+                }
+            });
+            
+            div.addEventListener('dragleave', () => {
+                div.classList.remove('drag-over');
+            });
+            
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                div.classList.remove('drag-over');
+                
+                console.log('🎯 Drop event triggered', { 
+                    targetToken: div.dataset.tokenName,
+                    draggedToken: draggedToken ? draggedToken.name : 'none',
+                    isReorder: draggedToken ? draggedToken.isReorder : false,
+                    layer: div.dataset.tokenLayer
+                });
+                
+                // Check if we have a dragged token and it's a reorder operation
+                if (draggedToken && draggedToken.isReorder && draggedToken.layer === div.dataset.tokenLayer) {
+                    const targetTokenName = div.dataset.tokenName;
+                    console.log('🎯 Dropping token for reorder:', draggedToken.name, 'onto:', targetTokenName);
+                    reorderTokens(draggedToken, targetTokenName, div.dataset.tokenLayer);
+                } else {
+                    console.log('❌ Drop ignored - not a valid reorder operation');
+                }
+            });
+            
+            div.addEventListener('dragend', () => {
+                div.classList.remove('dragging');
+                // Remove all drag-over classes
+                document.querySelectorAll('.drag-over').forEach(el => {
+                    el.classList.remove('drag-over');
+                });
+                console.log('🏁 Drag end event');
             });
             
             // Add event listeners for action buttons
             const renameBtn = div.querySelector('.dtmc-rename-btn');
             const deleteBtn = div.querySelector('.dtmc-delete-btn');
+            const dragHandle = div.querySelector('.dtmc-token-drag-handle');
+            
+            // Check if drag handle was found
+            if (!dragHandle) {
+                console.error('❌ Drag handle not found for token:', token.name);
+                return div;
+            }
             
             renameBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                renameToken(token, layer);
+                editToken(token, layer);
             });
             
             deleteBtn.addEventListener('click', (e) => {
@@ -892,50 +1094,206 @@
                 deleteToken(token, layer);
             });
             
+            // Add data attribute to identify drag handle
+            dragHandle.dataset.isDragHandle = 'true';
+            
+            // Ensure drag handle can initiate drag events
+            dragHandle.style.cursor = 'grab';
+            dragHandle.draggable = true;
+            
+            console.log('🔧 Drag handle setup for token:', token.name, 'Handle element:', dragHandle);
+            
+            // Add specific event listeners for drag handle
+            dragHandle.addEventListener('dragstart', (e) => {
+                console.log('🖱️ Drag handle dragstart - setting reorder flag');
+                
+                // Set the reorder flag directly
+                draggedToken = { ...token, layer, isReorder: true };
+                e.dataTransfer.setData('text/plain', JSON.stringify(draggedToken));
+                e.dataTransfer.effectAllowed = 'move';
+                
+                // Add dragging class
+                div.classList.add('dragging');
+                
+                console.log('🔄 Starting reorder drag for:', token.name, 'Data:', draggedToken);
+                
+                // Stop propagation to prevent parent from handling this
+                e.stopPropagation();
+            });
+            
+            dragHandle.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                console.log('🖱️ Drag handle mousedown');
+            });
+            
+            dragHandle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('🖱️ Drag handle clicked');
+            });
+            
+            dragHandle.addEventListener('dragend', (e) => {
+                div.classList.remove('dragging');
+                console.log('🏁 Drag handle drag end');
+            });
+            
             return div;
         }
 
-        // Rename token function
-        function renameToken(token, layer) {
-            const newName = prompt(`Rename token "${token.name}":`, token.name);
+        // Helper function to get the element after which to insert the dragged element
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.dtmc-token-item:not(.dragging)')];
             
-            if (newName && newName.trim() && newName !== token.name) {
-                const trimmedName = newName.trim();
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
                 
-                // Check if name already exists in the same layer
-                const existingToken = tokens[layer].find(t => t.name === trimmedName);
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // Function to reorder tokens within the same layer
+        function reorderTokens(draggedToken, targetTokenName, layer) {
+            console.log('🔄 ReorderTokens called:', { draggedToken: draggedToken.name, targetTokenName, layer });
+            
+            const layerTokens = tokens[layer];
+            const draggedIndex = layerTokens.findIndex(t => t.name === draggedToken.name);
+            const targetIndex = layerTokens.findIndex(t => t.name === targetTokenName);
+            
+            console.log('🔍 Indices:', { draggedIndex, targetIndex, layerTokens: layerTokens.map(t => t.name) });
+            
+            if (draggedIndex === -1 || targetIndex === -1) {
+                console.error('Token not found for reordering', { draggedIndex, targetIndex });
+                return;
+            }
+            
+            // Don't reorder if it's the same position
+            if (draggedIndex === targetIndex) {
+                console.log('📍 Same position, no reorder needed');
+                return;
+            }
+            
+            // Remove the dragged token from its current position
+            const [movedToken] = layerTokens.splice(draggedIndex, 1);
+            
+            // Insert it at the new position
+            layerTokens.splice(targetIndex, 0, movedToken);
+            
+            // Save state and re-render
+            saveState();
+            renderSidebar();
+            render();
+            
+            console.log(`✅ Token reordered: ${draggedToken.name} moved from position ${draggedIndex + 1} to ${targetIndex + 1} in ${layer} layer`);
+        }
+
+        // Edit token function - opens modal for editing name and value
+        function editToken(token, layer) {
+            const modal = document.getElementById('dtmc-edit-token-modal');
+            const nameInput = document.getElementById('dtmc-edit-token-name');
+            const valueInput = document.getElementById('dtmc-edit-token-value');
+            const typeSelect = document.getElementById('dtmc-edit-token-type');
+            
+            if (!modal || !nameInput || !valueInput || !typeSelect) {
+                console.error('Edit token modal elements not found');
+                return;
+            }
+            
+            // Populate modal with current token data
+            nameInput.value = token.name;
+            valueInput.value = token.value;
+            typeSelect.value = token.type;
+            
+            // Store current token and layer for later use
+            modal.dataset.tokenId = token.id;
+            modal.dataset.layer = layer;
+            modal.dataset.oldName = token.name;
+            
+            // Show modal
+            modal.style.display = 'flex';
+            
+            // Focus on name input
+            nameInput.focus();
+            nameInput.select();
+            
+            console.log(`Opening edit modal for token: ${token.name}`);
+        }
+        
+        // Update token function - called when user confirms edit
+        function updateToken() {
+            const modal = document.getElementById('dtmc-edit-token-modal');
+            const nameInput = document.getElementById('dtmc-edit-token-name');
+            const valueInput = document.getElementById('dtmc-edit-token-value');
+            const typeSelect = document.getElementById('dtmc-edit-token-type');
+            
+            if (!modal || !nameInput || !valueInput || !typeSelect) {
+                console.error('Edit token modal elements not found');
+                return;
+            }
+            
+            const newName = nameInput.value.trim();
+            const newValue = valueInput.value.trim();
+            const newType = typeSelect.value;
+            const layer = modal.dataset.layer;
+            const oldName = modal.dataset.oldName;
+            
+            // Validate inputs
+            if (!newName || !newValue) {
+                alert('Please enter both name and value for the token.');
+                return;
+            }
+            
+            // Check if name already exists in the same layer (and it's different from current name)
+            if (newName !== oldName) {
+                const existingToken = tokens[layer].find(t => t.name === newName);
                 if (existingToken) {
-                    alert(`Token name "${trimmedName}" already exists in the ${layer} layer.`);
+                    alert(`Token name "${newName}" already exists in the ${layer} layer.`);
                     return;
                 }
-                
-                const oldName = token.name;
-                token.name = trimmedName;
-                
-                // Update any nodes that reference this token
-                nodes.forEach(node => {
-                    if (node.layer === layer && node.name === oldName) {
-                        node.name = trimmedName;
-                    }
-                });
-                
-                // Update any connections that reference this token
-                connections.forEach(connection => {
-                    if (connection.fromNode === oldName && connection.fromLayer === layer) {
-                        connection.fromNode = trimmedName;
-                    }
-                    if (connection.toNode === oldName && connection.toLayer === layer) {
-                        connection.toNode = trimmedName;
-                    }
-                });
-                
-                // Save state and re-render
-                saveState();
-                renderSidebar();
-                render();
-                
-                console.log(`✅ Token renamed: ${oldName} → ${trimmedName}`);
             }
+            
+            // Find the token to update
+            const tokenIndex = tokens[layer].findIndex(t => t.name === oldName);
+            if (tokenIndex === -1) {
+                console.error('Token not found for update');
+                return;
+            }
+            
+            // Update token
+            const token = tokens[layer][tokenIndex];
+            token.name = newName;
+            token.value = newValue;
+            token.type = newType;
+            
+            // Update any nodes that reference this token
+            nodes.forEach(node => {
+                if (node.layer === layer && node.name === oldName) {
+                    node.name = newName;
+                }
+            });
+            
+            // Update any connections that reference this token
+            connections.forEach(connection => {
+                if (connection.fromNode === oldName && connection.fromLayer === layer) {
+                    connection.fromNode = newName;
+                }
+                if (connection.toNode === oldName && connection.toLayer === layer) {
+                    connection.toNode = newName;
+                }
+            });
+            
+            // Save state and re-render
+            saveState();
+            renderSidebar();
+            render();
+            
+            // Close modal
+            modal.style.display = 'none';
+            
+            console.log(`✅ Token updated: ${oldName} → ${newName} (${newValue})`);
         }
 
         // Delete token function
