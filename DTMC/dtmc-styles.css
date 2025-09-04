@@ -1253,6 +1253,75 @@ display: flex;
   cursor: pointer;
 }
 
+/* ===== BOOLEAN TOGGLE ===== */
+.dtmc-boolean-toggle {
+  display: flex;
+  gap: var(--dtmc-spacing-md);
+  margin-top: var(--dtmc-spacing-sm);
+}
+
+.dtmc-toggle-option {
+  display: flex;
+  align-items: center;
+  gap: var(--dtmc-spacing-sm);
+  cursor: pointer;
+  padding: var(--dtmc-spacing-sm) var(--dtmc-spacing-md);
+  border-radius: var(--dtmc-radius-md);
+  border: 2px solid var(--dtmc-neutral-600);
+  background: var(--dtmc-neutral-800);
+  transition: all var(--dtmc-transition-normal);
+  flex: 1;
+  justify-content: center;
+}
+
+.dtmc-toggle-option:hover {
+  border-color: var(--dtmc-neutral-500);
+  background: var(--dtmc-neutral-700);
+}
+
+.dtmc-toggle-option input[type="radio"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--dtmc-primary-500);
+}
+
+.dtmc-toggle-option:has(input:checked) {
+  border-color: var(--dtmc-primary-500);
+  background: var(--dtmc-primary-900);
+}
+
+.dtmc-toggle-label {
+  color: var(--dtmc-neutral-200);
+  font-size: var(--dtmc-font-size-sm);
+  font-weight: var(--dtmc-font-weight-medium);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ===== BOOLEAN INDICATOR ===== */
+.dtmc-boolean-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  margin-right: var(--dtmc-spacing-sm);
+}
+
+.dtmc-boolean-true {
+  background-color: var(--dtmc-success-500);
+  color: white;
+}
+
+.dtmc-boolean-false {
+  background-color: var(--dtmc-error-500);
+  color: white;
+}
+
 /* ===== COLOR PALETTE ===== */
 .dtmc-color-palette {
   display: grid;

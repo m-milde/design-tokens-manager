@@ -226,10 +226,10 @@
     <!-- Enhanced Token Creation Modal -->
     <div id="dtmc-token-modal" class="dtmc-modal-overlay" style="display: none;">
         <div class="dtmc-modal">
-            <div class="dtmc-modal-header">
+            <!-- <div class="dtmc-modal-header">
                 <h3 class="dtmc-modal-title">Create New Token</h3>
                 <p class="dtmc-modal-subtitle">Add a new token to your design system</p>
-            </div>
+            </div> -->
             
             <!-- Token Name Input -->
             <div class="dtmc-form-group">
@@ -326,6 +326,23 @@
                     <div class="dtmc-form-group">
                         <label for="token-value-simple" class="dtmc-form-label">Token Value</label>
                         <input type="text" id="token-value-simple" class="dtmc-form-input" placeholder="Enter value...">
+                    </div>
+                </div>
+                
+                <!-- Boolean Value Section -->
+                <div id="boolean-value-section" class="dtmc-token-section" style="display: none;">
+                    <div class="dtmc-form-group">
+                        <label class="dtmc-form-label">Token Value</label>
+                        <div class="dtmc-boolean-toggle">
+                            <label class="dtmc-toggle-option">
+                                <input type="radio" name="boolean-value" value="true" checked>
+                                <span class="dtmc-toggle-label">True</span>
+                            </label>
+                            <label class="dtmc-toggle-option">
+                                <input type="radio" name="boolean-value" value="false">
+                                <span class="dtmc-toggle-label">False</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1116,6 +1133,10 @@
                                 `<span class="dtmc-color-preview" style="background-color: ${token.value}"></span>` : 
                                 ''
                             }
+                            ${layer === 'primitive' && token.type === 'boolean' ? 
+                                `<span class="dtmc-boolean-indicator ${token.value === 'true' ? 'dtmc-boolean-true' : 'dtmc-boolean-false'}">${token.value === 'true' ? '✓' : '✗'}</span>` : 
+                                ''
+                            }
                             ${token.value}
                         </div>
                     </div>
@@ -1765,15 +1786,20 @@
             const colorSection = document.getElementById('color-token-section');
             const referenceSection = document.getElementById('reference-token-section');
             const simpleSection = document.getElementById('simple-value-section');
+            const booleanSection = document.getElementById('boolean-value-section');
             
             // Hide all sections first
             colorSection.style.display = 'none';
             referenceSection.style.display = 'none';
             simpleSection.style.display = 'none';
+            booleanSection.style.display = 'none';
             
             if (selectedTokenType === 'color' && selectedLayer === 'primitive') {
                 // Color tokens in primitive layer show color palette
                 colorSection.style.display = 'block';
+            } else if (selectedTokenType === 'boolean' && selectedLayer === 'primitive') {
+                // Boolean tokens in primitive layer show true/false toggle
+                booleanSection.style.display = 'block';
             } else if (selectedLayer !== 'primitive') {
                 // Non-primitive layers show reference dropdown
                 referenceSection.style.display = 'block';
@@ -2395,6 +2421,10 @@
             // Get value from appropriate input field
             if (selectedTokenType === 'color' && selectedLayer === 'primitive') {
                 value = document.getElementById('token-value').value.trim();
+            } else if (selectedTokenType === 'boolean' && selectedLayer === 'primitive') {
+                // Get boolean value from radio buttons
+                const selectedBoolean = document.querySelector('input[name="boolean-value"]:checked');
+                value = selectedBoolean ? selectedBoolean.value : 'true';
             } else if (selectedLayer !== 'primitive') {
                 value = document.getElementById('token-value-custom').value.trim();
             } else {
