@@ -672,6 +672,28 @@
                         const group = groups.find(g => g.id === groupId);
                         if (group) {
                             group.name = newName;
+                            
+                            // Recalculate group width if collapsed
+                            if (group.isCollapsed) {
+                                const centerX = group.bounds.x + group.bounds.width / 2;
+                                const centerY = group.bounds.y + group.bounds.height / 2;
+                                const newWidth = calculateMinimumGroupWidth(group);
+                                
+                                group.bounds = {
+                                    x: centerX - newWidth / 2,
+                                    y: centerY - group.bounds.height / 2,
+                                    width: newWidth,
+                                    height: group.bounds.height
+                                };
+                                
+                                // Update header bounds
+                                group.bounds.headerBounds = {
+                                    x: group.bounds.x + 10,
+                                    y: group.bounds.y - 15,
+                                    width: group.bounds.width - 20,
+                                    height: 30
+                                };
+                            }
 
                             render();
                         }
@@ -3048,6 +3070,28 @@
             
             return bounds;
         }
+
+        // Calculate minimum width needed for a group based on its name and content
+        function calculateMinimumGroupWidth(group) {
+            // Set up canvas context for text measurement
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.font = '14px Sora, sans-serif';
+            
+            // Measure group name width
+            const nameWidth = tempCtx.measureText(group.name).width;
+            
+            // Measure token count text width
+            const countText = `(${group.nodes.length})`;
+            const countWidth = tempCtx.measureText(countText).width;
+            
+            // Calculate minimum width needed
+            // 35px (arrow) + nameWidth + 20px (spacing) + countWidth + 10px (padding) + 60px (buttons)
+            const minWidth = 35 + nameWidth + 20 + countWidth + 10 + 60;
+            
+            // Ensure minimum width is at least 200px for collapsed groups
+            return Math.max(minWidth, 200);
+        }
         
         // Ungroup nodes
         function ungroupNodes(groupId) {
@@ -3099,7 +3143,7 @@
                 // Force collapsed dimensions to be small and center on new node positions
                 const centerX = newBounds.x + newBounds.width / 2;
                 const centerY = newBounds.y + newBounds.height / 2;
-                const collapsedWidth = 200; // Fixed width
+                const collapsedWidth = calculateMinimumGroupWidth(group); // Dynamic width based on content
                 const collapsedHeight = 80;  // Fixed height
                 
                 group.bounds = {
@@ -3168,7 +3212,7 @@
                 const centerY = group.bounds.y + group.bounds.height / 2;
                 
                 // Force collapsed dimensions to be small
-                const collapsedWidth = 200; // Fixed width
+                const collapsedWidth = calculateMinimumGroupWidth(group); // Dynamic width based on content
                 const collapsedHeight = 80;  // Fixed height
                 
                 group.bounds = {
