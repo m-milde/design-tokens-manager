@@ -1899,16 +1899,16 @@ display: flex;
 /* Create Group Button */
 .dtmc-create-group-button {
   margin-bottom: 8px;
-  padding: 8px;
+  padding: 8px 24px;
 }
 
 .dtmc-create-group-btn {
   width: 100%;
-  background: var(--dtmc-primary-600);
+  background: var(--dtmc-neutral-900);
   border: none;
   color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 8px;
+  border-radius: 100px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;

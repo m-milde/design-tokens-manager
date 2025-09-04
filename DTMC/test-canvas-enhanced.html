@@ -538,6 +538,10 @@
             setupSidebar();
             loadSampleTokens();
             loadSampleNodes(); // Load sample nodes for testing
+            
+            // Migrate any existing connections to use socket positions
+            migrateConnectionsToSockets();
+            
             resizeCanvas();
             updateZoomDisplay();
             render();
@@ -886,6 +890,9 @@
             ];
             
             nodes.push(...sampleNodes);
+            
+            // Create automatic connections for any nodes with references
+            createAllAutomaticConnections();
             
             // Create a sample group
             setTimeout(() => {
@@ -1515,6 +1522,9 @@
                     connection.toNode = newName;
                 }
             });
+            
+            // Update canvas nodes with the new token value
+            updateNodesWithToken(token, layer);
             
             // Save state and re-render
             saveState();
@@ -2255,7 +2265,7 @@
             closeModal();
             
             // Update any existing nodes with this token
-            updateNodesWithToken(newToken);
+            updateNodesWithToken(newToken, selectedLayer);
             
 
         }
@@ -2459,6 +2469,9 @@
                     node.y += deltaY;
                 });
                 
+                // Update connection socket positions based on new node positions
+                updateConnectionSockets();
+                
                 // Update header bounds
                 if (draggedGroup.bounds.headerBounds) {
                     draggedGroup.bounds.headerBounds.x += deltaX;
@@ -2500,6 +2513,9 @@
                 // Move only the selected node (not the entire group)
                 selectedNode.x += deltaX;
                 selectedNode.y += deltaY;
+                
+                // Update connection socket positions based on new node positions
+                updateConnectionSockets();
                 
                 lastMousePos = { x: e.clientX, y: e.clientY };
                 
@@ -3519,6 +3535,164 @@
             e.dataTransfer.dropEffect = 'copy';
         });
 
+        // Parse token reference (e.g., "{primitive.primary-blue}" -> {layer: "primitive", name: "primary-blue"})
+        function parseTokenReference(value) {
+            if (!value || typeof value !== 'string') return null;
+            
+            const match = value.match(/^\{([^.]+)\.([^}]+)\}$/);
+            if (match) {
+                return {
+                    layer: match[1],
+                    name: match[2]
+                };
+            }
+            return null;
+        }
+
+        // Determine the best socket pair based on node positions
+        function getBestSocketPair(startNode, endNode) {
+            const startCenterX = startNode.x + NODE_WIDTH / 2;
+            const startCenterY = startNode.y + NODE_HEIGHT / 2;
+            const endCenterX = endNode.x + NODE_WIDTH / 2;
+            const endCenterY = endNode.y + NODE_HEIGHT / 2;
+            
+            const deltaX = endCenterX - startCenterX;
+            const deltaY = endCenterY - startCenterY;
+            
+            // Determine if nodes are positioned horizontally or vertically
+            const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
+            
+            let startSocket, endSocket;
+            
+            if (isHorizontal) {
+                // Nodes are positioned side by side
+                if (deltaX > 0) {
+                    // End node is to the right of start node
+                    startSocket = 'right';
+                    endSocket = 'left';
+                } else {
+                    // End node is to the left of start node
+                    startSocket = 'left';
+                    endSocket = 'right';
+                }
+            } else {
+                // Nodes are positioned vertically
+                if (deltaY > 0) {
+                    // End node is below start node
+                    startSocket = 'bottom';
+                    endSocket = 'top';
+                } else {
+                    // End node is above start node
+                    startSocket = 'top';
+                    endSocket = 'bottom';
+                }
+            }
+            
+            return { startSocket, endSocket };
+        }
+
+        // Create automatic connections for token references
+        function createAutomaticConnections(newNode) {
+            // 1. Check if the new node references any existing nodes on the canvas
+            const reference = parseTokenReference(newNode.value);
+            if (reference) {
+                const referencedNode = nodes.find(node => 
+                    node.name === reference.name && 
+                    node.layer === reference.layer &&
+                    node.id !== newNode.id // Don't connect to itself
+                );
+
+                if (referencedNode) {
+                    createConnectionBetweenNodes(referencedNode, newNode);
+                } else {
+                    console.log(`Referenced token ${reference.layer}.${reference.name} not found on canvas`);
+                }
+            }
+
+            // 2. Check if any existing nodes on the canvas reference the new node
+            nodes.forEach(existingNode => {
+                if (existingNode.id === newNode.id) return; // Skip the new node itself
+                
+                const existingReference = parseTokenReference(existingNode.value);
+                if (existingReference && 
+                    existingReference.name === newNode.name && 
+                    existingReference.layer === newNode.layer) {
+                    createConnectionBetweenNodes(existingNode, newNode);
+                }
+            });
+        }
+
+        // Helper function to create a connection between two nodes
+        function createConnectionBetweenNodes(startNode, endNode) {
+            // Determine the best socket pair based on node positions
+            const { startSocket, endSocket } = getBestSocketPair(startNode, endNode);
+            
+            // Create connection from start node to end node
+            const connection = {
+                id: Date.now(),
+                startNode: startNode,
+                endNode: endNode,
+                startSocket: startSocket,
+                endSocket: endSocket,
+                fromNode: startNode.name,
+                fromLayer: startNode.layer,
+                toNode: endNode.name,
+                toLayer: endNode.layer
+            };
+
+            // Check if connection already exists (in either direction)
+            const existingConnection = connections.find(conn => 
+                (conn.fromNode === connection.fromNode &&
+                 conn.fromLayer === connection.fromLayer &&
+                 conn.toNode === connection.toNode &&
+                 conn.toLayer === connection.toLayer) ||
+                (conn.fromNode === connection.toNode &&
+                 conn.fromLayer === connection.toLayer &&
+                 conn.toNode === connection.fromNode &&
+                 conn.toLayer === connection.fromLayer)
+            );
+
+            if (!existingConnection) {
+                connections.push(connection);
+                console.log(`Auto-created connection: ${startNode.layer}.${startNode.name} -> ${endNode.layer}.${endNode.name} (${startSocket} -> ${endSocket})`);
+            }
+        }
+
+        // Migrate existing connections to use socket positions
+        function migrateConnectionsToSockets() {
+            connections.forEach(connection => {
+                // If connection doesn't have socket information, add it
+                if (!connection.startSocket || !connection.endSocket) {
+                    const { startSocket, endSocket } = getBestSocketPair(connection.startNode, connection.endNode);
+                    connection.startSocket = startSocket;
+                    connection.endSocket = endSocket;
+                    console.log(`Migrated connection: ${connection.startNode.name} -> ${connection.endNode.name} (${startSocket} -> ${endSocket})`);
+                }
+            });
+        }
+
+        // Update socket positions for connections when nodes are moved
+        function updateConnectionSockets() {
+            connections.forEach(connection => {
+                // Re-evaluate the best socket pair based on current node positions
+                const { startSocket, endSocket } = getBestSocketPair(connection.startNode, connection.endNode);
+                connection.startSocket = startSocket;
+                connection.endSocket = endSocket;
+            });
+        }
+
+        // Create automatic connections for all nodes that have references
+        function createAllAutomaticConnections() {
+            // First migrate any existing connections to use sockets
+            migrateConnectionsToSockets();
+            
+            // Create new automatic connections for all nodes
+            // The duplicate check in createConnectionBetweenNodes will prevent duplicates
+            nodes.forEach(node => {
+                createAutomaticConnections(node);
+            });
+        }
+
         canvas.addEventListener('drop', (e) => {
             e.preventDefault();
             
@@ -3541,6 +3715,10 @@
             };
             
             nodes.push(newNode);
+            
+            // Create automatic connections if the token has references
+            createAutomaticConnections(newNode);
+            
             saveState();
             render();
             
@@ -4334,13 +4512,22 @@
         }
 
         // Update nodes when tokens change
-        function updateNodesWithToken(token) {
+        function updateNodesWithToken(token, layer = null) {
+            const targetLayer = layer || selectedLayer;
+            const updatedNodes = [];
+            
             nodes.forEach(node => {
-                if (node.name === token.name && node.layer === selectedLayer) {
+                if (node.name === token.name && node.layer === targetLayer) {
                     node.value = token.value;
-
+                    updatedNodes.push(node);
                 }
             });
+            
+            // Re-evaluate connections for updated nodes
+            updatedNodes.forEach(node => {
+                createAutomaticConnections(node);
+            });
+            
             render();
         }
 
@@ -4983,6 +5170,9 @@
                 selectedNode = null;
                 selectedConnection = null;
                 
+                // Create automatic connections for all nodes with references
+                createAllAutomaticConnections();
+                
                 // Update UI
                 renderSidebar();
                 updateZoomDisplay();
@@ -5153,6 +5343,9 @@
                 selectedConnection = null;
                 hoveredConnection = null;
                 
+                // Create automatic connections for all nodes with references
+                createAllAutomaticConnections();
+                
                 // Update UI
                 renderSidebar();
                 updateZoomDisplay();
@@ -5216,3 +5409,4 @@
     </script>
 </body>
 </html>
+
