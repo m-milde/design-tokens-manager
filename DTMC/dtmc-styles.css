@@ -155,14 +155,14 @@
   --dtmc-group-dash-dragging: 8px;
   
   /* Bubble Dimensions */
-  --dtmc-bubble-width: 240px;
+  --dtmc-bubble-width: 200px;
   --dtmc-bubble-height: 100px;
   --dtmc-bubble-spacing-x: 20px;
   --dtmc-bubble-spacing-y: 5px;
   
   /* Bubble Border */
   --dtmc-bubble-border-width: 2px;
-  --dtmc-bubble-border-radius: 16px;
+  --dtmc-bubble-border-radius: 8px;
   --dtmc-bubble-border-end-color: transparent;
   
   /* Bubble Content */
@@ -405,16 +405,17 @@ body {
 }
 
 .dtmc-layer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--dtmc-spacing-xs);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: calc(-1 * var(--dtmc-spacing-xs));
+	border-bottom: 1px solid var(--dtmc-neutral-700);
 }
 
 .dtmc-layer-header-left {
   display: flex;
   align-items: center;
-  gap: var(--dtmc-spacing-xs);
+  gap: var(--dtmc-spacing-sm);
 }
 
 .dtmc-token-type-indicator{
@@ -441,9 +442,9 @@ body {
 
 .dtmc-layer-title {
   color: var(--dtmc-neutral-200);
-  font-size: var(--dtmc-font-size-md);
-  font-weight: var(--dtmc-font-weight-semibold);
-  text-transform: capitalize;
+  font-size: var(--dtmc-font-size-sm);
+  font-weight: var(--dtmc-font-weight-regular);
+  text-transform: uppercase;
 }
 
 .dtmc-layer-count {
