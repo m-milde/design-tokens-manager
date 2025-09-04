@@ -100,18 +100,48 @@
 
         <!-- Main Canvas Area -->
         <div class="dtmc-main">
-                    <div class="dtmc-controls">
-            <button id="dtmc-undo-btn" class="dtmc-btn secondary" title=Undo">Undo</button>
-            <button id="dtmc-clear-btn" class="dtmc-btn secondary" title="Clear canvas">Clear All</button>
-            <button id="dtmc-export-btn" class="dtmc-btn secondary" title="Export JSON">Export JSON</button>
-            <button id="dtmc-save-btn" class="dtmc-btn secondary" title="Save setup">Save Session</button>
-            <button id="dtmc-load-btn" class="dtmc-btn secondary" title="Load setup">Load Session</button>
+            <div class="dtmc-controls">
+                <!-- Always visible buttons -->
+                <button id="dtmc-undo-btn" class="dtmc-btn secondary" title="Undo">
+                    <span class="material-icons">undo</span>
+                </button>
+                <button id="dtmc-redo-btn" class="dtmc-btn secondary" title="Redo">
+                    <span class="material-icons" style="font-size: 18px;"">redo</span>
+                </button>
+                <button id="dtmc-clear-btn" class="dtmc-btn secondary" title="Clear canvas">
+                    <span class="material-icons">delete</span>
+                </button>
+                
+                <!-- Menu button -->
+                <div class="dtmc-menu-container">
+                    <button id="dtmc-menu-btn" class="dtmc-btn secondary" title="More options">
+                        <span class="material-icons">more_vert</span>
+                    </button>
+                    
+                    <!-- Vertical menu -->
+                    <div class="dtmc-vertical-menu" id="dtmc-vertical-menu">
+                        <button class="dtmc-menu-item" id="dtmc-save-btn">
+                            <span class="material-icons">save</span>
+                            <span class="menu-text">Save current setup</span>
+                        </button>
+                        <button class="dtmc-menu-item" id="dtmc-load-btn">
+                            <span class="material-icons">folder_open</span>
+                            <span class="menu-text">Load setup</span>
+                        </button>
+                        <button class="dtmc-menu-item" id="dtmc-export-btn">
+                            <span class="material-icons">download</span>
+                            <span class="menu-text">Export JSON</span>
+                        </button>
+                        <button class="dtmc-menu-item" id="dtmc-load-json-btn">
+                            <span class="material-icons">file_open</span>
+                            <span class="menu-text">Load JSON</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <!-- File input for loading JSON -->
             <input type="file" id="dtmc-load-json-input" accept=".json" style="display: none;">
-            <button id="dtmc-load-json-btn" class="dtmc-btn secondary" title="Load JSON file"><span class="material-icons" style="font-size: 18px; display: inline-block; vertical-align: middle;">file_open</span></button>
-
-        </div>
             <canvas id="dtmc-canvas"></canvas>
             
             <!-- Floating Context Menu -->
@@ -320,8 +350,29 @@
             </div>
             
             <div class="dtmc-form-group">
+                <label class="dtmc-form-label">Save Options</label>
+                <div class="dtmc-save-options">
+                    <label class="dtmc-radio-option">
+                        <input type="radio" name="save-option" value="new" checked>
+                        <span class="dtmc-radio-label">Save as new session</span>
+                    </label>
+                    <label class="dtmc-radio-option">
+                        <input type="radio" name="save-option" value="overwrite">
+                        <span class="dtmc-radio-label">Overwrite existing session</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="dtmc-form-group" id="new-session-fields">
                 <label for="session-name" class="dtmc-form-label">Session Name</label>
                 <input type="text" id="session-name" class="dtmc-form-input" placeholder="e.g., My Design System v1">
+            </div>
+            
+            <div class="dtmc-form-group" id="overwrite-session-fields" style="display: none;">
+                <label class="dtmc-form-label">Select Session to Overwrite</label>
+                <div id="dtmc-overwrite-sessions-list" class="dtmc-sessions-list">
+                    <!-- Existing sessions will be populated here -->
+                </div>
             </div>
             
             <div class="dtmc-form-group">
@@ -468,8 +519,23 @@
         
         // Constants
         const SOCKET_RADIUS = 9; // 18px diameter = 9px radius
-        const NODE_WIDTH = 200;
-        const NODE_HEIGHT = 120;
+        
+        // Get bubble dimensions from CSS variables
+        function getBubbleWidth() {
+            return parseCSSValue(getCSSVariable('--dtmc-bubble-width'));
+        }
+        
+        function getBubbleHeight() {
+            return parseCSSValue(getCSSVariable('--dtmc-bubble-height'));
+        }
+        
+        function getBubbleSpacingX() {
+            return parseCSSValue(getCSSVariable('--dtmc-bubble-spacing-x'));
+        }
+        
+        function getBubbleSpacingY() {
+            return parseCSSValue(getCSSVariable('--dtmc-bubble-spacing-y'));
+        }
         const MIN_ZOOM = 0.5;
         const MAX_ZOOM = 3.0;
         
@@ -517,6 +583,7 @@
         // Selected tokens for grouping (Ctrl+click selection)
         let selectedSidebarTokens = [];
         let undoStack = [];
+        let redoStack = [];
         let dragPreview = null;
         let draggedToken = null;
         let isDraggingGroup = false; // New: track if dragging a group
@@ -568,24 +635,77 @@
             // Control buttons
             document.getElementById('dtmc-clear-btn').addEventListener('click', clearAll);
             document.getElementById('dtmc-undo-btn').addEventListener('click', () => {
-
                 undo();
             });
+            document.getElementById('dtmc-redo-btn').addEventListener('click', () => {
+                redo();
+            });
+            
+            // Vertical menu functionality
+            const menuBtn = document.getElementById('dtmc-menu-btn');
+            const verticalMenu = document.getElementById('dtmc-vertical-menu');
+            
+            menuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                verticalMenu.classList.toggle('show');
+            });
+            
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.dtmc-menu-container')) {
+                    verticalMenu.classList.remove('show');
+                }
+            });
+            
+            // Menu item event listeners
+            document.getElementById('dtmc-save-btn').addEventListener('click', showSaveModal);
+            document.getElementById('dtmc-load-btn').addEventListener('click', showLoadModal);
             document.getElementById('dtmc-export-btn').addEventListener('click', exportJSON);
+            document.getElementById('dtmc-load-json-btn').addEventListener('click', () => {
+                document.getElementById('dtmc-load-json-input').click();
+            });
+            
+            // Debug: Check if menu items have their text spans and fix if needed
+            setTimeout(() => {
+                const menuItems = document.querySelectorAll('.dtmc-menu-item');
+                menuItems.forEach((item, index) => {
+                    const spans = item.querySelectorAll('span');
+                    console.log(`Menu item ${index}:`, item.id, 'has', spans.length, 'spans');
+                    spans.forEach((span, spanIndex) => {
+                        console.log(`  Span ${spanIndex}:`, span.className, span.textContent);
+                    });
+                    
+                    // If the item doesn't have a text span, add it
+                    if (spans.length === 1) {
+                        const textSpan = document.createElement('span');
+                        textSpan.className = 'menu-text';
+                        
+                        // Set text based on button ID
+                        switch(item.id) {
+                            case 'dtmc-save-btn':
+                                textSpan.textContent = 'Save current setup';
+                                break;
+                            case 'dtmc-load-btn':
+                                textSpan.textContent = 'Load setup';
+                                break;
+                            case 'dtmc-export-btn':
+                                textSpan.textContent = 'Export JSON';
+                                break;
+                            case 'dtmc-load-json-btn':
+                                textSpan.textContent = 'Load JSON';
+                                break;
+                        }
+                        
+                        item.appendChild(textSpan);
+                        console.log(`Added text span to ${item.id}:`, textSpan.textContent);
+                    }
+                });
+            }, 1000);
             
             // Zoom controls
             document.getElementById('dtmc-zoom-in-btn').addEventListener('click', () => zoomIn());
             document.getElementById('dtmc-zoom-out-btn').addEventListener('click', () => zoomOut());
             document.getElementById('dtmc-reset-zoom-btn').addEventListener('click', () => resetZoom());
-            
-            // Save/Load session buttons
-            document.getElementById('dtmc-save-btn').addEventListener('click', showSaveModal);
-            document.getElementById('dtmc-load-btn').addEventListener('click', showLoadModal);
-            
-            // Load JSON file button
-            document.getElementById('dtmc-load-json-btn').addEventListener('click', () => {
-                document.getElementById('dtmc-load-json-input').click();
-            });
             
             // File input change event
             document.getElementById('dtmc-load-json-input').addEventListener('change', handleJSONFileLoad);
@@ -845,12 +965,22 @@
                 sidebar.classList.add('collapsed');
                 sidebarExpandBtn.style.display = 'flex';
                 mainContent.classList.add('sidebar-collapsed');
+                
+                // Trigger canvas resize after sidebar collapse
+                setTimeout(() => {
+                    resizeCanvas();
+                }, 300); // Wait for CSS transition to complete
             });
 
             sidebarExpandBtn.addEventListener('click', () => {
                 sidebar.classList.remove('collapsed');
                 sidebarExpandBtn.style.display = 'none';
                 mainContent.classList.remove('sidebar-collapsed');
+                
+                // Trigger canvas resize after sidebar expand
+                setTimeout(() => {
+                    resizeCanvas();
+                }, 300); // Wait for CSS transition to complete
             });
         }
 
@@ -2703,8 +2833,8 @@
         function getNodeAtPoint(x, y) {
             for (let i = nodes.length - 1; i >= 0; i--) {
                 const node = nodes[i];
-                if (x >= node.x && x <= node.x + NODE_WIDTH &&
-                    y >= node.y && y <= node.y + NODE_HEIGHT) {
+                if (x >= node.x && x <= node.x + getBubbleWidth() &&
+                    y >= node.y && y <= node.y + getBubbleHeight()) {
                     return node;
                 }
             }
@@ -2803,10 +2933,10 @@
         function getSocketAtPoint(x, y) {
             for (const node of nodes) {
                 const sockets = [
-                    { x: node.x + NODE_WIDTH / 2, y: node.y, type: 'input', socket: 'top' },
-                    { x: node.x, y: node.y + NODE_HEIGHT / 2, type: 'input', socket: 'left' },
-                    { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2, type: 'output', socket: 'right' },
-                    { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT, type: 'output', socket: 'bottom' }
+                    { x: node.x + getBubbleWidth() / 2, y: node.y, type: 'input', socket: 'top' },
+                    { x: node.x, y: node.y + getBubbleHeight() / 2, type: 'input', socket: 'left' },
+                    { x: node.x + getBubbleWidth(), y: node.y + getBubbleHeight() / 2, type: 'output', socket: 'right' },
+                    { x: node.x + getBubbleWidth() / 2, y: node.y + getBubbleHeight(), type: 'output', socket: 'bottom' }
                 ];
                 
                 for (const socket of sockets) {
@@ -3002,11 +3132,11 @@
 
         function getSocketPosition(node, socket) {
             switch (socket) {
-                case 'top': return { x: node.x + NODE_WIDTH / 2, y: node.y };
-                case 'left': return { x: node.x, y: node.y + NODE_HEIGHT / 2 };
-                case 'right': return { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2 };
-                case 'bottom': return { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT };
-                default: return { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT / 2 };
+                case 'top': return { x: node.x + getBubbleWidth() / 2, y: node.y };
+                case 'left': return { x: node.x, y: node.y + getBubbleHeight() / 2 };
+                case 'right': return { x: node.x + getBubbleWidth(), y: node.y + getBubbleHeight() / 2 };
+                case 'bottom': return { x: node.x + getBubbleWidth() / 2, y: node.y + getBubbleHeight() };
+                default: return { x: node.x + getBubbleWidth() / 2, y: node.y + getBubbleHeight() / 2 };
             }
         }
 
@@ -3035,6 +3165,9 @@
                 node.groupId = groupId;
             });
             
+            // Ensure group.nodes contains references to the actual node objects
+            group.nodes = selectedNodes;
+            
             groups.push(group);
 
             
@@ -3049,9 +3182,9 @@
             if (nodes.length === 0) return null;
             
             let minX = Math.min(...nodes.map(n => n.x));
-            let maxX = Math.max(...nodes.map(n => n.x + NODE_WIDTH));
+            let maxX = Math.max(...nodes.map(n => n.x + getBubbleWidth()));
             let minY = Math.min(...nodes.map(n => n.y));
-            let maxY = Math.max(...nodes.map(n => n.y + NODE_HEIGHT));
+            let maxY = Math.max(...nodes.map(n => n.y + getBubbleHeight()));
             
             const bounds = {
                 x: minX - 20, // Padding
@@ -3432,7 +3565,7 @@
             
             if (selectedNodes.length >= 2) {
                 // Position group menu above the selection
-                const centerX = selectedNodes.reduce((sum, node) => sum + node.x + NODE_WIDTH / 2, 0) / selectedNodes.length;
+                const centerX = selectedNodes.reduce((sum, node) => sum + node.x + getBubbleWidth() / 2, 0) / selectedNodes.length;
                 const minY = Math.min(...selectedNodes.map(node => node.y));
                 
                 const menuX = centerX * zoomLevel + panOffset.x;
@@ -3482,8 +3615,8 @@
             
             // Position menu above the bubble, horizontally centered
             const menuWidth = 180;
-            const bubbleCenterX = node.x + NODE_WIDTH / 2;
-            const menuX = bubbleCenterX * zoomLevel + panOffset.x - menuWidth / 2 + (NODE_WIDTH * 0.5);
+            const bubbleCenterX = node.x + getBubbleWidth() / 2;
+            const menuX = bubbleCenterX * zoomLevel + panOffset.x - menuWidth / 2 + (getBubbleWidth() * 0.5);
             const menuY = (node.y - 10) * zoomLevel + panOffset.y - 80; // 10px above bubble, accounting for menu height
             
 
@@ -3595,10 +3728,10 @@
 
         // Determine the best socket pair based on node positions
         function getBestSocketPair(startNode, endNode) {
-            const startCenterX = startNode.x + NODE_WIDTH / 2;
-            const startCenterY = startNode.y + NODE_HEIGHT / 2;
-            const endCenterX = endNode.x + NODE_WIDTH / 2;
-            const endCenterY = endNode.y + NODE_HEIGHT / 2;
+            const startCenterX = startNode.x + getBubbleWidth() / 2;
+            const startCenterY = startNode.y + getBubbleHeight() / 2;
+            const endCenterX = endNode.x + getBubbleWidth() / 2;
+            const endCenterY = endNode.y + getBubbleHeight() / 2;
             
             const deltaX = endCenterX - startCenterX;
             const deltaY = endCenterY - startCenterY;
@@ -3749,8 +3882,8 @@
             // Create new node from token
             const newNode = {
                 id: Date.now(),
-                x: x - NODE_WIDTH / 2,
-                y: y - NODE_HEIGHT / 2,
+                x: x - getBubbleWidth() / 2,
+                y: y - getBubbleHeight() / 2,
                 name: draggedToken.name,
                 value: draggedToken.value,
                 type: draggedToken.type,
@@ -3849,7 +3982,7 @@
             ctx.shadowOffsetY = 0;
             
             ctx.beginPath();
-            ctx.roundRect(node.x, node.y, NODE_WIDTH, NODE_HEIGHT, bubbleRadius);
+            ctx.roundRect(node.x, node.y, getBubbleWidth(), getBubbleHeight(), bubbleRadius);
             ctx.fill();
             
             // Reset shadow for border
@@ -3870,7 +4003,7 @@
             ctx.textAlign = 'center';
             
             // Wrap text if it's too long
-            const maxWidth = NODE_WIDTH - 20; // 10px padding on each side
+            const maxWidth = getBubbleWidth() - 20; // 10px padding on each side
             const wrappedLines = wrapText(ctx, node.name, maxWidth, 10);
             
             // Draw each line
@@ -3884,7 +4017,7 @@
             
             wrappedLines.forEach((line, index) => {
                 // Ensure text stays within bubble bounds
-                const textX = node.x + NODE_WIDTH / 2;
+                const textX = node.x + getBubbleWidth() / 2;
                 const textY = startY + (index * lineHeight);
                 
                 // Check if text would go outside bubble bounds
@@ -3978,9 +4111,9 @@
             nodes.forEach(node => {
                 // Check if node is within the rectangle bounds
                 const nodeLeft = node.x;
-                const nodeRight = node.x + NODE_WIDTH;
+                const nodeRight = node.x + getBubbleWidth();
                 const nodeTop = node.y;
-                const nodeBottom = node.y + NODE_HEIGHT;
+                const nodeBottom = node.y + getBubbleHeight();
                 
                 // Check for overlap between node and selection rectangle
                 if (nodeLeft < rectX + rectWidth && 
@@ -4044,23 +4177,23 @@
                 // Create gradient for the border
                 const gradient = ctx.createLinearGradient(
                     node.x, node.y, 
-                    node.x, node.y + NODE_HEIGHT / 2
+                    node.x, node.y + getBubbleHeight() / 2
                 );
                 gradient.addColorStop(0, startColor);
                 gradient.addColorStop(1, endColor);
                 ctx.strokeStyle = gradient;
             }
             ctx.beginPath();
-            ctx.roundRect(node.x + borderWidth/2, node.y + borderWidth/2, NODE_WIDTH - borderWidth, NODE_HEIGHT - borderWidth, borderRadius);
+            ctx.roundRect(node.x + borderWidth/2, node.y + borderWidth/2, getBubbleWidth() - borderWidth, getBubbleHeight() - borderWidth, borderRadius);
             ctx.stroke();
             
             // Draw the bottom half with solid color
             ctx.strokeStyle = isSelected || isMultiSelected ? '#3b82f6' : borderEndColor;
             ctx.beginPath();
-            ctx.moveTo(node.x + borderWidth/2, node.y + NODE_HEIGHT / 2);
-            ctx.lineTo(node.x + NODE_WIDTH - borderWidth/2, node.y + NODE_HEIGHT / 2);
-            ctx.lineTo(node.x + NODE_WIDTH - borderWidth/2, node.y + NODE_HEIGHT - borderWidth/2);
-            ctx.lineTo(node.x + borderWidth/2, node.y + NODE_HEIGHT - borderWidth/2);
+            ctx.moveTo(node.x + borderWidth/2, node.y + getBubbleHeight() / 2);
+            ctx.lineTo(node.x + getBubbleWidth() - borderWidth/2, node.y + getBubbleHeight() / 2);
+            ctx.lineTo(node.x + getBubbleWidth() - borderWidth/2, node.y + getBubbleHeight() - borderWidth/2);
+            ctx.lineTo(node.x + borderWidth/2, node.y + getBubbleHeight() - borderWidth/2);
             ctx.closePath();
             ctx.stroke();
         }
@@ -4072,18 +4205,37 @@
             const containerMarginX = parseCSSValue(getCSSVariable('--dtmc-value-container-margin-x'));
             const containerYOffset = parseCSSValue(getCSSVariable('--dtmc-value-container-y-offset'));
             const containerHeight = parseCSSValue(getCSSVariable('--dtmc-value-container-height'));
+            const containerPaddingX = parseCSSValue(getCSSVariable('--dtmc-value-container-padding-x'));
+            const containerPaddingY = parseCSSValue(getCSSVariable('--dtmc-value-container-padding-y'));
+            const containerBorderWidth = parseCSSValue(getCSSVariable('--dtmc-value-container-border-width'));
+            const containerBorderColor = getCSSVariable('--dtmc-value-container-border-color');
+            
+            // Get CSS variables for value text styling
             const valueTextColor = getCSSVariable('--dtmc-value-text-color');
             const valueTextFontSize = getCSSVariable('--dtmc-value-text-font-size');
+            const valueTextFontWeight = getCSSVariable('--dtmc-value-text-font-weight');
+            const valueTextLineHeight = parseCSSValue(getCSSVariable('--dtmc-value-text-line-height'));
+            const valueTextAlign = getCSSVariable('--dtmc-value-text-align');
+            const valueTextTransform = getCSSVariable('--dtmc-value-text-transform');
             
             const containerX = node.x + containerMarginX;
             const containerY = node.y + containerYOffset;
-            const containerWidth = NODE_WIDTH - (containerMarginX * 2);
+            const containerWidth = getBubbleWidth() - (containerMarginX * 2);
             
             // Draw background container
             ctx.fillStyle = containerBg;
             ctx.beginPath();
             ctx.roundRect(containerX, containerY, containerWidth, containerHeight, containerRadius);
             ctx.fill();
+            
+            // Draw container border if specified
+            if (containerBorderWidth > 0) {
+                ctx.strokeStyle = containerBorderColor;
+                ctx.lineWidth = containerBorderWidth;
+                ctx.beginPath();
+                ctx.roundRect(containerX, containerY, containerWidth, containerHeight, containerRadius);
+                ctx.stroke();
+            }
             
             // Check if this is a primitive color token with a direct hex value (not a reference)
             const isPrimitiveColor = node.layer === 'primitive' && node.type === 'color';
@@ -4109,53 +4261,57 @@
                 ctx.stroke();
                 
                 // Adjust text position to make room for color square
-                const textX = node.x + NODE_WIDTH / 2 + colorSquareSize / 2 + 4;
+                const textX = node.x + getBubbleWidth() / 2 + colorSquareSize / 2 + 4;
                 ctx.fillStyle = valueTextColor;
-                ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
-                ctx.textAlign = 'center';
+                ctx.font = `${valueTextFontWeight} ${valueTextFontSize} Sora, system-ui, sans-serif`;
+                ctx.textAlign = valueTextAlign;
+                ctx.textBaseline = 'middle'; // This centers text vertically!
                 
                 // Wrap value text if needed
-                const maxValueWidth = NODE_WIDTH - colorSquareSize - 20; // Account for color square and padding
-                const wrappedValueLines = wrapText(ctx, node.value, maxValueWidth, 10);
-                const valueLineHeight = 12;
-                const valueStartY = containerY + containerHeight/2 - ((wrappedValueLines.length - 1) * valueLineHeight / 2);
+                const maxValueWidth = getBubbleWidth() - colorSquareSize - 20; // Account for color square and padding
+                const textToDisplay = valueTextTransform === 'uppercase' ? node.value.toUpperCase() : 
+                                    valueTextTransform === 'lowercase' ? node.value.toLowerCase() : node.value;
+                const wrappedValueLines = wrapText(ctx, textToDisplay, maxValueWidth, 10);
+                const valueLineHeight = parseFloat(valueTextFontSize) * valueTextLineHeight;
                 
-                // Debug: Log value text wrapping info
-                if (wrappedValueLines.length > 1) {
-
+                // For single line, center perfectly
+                if (wrappedValueLines.length === 1) {
+                    const centerY = containerY + containerHeight / 2;
+                    ctx.fillText(wrappedValueLines[0], textX, centerY);
+                } else {
+                    // For multiple lines, distribute evenly around center
+                    const centerY = containerY + containerHeight / 2;
+                    const startY = centerY - (wrappedValueLines.length - 1) * valueLineHeight / 2;
+                    wrappedValueLines.forEach((line, index) => {
+                        ctx.fillText(line, textX, startY + (index * valueLineHeight));
+                    });
                 }
-                
-                wrappedValueLines.forEach((line, index) => {
-                    const textWidth = ctx.measureText(line).width;
-                    if (textWidth > maxValueWidth) {
-                        console.warn(`Value text still too wide: "${line}" (${textWidth}px > ${maxValueWidth}px)`);
-                    }
-                    ctx.fillText(line, textX, valueStartY + (index * valueLineHeight));
-                });
             } else {
                 // Draw value text normally (centered) with wrapping
                 ctx.fillStyle = valueTextColor;
-                ctx.font = `${valueTextFontSize} Sora, system-ui, sans-serif`;
-                ctx.textAlign = 'center';
+                ctx.font = `${valueTextFontWeight} ${valueTextFontSize} Sora, system-ui, sans-serif`;
+                ctx.textAlign = valueTextAlign;
+                ctx.textBaseline = 'middle'; // This centers text vertically!
                 
                 // Wrap value text if needed
-                const maxValueWidth = NODE_WIDTH - 20; // 10px padding on each side
-                const wrappedValueLines = wrapText(ctx, node.value, maxValueWidth, 10);
-                const valueLineHeight = 12;
-                const valueStartY = containerY + containerHeight/2 - ((wrappedValueLines.length - 1) * valueLineHeight / 2);
+                const maxValueWidth = getBubbleWidth() - 20; // 10px padding on each side
+                const textToDisplay = valueTextTransform === 'uppercase' ? node.value.toUpperCase() : 
+                                    valueTextTransform === 'lowercase' ? node.value.toLowerCase() : node.value;
+                const wrappedValueLines = wrapText(ctx, textToDisplay, maxValueWidth, 10);
+                const valueLineHeight = parseFloat(valueTextFontSize) * valueTextLineHeight;
                 
-                // Debug: Log value text wrapping info
-                if (wrappedValueLines.length > 1) {
-
+                // For single line, center perfectly
+                if (wrappedValueLines.length === 1) {
+                    const centerY = containerY + containerHeight / 2;
+                    ctx.fillText(wrappedValueLines[0], node.x + getBubbleWidth() / 2, centerY);
+                } else {
+                    // For multiple lines, distribute evenly around center
+                    const centerY = containerY + containerHeight / 2;
+                    const startY = centerY - (wrappedValueLines.length - 1) * valueLineHeight / 2;
+                    wrappedValueLines.forEach((line, index) => {
+                        ctx.fillText(line, node.x + getBubbleWidth() / 2, startY + (index * valueLineHeight));
+                    });
                 }
-                
-                wrappedValueLines.forEach((line, index) => {
-                    const textWidth = ctx.measureText(line).width;
-                    if (textWidth > maxValueWidth) {
-                        console.warn(`Value text still too wide: "${line}" (${textWidth}px > ${maxValueWidth}px)`);
-                    }
-                    ctx.fillText(line, node.x + NODE_WIDTH / 2, valueStartY + (index * valueLineHeight));
-                });
             }
         }
         
@@ -4172,19 +4328,19 @@
             });
             
             // Top socket (INPUT - red)
-            const topSocket = { x: node.x + NODE_WIDTH / 2, y: node.y };
+            const topSocket = { x: node.x + getBubbleWidth() / 2, y: node.y };
             drawSocket(topSocket.x, topSocket.y, 'input', connectedSockets.has('top'), node);
             
             // Left socket (INPUT - red)
-            const leftSocket = { x: node.x, y: node.y + NODE_HEIGHT / 2 };
+            const leftSocket = { x: node.x, y: node.y + getBubbleHeight() / 2 };
             drawSocket(leftSocket.x, leftSocket.y, 'input', connectedSockets.has('left'), node);
             
             // Right socket (OUTPUT - green)
-            const rightSocket = { x: node.x + NODE_WIDTH, y: node.y + NODE_HEIGHT / 2 };
+            const rightSocket = { x: node.x + getBubbleWidth(), y: node.y + getBubbleHeight() / 2 };
             drawSocket(rightSocket.x, rightSocket.y, 'output', connectedSockets.has('right'), node);
             
             // Bottom socket (OUTPUT - green)
-            const bottomSocket = { x: node.x + NODE_WIDTH / 2, y: node.y + NODE_HEIGHT };
+            const bottomSocket = { x: node.x + getBubbleWidth() / 2, y: node.y + getBubbleHeight() };
             drawSocket(bottomSocket.x, bottomSocket.y, 'output', connectedSockets.has('bottom'), node);
         }
         
@@ -4205,8 +4361,8 @@
             const mouseX = (lastMousePos.x - rect.left - panOffset.x) / zoomLevel;
             const mouseY = (lastMousePos.y - rect.top - panOffset.y) / zoomLevel;
             
-            const isHoveringOverNode = mouseX >= node.x && mouseX <= node.x + NODE_WIDTH &&
-                                     mouseY >= node.y && mouseY <= node.y + NODE_HEIGHT;
+            const isHoveringOverNode = mouseX >= node.x && mouseX <= node.x + getBubbleWidth() &&
+                                     mouseY >= node.y && mouseY <= node.y + getBubbleHeight();
             
             // Draw socket background
             if (isConnected) {
@@ -4583,28 +4739,78 @@
         }
 
         function saveState() {
+            // Clear redo stack when new action is performed
+            redoStack = [];
+            
             undoStack.push({
                 nodes: JSON.parse(JSON.stringify(nodes)),
-                connections: JSON.parse(JSON.stringify(connections))
+                connections: JSON.parse(JSON.stringify(connections)),
+                groups: JSON.parse(JSON.stringify(groups)),
+                tokens: JSON.parse(JSON.stringify(tokens)),
+                tokenGroups: JSON.parse(JSON.stringify(tokenGroups))
             });
             
-            if (undoStack.length > 20) {
+            // Limit to 30 steps
+            if (undoStack.length > 30) {
                 undoStack.shift();
             }
         }
 
         function undo() {
-
-            
             if (undoStack.length > 0) {
+                // Save current state to redo stack
+                redoStack.push({
+                    nodes: JSON.parse(JSON.stringify(nodes)),
+                    connections: JSON.parse(JSON.stringify(connections)),
+                    groups: JSON.parse(JSON.stringify(groups)),
+                    tokens: JSON.parse(JSON.stringify(tokens)),
+                    tokenGroups: JSON.parse(JSON.stringify(tokenGroups))
+                });
+                
+                // Limit redo stack to 30 steps
+                if (redoStack.length > 30) {
+                    redoStack.shift();
+                }
+                
+                // Restore previous state
                 const previousState = undoStack.pop();
-
                 nodes = previousState.nodes;
                 connections = previousState.connections;
+                groups = previousState.groups || [];
+                tokens = previousState.tokens || tokens;
+                tokenGroups = previousState.tokenGroups || tokenGroups;
+                
                 render();
-
-            } else {
-
+                renderSidebar();
+            }
+        }
+        
+        function redo() {
+            if (redoStack.length > 0) {
+                // Save current state to undo stack
+                undoStack.push({
+                    nodes: JSON.parse(JSON.stringify(nodes)),
+                    connections: JSON.parse(JSON.stringify(connections)),
+                    groups: JSON.parse(JSON.stringify(groups)),
+                    tokens: JSON.parse(JSON.stringify(tokens)),
+                    tokenGroups: JSON.parse(JSON.stringify(tokenGroups))
+                });
+                
+                // Limit undo stack to 30 steps
+                if (undoStack.length > 30) {
+                    undoStack.shift();
+                }
+                
+                // Restore next state
+                const nextState = redoStack.pop();
+                nodes = nextState.nodes;
+                connections = nextState.connections;
+                groups = nextState.groups || [];
+                tokens = nextState.tokens || tokens;
+                tokenGroups = nextState.tokenGroups || tokenGroups;
+                
+                render();
+                renderSidebar();
             }
         }
 
@@ -4621,6 +4827,7 @@
                 };
                 selectedSidebarTokens = [];
                 undoStack = [];
+                redoStack = [];
                 render();
                 renderSidebar();
             }
@@ -4882,9 +5089,9 @@
             
             // Calculate bounds of all nodes
             let minX = Math.min(...nodes.map(n => n.x));
-            let maxX = Math.max(...nodes.map(n => n.x + NODE_WIDTH));
+            let maxX = Math.max(...nodes.map(n => n.x + getBubbleWidth()));
             let minY = Math.min(...nodes.map(n => n.y));
-            let maxY = Math.max(...nodes.map(n => n.y + NODE_HEIGHT));
+            let maxY = Math.max(...nodes.map(n => n.y + getBubbleHeight()));
             
             // Add padding
             const padding = 50;
@@ -4903,8 +5110,8 @@
             nodes.forEach(node => {
                 const minimapX = (node.x - minX) * scale;
                 const minimapY = (node.y - minY) * scale;
-                const minimapWidth = NODE_WIDTH * scale;
-                const minimapHeight = NODE_HEIGHT * scale;
+                const minimapWidth = getBubbleWidth() * scale;
+                const minimapHeight = getBubbleHeight() * scale;
                 
                 minimapCtx.fillRect(minimapX, minimapY, minimapWidth, minimapHeight);
             });
@@ -4949,9 +5156,9 @@
             
             // Calculate bounds (same logic as renderMiniMap)
             let minX = Math.min(...nodes.map(n => n.x));
-            let maxX = Math.max(...nodes.map(n => n.x + NODE_WIDTH));
+            let maxX = Math.max(...nodes.map(n => n.x + getBubbleWidth()));
             let minY = Math.min(...nodes.map(n => n.y));
-            let maxY = Math.max(...nodes.map(n => n.y + NODE_HEIGHT));
+            let maxY = Math.max(...nodes.map(n => n.y + getBubbleHeight()));
             
             const padding = 50;
             minX -= padding;
@@ -5091,6 +5298,14 @@
             sessionNameInput.value = '';
             sessionDescriptionInput.value = '';
             
+            // Reset radio buttons to "new session"
+            document.querySelector('input[name="save-option"][value="new"]').checked = true;
+            document.getElementById('new-session-fields').style.display = 'block';
+            document.getElementById('overwrite-session-fields').style.display = 'none';
+            
+            // Load existing sessions for overwrite option
+            loadOverwriteSessionsList();
+            
             // Show modal
             modal.style.display = 'flex';
             sessionNameInput.focus();
@@ -5099,21 +5314,106 @@
             setupSaveModalEvents();
         }
         
+        // Load overwrite sessions list
+        function loadOverwriteSessionsList() {
+            const sessionsList = document.getElementById('dtmc-overwrite-sessions-list');
+            const sessions = JSON.parse(localStorage.getItem('dtmc-sessions') || '{}');
+            
+            if (Object.keys(sessions).length === 0) {
+                sessionsList.innerHTML = '<div class="dtmc-session-item"><div class="dtmc-session-item-description">No saved sessions found</div></div>';
+                return;
+            }
+            
+            // Sort sessions by timestamp (newest first)
+            const sortedSessions = Object.values(sessions).sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            
+            sessionsList.innerHTML = sortedSessions.map(session => {
+                const date = new Date(session.timestamp).toLocaleString();
+                const nodeCount = session.data.nodes.length;
+                const connectionCount = session.data.connections.length;
+                
+                return `
+                    <div class="dtmc-session-item" data-session-name="${session.name}">
+                        <div class="dtmc-session-item-header">
+                            <div class="dtmc-session-item-name">${session.name}</div>
+                            <div class="dtmc-session-item-date">${date}</div>
+                        </div>
+                        ${session.description ? `<div class="dtmc-session-item-description">${session.description}</div>` : ''}
+                        <div class="dtmc-session-item-stats">
+                            <div class="dtmc-session-item-stat">
+                                <span>🎯</span>
+                                <span>${nodeCount} tokens</span>
+                            </div>
+                            <div class="dtmc-session-item-stat">
+                                <span>🔗</span>
+                                <span>${connectionCount} connections</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
         // Setup save modal event listeners
         function setupSaveModalEvents() {
             const modal = document.getElementById('dtmc-save-modal');
             const sessionNameInput = document.getElementById('session-name');
             const saveBtn = document.getElementById('dtmc-save-confirm-btn');
             const cancelBtn = document.getElementById('dtmc-save-cancel-btn');
+            const radioOptions = document.querySelectorAll('input[name="save-option"]');
+            const newSessionFields = document.getElementById('new-session-fields');
+            const overwriteSessionFields = document.getElementById('overwrite-session-fields');
+            const overwriteSessionsList = document.getElementById('dtmc-overwrite-sessions-list');
+            
+            // Radio button change handler
+            radioOptions.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'new') {
+                        newSessionFields.style.display = 'block';
+                        overwriteSessionFields.style.display = 'none';
+                    } else {
+                        newSessionFields.style.display = 'none';
+                        overwriteSessionFields.style.display = 'block';
+                    }
+                });
+            });
+            
+            // Overwrite session selection
+            overwriteSessionsList.onclick = (e) => {
+                const sessionItem = e.target.closest('.dtmc-session-item');
+                if (!sessionItem) return;
+                
+                // Remove previous selection
+                document.querySelectorAll('#dtmc-overwrite-sessions-list .dtmc-session-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Add selection to clicked item
+                sessionItem.classList.add('selected');
+            };
             
             // Save button click
             saveBtn.onclick = () => {
-                const sessionName = sessionNameInput.value.trim();
-                if (!sessionName) {
-                    alert('Please enter a session name');
-                    return;
+                const selectedOption = document.querySelector('input[name="save-option"]:checked').value;
+                
+                if (selectedOption === 'new') {
+                    const sessionName = sessionNameInput.value.trim();
+                    if (!sessionName) {
+                        alert('Please enter a session name');
+                        return;
+                    }
+                    saveSession(sessionName);
+                } else {
+                    const selectedSession = document.querySelector('#dtmc-overwrite-sessions-list .dtmc-session-item.selected');
+                    if (!selectedSession) {
+                        alert('Please select a session to overwrite');
+                        return;
+                    }
+                    const sessionName = selectedSession.dataset.sessionName;
+                    saveSession(sessionName, true);
                 }
-                saveSession(sessionName);
             };
             
             // Cancel button click
@@ -5137,7 +5437,7 @@
         }
         
         // Save session to localStorage
-        function saveSession(sessionName) {
+        function saveSession(sessionName, isOverwrite = false) {
             const sessionDescription = document.getElementById('session-description').value.trim();
             
             const sessionData = {
@@ -5166,7 +5466,10 @@
             document.getElementById('dtmc-save-modal').style.display = 'none';
             
             // Show success message
-            showNotification(`Session "${sessionName}" saved successfully!`, 'success');
+            const message = isOverwrite ? 
+                `Session "${sessionName}" overwritten successfully!` : 
+                `Session "${sessionName}" saved successfully!`;
+            showNotification(message, 'success');
             
 
         }
@@ -5296,6 +5599,7 @@
                 nodes = sessionData.data.nodes;
                 connections = sessionData.data.connections;
                 tokens = sessionData.data.tokens;
+                groups = sessionData.data.groups || []; // Load groups if they exist
                 panOffset = sessionData.data.panOffset || { x: 0, y: 0 };
                 zoomLevel = sessionData.data.zoomLevel || 1.0;
                 
@@ -5314,6 +5618,53 @@
                 });
                 
                 console.log(`Fixed ${connections.length} connection references`);
+                
+                // Fix group node references to point to the newly loaded nodes
+                if (groups && groups.length > 0) {
+                    groups.forEach(group => {
+                        if (group.nodes && group.nodes.length > 0) {
+                            // Find the actual node objects that correspond to the group's nodes
+                            const actualNodes = group.nodes.map(groupNode => {
+                                // Try to find by ID first, then by name as fallback
+                                return nodes.find(node => 
+                                    node.id === groupNode.id || 
+                                    (node.name === groupNode.name && node.layer === groupNode.layer)
+                                );
+                            }).filter(node => node !== undefined);
+                            
+                            group.nodes = actualNodes; // Use the actual node objects from the loaded nodes array
+                            
+                            // Recalculate group bounds
+                            if (group.nodes.length > 0) {
+                                group.bounds = calculateGroupBounds(group.nodes);
+                                
+                                // If group was collapsed, maintain collapsed state
+                                if (group.isCollapsed) {
+                                    const centerX = group.bounds.x + group.bounds.width / 2;
+                                    const centerY = group.bounds.y + group.bounds.height / 2;
+                                    const collapsedWidth = calculateMinimumGroupWidth(group);
+                                    const collapsedHeight = 80;
+                                    
+                                    group.bounds = {
+                                        x: centerX - collapsedWidth / 2,
+                                        y: centerY - collapsedHeight / 2,
+                                        width: collapsedWidth,
+                                        height: collapsedHeight
+                                    };
+                                    
+                                    // Update header bounds for collapsed state
+                                    group.bounds.headerBounds = {
+                                        x: group.bounds.x + 10,
+                                        y: group.bounds.y - 15,
+                                        width: group.bounds.width - 20,
+                                        height: 30
+                                    };
+                                }
+                            }
+                        }
+                    });
+                    console.log(`Fixed ${groups.length} group node references`);
+                }
                 
                 // Clear selections
                 selectedNode = null;
@@ -5452,13 +5803,57 @@
                 
                 // Load groups if they exist
                 if (jsonData.groups) {
-                    groups = jsonData.groups.map(group => ({
-                        ...group,
-                        // Ensure all required properties exist
-                        id: group.id || Date.now() + Math.random(),
-                        name: group.name || 'Unnamed Group',
-                        nodes: group.nodes || []
-                    }));
+                    groups = jsonData.groups.map(group => {
+                        // Find the actual node objects that correspond to the group's nodes
+                        const actualNodes = (group.nodes || []).map(groupNode => {
+                            // Try to find by ID first, then by name as fallback
+                            return nodes.find(node => 
+                                node.id === groupNode.id || 
+                                (node.name === groupNode.name && node.layer === groupNode.layer)
+                            );
+                        }).filter(node => node !== undefined);
+                        
+                        return {
+                            ...group,
+                            // Ensure all required properties exist
+                            id: group.id || Date.now() + Math.random(),
+                            name: group.name || 'Unnamed Group',
+                            nodes: actualNodes, // Use the actual node objects from the loaded nodes array
+                            isCollapsed: group.isCollapsed || false,
+                            originalBounds: group.originalBounds || null,
+                            headerBounds: group.headerBounds || null
+                        };
+                    });
+                    
+                    // Recalculate group bounds for all loaded groups
+                    groups.forEach(group => {
+                        if (group.nodes.length > 0) {
+                            group.bounds = calculateGroupBounds(group.nodes);
+                            
+                            // If group was collapsed, maintain collapsed state
+                            if (group.isCollapsed) {
+                                const centerX = group.bounds.x + group.bounds.width / 2;
+                                const centerY = group.bounds.y + group.bounds.height / 2;
+                                const collapsedWidth = calculateMinimumGroupWidth(group);
+                                const collapsedHeight = 80;
+                                
+                                group.bounds = {
+                                    x: centerX - collapsedWidth / 2,
+                                    y: centerY - collapsedHeight / 2,
+                                    width: collapsedWidth,
+                                    height: collapsedHeight
+                                };
+                                
+                                // Update header bounds for collapsed state
+                                group.bounds.headerBounds = {
+                                    x: group.bounds.x + 10,
+                                    y: group.bounds.y - 15,
+                                    width: group.bounds.width - 20,
+                                    height: 30
+                                };
+                            }
+                        }
+                    });
                 }
                 
                 // Load canvas state
@@ -5558,4 +5953,5 @@
     </script>
 </body>
 </html>
+
 
