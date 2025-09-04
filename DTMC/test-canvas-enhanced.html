@@ -4277,7 +4277,12 @@
                 
                 // Skip connections within the same collapsed group
                 if (startGroup && endGroup && startGroup.id === endGroup.id && startGroup.isCollapsed) {
-
+                    return;
+                }
+                
+                // Skip if neither node is in a collapsed group - draw normally
+                if ((!startGroup || !startGroup.isCollapsed) && (!endGroup || !endGroup.isCollapsed)) {
+                    drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
                     return;
                 }
                 
@@ -4315,19 +4320,54 @@
             
             // Draw consolidated connections
             connectionGroups.forEach((group, key) => {
-                if (group.connections.length === 1) {
-                    // Single connection - draw normally
-                    const connection = group.connections[0];
-
-                    drawConnection(connection.startNode, connection.endNode, connection.startSocket, connection.endSocket);
-                } else {
-                    // Multiple connections - draw consolidated
-
-                    drawConsolidatedConnection(group);
-                }
+                drawConsolidatedConnection(group);
             });
         }
         
+        // Get the best connection point on a group border based on direction
+        function getGroupBorderConnectionPoint(group, targetPoint) {
+            const bounds = group.bounds;
+            const groupCenterX = bounds.x + bounds.width / 2;
+            const groupCenterY = bounds.y + bounds.height / 2;
+            
+            // Calculate direction from group center to target
+            const deltaX = targetPoint.x - groupCenterX;
+            const deltaY = targetPoint.y - groupCenterY;
+            
+            // Determine which border to connect to based on direction
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal connection
+                if (deltaX > 0) {
+                    // Target is to the right, connect to right border
+                    return {
+                        x: bounds.x + bounds.width,
+                        y: groupCenterY
+                    };
+                } else {
+                    // Target is to the left, connect to left border
+                    return {
+                        x: bounds.x,
+                        y: groupCenterY
+                    };
+                }
+            } else {
+                // Vertical connection
+                if (deltaY > 0) {
+                    // Target is below, connect to bottom border
+                    return {
+                        x: groupCenterX,
+                        y: bounds.y + bounds.height
+                    };
+                } else {
+                    // Target is above, connect to top border
+                    return {
+                        x: groupCenterX,
+                        y: bounds.y
+                    };
+                }
+            }
+        }
+
         // Draw a consolidated connection representing multiple connections
         function drawConsolidatedConnection(connectionGroup) {
             const { sourceGroup, targetGroup, sourceNode, targetNode, startSocket, endSocket, connections } = connectionGroup;
@@ -4336,21 +4376,37 @@
             let startPoint, endPoint;
             
             if (sourceGroup && sourceGroup.isCollapsed) {
-                // Start from group center
-                startPoint = {
-                    x: sourceGroup.bounds.x + sourceGroup.bounds.width / 2,
-                    y: sourceGroup.bounds.y + sourceGroup.bounds.height / 2
-                };
+                // Calculate target point for direction calculation
+                let targetPoint;
+                if (targetGroup && targetGroup.isCollapsed) {
+                    targetPoint = {
+                        x: targetGroup.bounds.x + targetGroup.bounds.width / 2,
+                        y: targetGroup.bounds.y + targetGroup.bounds.height / 2
+                    };
+                } else {
+                    targetPoint = getSocketPosition(targetNode, endSocket);
+                }
+                
+                // Get connection point on group border
+                startPoint = getGroupBorderConnectionPoint(sourceGroup, targetPoint);
             } else {
                 startPoint = getSocketPosition(sourceNode, startSocket);
             }
             
             if (targetGroup && targetGroup.isCollapsed) {
-                // End at group center
-                endPoint = {
-                    x: targetGroup.bounds.x + targetGroup.bounds.width / 2,
-                    y: targetGroup.bounds.y + targetGroup.bounds.height / 2
-                };
+                // Calculate source point for direction calculation
+                let sourcePoint;
+                if (sourceGroup && sourceGroup.isCollapsed) {
+                    sourcePoint = {
+                        x: sourceGroup.bounds.x + sourceGroup.bounds.width / 2,
+                        y: sourceGroup.bounds.y + sourceGroup.bounds.height / 2
+                    };
+                } else {
+                    sourcePoint = getSocketPosition(sourceNode, startSocket);
+                }
+                
+                // Get connection point on group border
+                endPoint = getGroupBorderConnectionPoint(targetGroup, sourcePoint);
             } else {
                 endPoint = getSocketPosition(targetNode, endSocket);
             }
@@ -4383,10 +4439,59 @@
             );
             ctx.stroke();
             
+            // Draw connection points on group borders
+            if (sourceGroup && sourceGroup.isCollapsed) {
+                drawGroupConnectionPoint(startPoint, 'output');
+            }
+            if (targetGroup && targetGroup.isCollapsed) {
+                drawGroupConnectionPoint(endPoint, 'input');
+            }
+            
             // Draw connection count label
             drawConsolidatedConnectionLabel(startPoint, endPoint, connections.length);
         }
         
+        // Draw a connection point on a group border
+        function drawGroupConnectionPoint(point, type) {
+            // Get CSS variables for socket styling
+            const socketRadius = parseCSSValue(getCSSVariable('--dtmc-socket-radius'));
+            const socketConnectedColor = getCSSVariable('--dtmc-socket-connected-color');
+            const socketStrokeColor = getCSSVariable('--dtmc-socket-stroke-color');
+            const socketStrokeWidth = parseCSSValue(getCSSVariable('--dtmc-socket-stroke-width'));
+            const socketInnerCircleRadius = parseCSSValue(getCSSVariable('--dtmc-socket-inner-circle-radius'));
+            const socketPlusSize = parseCSSValue(getCSSVariable('--dtmc-socket-plus-size'));
+            
+            // Draw socket background
+            ctx.fillStyle = socketConnectedColor;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, socketRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Draw socket border
+            ctx.strokeStyle = socketStrokeColor;
+            ctx.lineWidth = socketStrokeWidth;
+            ctx.stroke();
+            
+            // Draw socket content
+            if (type === 'input') {
+                // Draw small circle inside for input sockets
+                ctx.fillStyle = socketStrokeColor;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, socketInnerCircleRadius, 0, 2 * Math.PI);
+                ctx.fill();
+            } else {
+                // Draw plus sign for output sockets
+                ctx.strokeStyle = socketStrokeColor;
+                ctx.lineWidth = socketStrokeWidth;
+                ctx.beginPath();
+                ctx.moveTo(point.x - socketPlusSize, point.y);
+                ctx.lineTo(point.x + socketPlusSize, point.y);
+                ctx.moveTo(point.x, point.y - socketPlusSize);
+                ctx.lineTo(point.x, point.y + socketPlusSize);
+                ctx.stroke();
+            }
+        }
+
         // Draw label for consolidated connection showing count
         function drawConsolidatedConnectionLabel(startPoint, endPoint, connectionCount) {
             // Save the current canvas context state
