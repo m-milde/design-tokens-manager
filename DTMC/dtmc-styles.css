@@ -125,6 +125,13 @@
   --dtmc-specific-start: #C80067;
   --dtmc-specific-end: #393939;
   
+  /* ===== GRID STYLES ===== */
+  /* Grid dot configuration - easily customizable */
+  --dtmc-grid-dot-size: 1px;           /* Size of each grid dot */
+  --dtmc-grid-dot-spacing: 10px;       /* Distance between grid dots */
+  --dtmc-grid-dot-color: #ffffff;      /* Color of the grid dots */
+  --dtmc-grid-opacity: 0.3;            /* Opacity of the grid dots (0-1) */
+
   /* ===== BUBBLE STYLES ===== */
   /* Bubble Background */
   --dtmc-bubble-bg-opacity: 0.5;
@@ -235,7 +242,7 @@ body {
 
 /* ===== SIDEBAR STYLES ===== */
 .dtmc-sidebar {
-  width: 320px;
+  width: 300px;
   background: var(--dtmc-neutral-800);
   border-right: 1px solid var(--dtmc-neutral-700);
   display: flex;
@@ -266,10 +273,10 @@ body {
 }
 
 .dtmc-sidebar-header h2 {
-  color: var(--dtmc-neutral-100);
-  font-size: var(--dtmc-font-size-xl);
-  font-weight: var(--dtmc-font-weight-bold);
-  margin: 0;
+	color: var(--dtmc-neutral-100);
+	font-size: var(--dtmc-font-size-lg);
+	font-weight: 400;
+	margin: 0;
 }
 
 .dtmc-sidebar-collapse-btn {
@@ -351,53 +358,132 @@ body {
   overflow-y: auto;
 }
 
-.dtmc-token-types {
-	display: flex;
-	flex-flow: row wrap;
-	gap: .5rem;
+
+/* ===== FLOATING TOKEN TYPE SELECTION MENU ===== */
+.dtmc-token-type-menu {
+  position: fixed;
+  background: var(--dtmc-neutral-800);
+  border: 1px solid var(--dtmc-neutral-700);
+  border-radius: var(--dtmc-radius-lg);
+  box-shadow: var(--dtmc-shadow-xl);
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  z-index: var(--dtmc-z-modal);
+  min-width: 200px;
+  max-width: 250px;
+  backdrop-filter: blur(10px);
 }
 
-/* ===== TOKEN TYPE SELECTION ===== */
-.dtmc-type-selector {
-  margin-bottom: var(--dtmc-spacing-xl);
+/* Arrow pointing to the button */
+.dtmc-token-type-menu::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: var(--arrow-offset, 20px);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--dtmc-neutral-700);
+  z-index: 1;
 }
 
-.dtmc-type-selector h3 {
-  color: var(--dtmc-neutral-200);
+.dtmc-token-type-menu::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: calc(var(--arrow-offset, 20px) + 1px);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid var(--dtmc-neutral-800);
+  z-index: 2;
+}
+
+.dtmc-token-type-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--dtmc-spacing-md) var(--dtmc-spacing-lg);
+  background: var(--dtmc-neutral-700);
+  border-bottom: 1px solid var(--dtmc-neutral-600);
+}
+
+.dtmc-token-type-menu-header h3 {
+  color: var(--dtmc-neutral-100);
   font-size: var(--dtmc-font-size-md);
   font-weight: var(--dtmc-font-weight-semibold);
-  margin-bottom: var(--dtmc-spacing-md);
+  margin: 0;
 }
 
-.dtmc-type-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--dtmc-spacing-sm);
-}
-
-.dtmc-type-btn {
-  padding: var(--dtmc-spacing-sm) var(--dtmc-spacing-md);
-  background: var(--dtmc-neutral-800);
-  border: 1px solid var(--dtmc-neutral-600);
-  border-radius: var(--dtmc-radius-md);
-  color: var(--dtmc-neutral-300);
-  font-size: var(--dtmc-font-size-sm);
-  font-weight: var(--dtmc-font-weight-medium);
+.dtmc-token-type-menu-close {
+  background: transparent;
+  border: none;
+  color: var(--dtmc-neutral-400);
   cursor: pointer;
+  padding: var(--dtmc-spacing-xs);
+  border-radius: var(--dtmc-radius-sm);
   transition: all var(--dtmc-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
-.dtmc-type-btn:hover {
-  background: var(--dtmc-neutral-700);
-  border-color: var(--dtmc-neutral-500);
+.dtmc-token-type-menu-close:hover {
+  background: var(--dtmc-neutral-600);
   color: var(--dtmc-neutral-200);
 }
 
-.dtmc-type-btn.active {
-  background: var(--dtmc-neutral-50);
-  border-color: var(--dtmc-neutral-50);
-  color: var(--dtmc-neutral-900);
+.dtmc-token-type-menu-close .material-icons {
+  font-size: 18px;
 }
+
+.dtmc-token-type-options {
+  padding: var(--dtmc-spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dtmc-spacing-xs);
+}
+
+.dtmc-token-type-option {
+	display: flex;
+	align-items: center;
+	gap: var(--dtmc-spacing-md);
+	padding: var(--dtmc-spacing-xs) var(--dtmc-spacing-sm);
+	background: transparent;
+	border: none;
+	border-radius: var(--dtmc-radius-sm);
+	color: var(--dtmc-neutral-300);
+	font-size: var(--dtmc-font-size-xs);
+	cursor: pointer;
+	text-align: left;
+	width: 100%;
+}
+
+.dtmc-token-type-option:hover {
+  background: var(--dtmc-neutral-700);
+  color: var(--dtmc-neutral-100);
+}
+
+.dtmc-token-type-option .material-icons {
+  font-size: 20px;
+  color: var(--dtmc-neutral-400);
+  transition: color var(--dtmc-transition-normal);
+  flex-shrink: 0;
+}
+
+.dtmc-token-type-option:hover .material-icons {
+  color: var(--dtmc-neutral-200);
+}
+
+.dtmc-token-type-option span:not(.material-icons) {
+  flex: 1;
+}
+
 
 /* ===== TOKEN LAYERS ===== */
 .dtmc-layer {
@@ -408,7 +494,7 @@ body {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: calc(-1 * var(--dtmc-spacing-xs));
+	margin-bottom: var(--dtmc-spacing-sm);
 	border-bottom: 1px solid var(--dtmc-neutral-700);
 }
 
@@ -442,7 +528,7 @@ body {
 
 .dtmc-layer-title {
   color: var(--dtmc-neutral-200);
-  font-size: var(--dtmc-font-size-sm);
+  font-size: var(--dtmc-font-size-xs);
   font-weight: var(--dtmc-font-weight-regular);
   text-transform: uppercase;
 }
@@ -564,12 +650,12 @@ body {
   color: var(--dtmc-neutral-100);
   font-weight: var(--dtmc-font-weight-semibold);
   margin-bottom: var(--dtmc-spacing-xs);
-  font-size: .875rem;
+  font-size: .75rem;
 }
 
 .dtmc-token-value {
   color: var(--dtmc-neutral-400);
-  font-size: var(--dtmc-font-size-sm);
+  font-size: var(--dtmc-font-size-xs);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   display: flex;
   align-items: center;
@@ -727,6 +813,14 @@ body {
   left: calc(var(--dtmc-spacing-lg) + 40px + var(--dtmc-spacing-md));
 }
 
+.dtmc-controls .dtmc-btn{
+  padding: var(--dtmc-spacing-xs) var(--dtmc-spacing-sm);
+}
+
+.dtmc-controls .dtmc-btn span{
+  font-size: var(--dtmc-font-size-md) !important;
+}
+
 /* ===== VERTICAL MENU ===== */
 .dtmc-menu-container {
   position: relative;
@@ -784,67 +878,8 @@ body {
   color: var(--dtmc-neutral-200);
 }
 
-.dtmc-vertical-menu .dtmc-menu-item span:not(.material-icons) {
-  display: inline-block !important;
-  color: var(--dtmc-neutral-200) !important;
-  font-size: var(--dtmc-font-size-sm) !important;
-  font-weight: var(--dtmc-font-weight-medium) !important;
-  white-space: nowrap;
-  opacity: 1 !important;
-  visibility: visible !important;
-  transition: color var(--dtmc-transition-normal);
-  width: auto !important;
-  height: auto !important;
-  overflow: visible !important;
-}
-
 .dtmc-vertical-menu .dtmc-menu-item:hover span:not(.material-icons) {
   color: var(--dtmc-neutral-100) !important;
-}
-
-/* Force text visibility with maximum specificity */
-#dtmc-vertical-menu button span:not(.material-icons) {
-  display: inline !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  color: #e2e8f0 !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  line-height: 1.5 !important;
-  text-decoration: none !important;
-  text-transform: none !important;
-  letter-spacing: normal !important;
-  word-spacing: normal !important;
-  white-space: normal !important;
-  width: auto !important;
-  height: auto !important;
-  max-width: none !important;
-  max-height: none !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  position: static !important;
-  float: none !important;
-  clear: none !important;
-  overflow: visible !important;
-  clip: auto !important;
-  clip-path: none !important;
-}
-
-/* Specific styling for menu text */
-.menu-text {
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  color: #e2e8f0 !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  line-height: 1.5 !important;
-  white-space: nowrap !important;
-  margin-left: 8px !important;
 }
 
 .dtmc-btn {
@@ -1044,6 +1079,10 @@ display: flex;
   height: 100%;
   cursor: grab;
   background: var(--dtmc-neutral-900);
+  background-image: 
+    radial-gradient(circle, rgba(255, 255, 255, var(--dtmc-grid-opacity)) var(--dtmc-grid-dot-size), transparent var(--dtmc-grid-dot-size));
+  background-size: var(--dtmc-grid-dot-spacing) var(--dtmc-grid-dot-spacing);
+  background-position: 0 0;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -1830,9 +1869,90 @@ display: flex;
   }
 }
 
+/* ===== GRID UTILITY CLASSES ===== */
+/* 
+ * GRID CUSTOMIZATION GUIDE:
+ * 
+ * 1. Basic Configuration:
+ *    - Modify CSS variables in :root section to change default grid appearance
+ *    - --dtmc-grid-dot-size: Size of each dot (default: 1px)
+ *    - --dtmc-grid-dot-spacing: Distance between dots (default: 10px)
+ *    - --dtmc-grid-dot-color: Color of dots (default: #ffffff)
+ *    - --dtmc-grid-opacity: Opacity of dots (default: 0.3)
+ * 
+ * 2. Using Preset Classes:
+ *    - Add classes to #dtmc-canvas element for quick customization
+ *    - Size: .dtmc-grid-small, .dtmc-grid-medium, .dtmc-grid-large
+ *    - Color: .dtmc-grid-white, .dtmc-grid-gray, .dtmc-grid-blue, .dtmc-grid-green
+ *    - Opacity: .dtmc-grid-faint, .dtmc-grid-subtle, .dtmc-grid-visible, .dtmc-grid-prominent
+ *    - Hide: .dtmc-grid-hidden
+ * 
+ * 3. Example Usage:
+ *    <canvas id="dtmc-canvas" class="dtmc-grid-large dtmc-grid-blue dtmc-grid-visible"></canvas>
+ */
+
+/* Grid visibility toggle */
+.dtmc-grid-hidden {
+  background-image: none !important;
+}
+
+/* Grid size presets */
+.dtmc-grid-small {
+  --dtmc-grid-dot-spacing: 5px;
+  --dtmc-grid-dot-size: 0.5px;
+}
+
+.dtmc-grid-medium {
+  --dtmc-grid-dot-spacing: 10px;
+  --dtmc-grid-dot-size: 0.5px;
+}
+
+.dtmc-grid-large {
+  --dtmc-grid-dot-spacing: 20px;
+  --dtmc-grid-dot-size: 2px;
+}
+
+/* Grid color presets */
+.dtmc-grid-white {
+  --dtmc-grid-dot-color: #ffffff;
+}
+
+.dtmc-grid-gray {
+  --dtmc-grid-dot-color: #6b7280;
+}
+
+.dtmc-grid-blue {
+  --dtmc-grid-dot-color: #3b82f6;
+}
+
+.dtmc-grid-green {
+  --dtmc-grid-dot-color: #10b981;
+}
+
+/* Grid opacity presets */
+.dtmc-grid-faint {
+  --dtmc-grid-opacity: 0.1;
+}
+
+.dtmc-grid-subtle {
+  --dtmc-grid-opacity: 0.2;
+}
+
+.dtmc-grid-visible {
+  --dtmc-grid-opacity: 0.4;
+}
+
+.dtmc-grid-prominent {
+  --dtmc-grid-opacity: 0.6;
+}
+
 /* ===== UTILITY CLASSES ===== */
 .dtmc-d-flex {
   display: flex;
+}
+
+.dtmc-flex-col{
+  flex-direction: column;
 }
 
 .dtmc-hidden {

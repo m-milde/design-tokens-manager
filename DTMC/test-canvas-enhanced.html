@@ -27,15 +27,8 @@
                 </button>
             </div>
             
-            <div class="dtmc-token-types">
-                <button class="dtmc-type-btn active" data-type="color">Color</button>
-                <button class="dtmc-type-btn" data-type="spacing">Spacing</button>
-                <button class="dtmc-type-btn" data-type="typography">Typography</button>
-                <button class="dtmc-type-btn" data-type="number">Number</button>
-                <button class="dtmc-type-btn" data-type="string">String</button>
-                <button class="dtmc-type-btn" data-type="boolean">Boolean</button>
-            </div>
 
+            <div class="dtmc-d-flex dtmc-flex-col">
             <div class="dtmc-layer-section dtmc-primitive-layers">
                 <div class="dtmc-layer-header">
                     <div class="dtmc-layer-header-left">
@@ -92,6 +85,37 @@
                 <div class="dtmc-tokens-list" id="specific-tokens"></div>
             </div>
         </div>
+        </div>
+
+        <!-- Floating Token Type Selection Menu (hidden by default) -->
+        <div class="dtmc-token-type-menu" id="dtmc-token-type-menu" style="display: none;">
+            <div class="dtmc-token-type-options">
+                <button class="dtmc-token-type-option" data-type="color">
+                    <span class="material-icons">palette</span>
+                    <span>Color</span>
+                </button>
+                <button class="dtmc-token-type-option" data-type="spacing">
+                    <span class="material-icons">space_bar</span>
+                    <span>Spacing</span>
+                </button>
+                <button class="dtmc-token-type-option" data-type="typography">
+                    <span class="material-icons">text_fields</span>
+                    <span>Typography</span>
+                </button>
+                <button class="dtmc-token-type-option" data-type="number">
+                    <span class="material-icons">numbers</span>
+                    <span>Number</span>
+                </button>
+                <button class="dtmc-token-type-option" data-type="string">
+                    <span class="material-icons">text_format</span>
+                    <span>String</span>
+                </button>
+                <button class="dtmc-token-type-option" data-type="boolean">
+                    <span class="material-icons">check_box</span>
+                    <span>Boolean</span>
+                </button>
+            </div>
+        </div>
 
         <!-- Sidebar Expand Button (visible when sidebar is collapsed) -->
         <button class="dtmc-sidebar-expand-btn" id="dtmc-sidebar-expand-btn" title="Expand sidebar" style="display: none;">
@@ -142,7 +166,7 @@
             
             <!-- File input for loading JSON -->
             <input type="file" id="dtmc-load-json-input" accept=".json" style="display: none;">
-            <canvas id="dtmc-canvas"></canvas>
+            <canvas id="dtmc-canvas" class="dtmc-grid-medium dtmc-grid-grey dtmc-grid-faint"></canvas>
             
             <!-- Floating Context Menu -->
             <div id="dtmc-floating-menu" class="dtmc-floating-menu" style="display: none;">
@@ -935,22 +959,49 @@
 
         // Setup sidebar functionality
         function setupSidebar() {
-            // Token type selection
-            document.querySelectorAll('.dtmc-type-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.dtmc-type-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    selectedTokenType = btn.dataset.type;
-
+            // Token type menu functionality
+            const tokenTypeMenu = document.getElementById('dtmc-token-type-menu');
+            const tokenTypeMenuClose = document.getElementById('dtmc-token-type-menu-close');
+            
+            // Show token type menu when clicking + buttons
+            document.querySelectorAll('.dtmc-add-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent event bubbling
+                    selectedLayer = btn.dataset.layer;
+                    showTokenTypeMenu(btn);
                 });
             });
 
-            // Add token buttons
-            document.querySelectorAll('.dtmc-add-btn').forEach(btn => {
+            // Hide token type menu when clicking close button
+            if (tokenTypeMenuClose) {
+                tokenTypeMenuClose.addEventListener('click', () => {
+                    hideTokenTypeMenu();
+                });
+            }
+
+            // Handle token type selection
+            document.querySelectorAll('.dtmc-token-type-option').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    selectedLayer = btn.dataset.layer;
+                    selectedTokenType = btn.dataset.type;
+                    hideTokenTypeMenu();
                     openModal();
                 });
+            });
+
+            // Hide menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (tokenTypeMenu && tokenTypeMenu.style.display !== 'none' && 
+                    !tokenTypeMenu.contains(e.target) && 
+                    !e.target.closest('.dtmc-add-btn')) {
+                    hideTokenTypeMenu();
+                }
+            });
+
+            // Hide menu when scrolling (optional - keeps menu in sync with button)
+            window.addEventListener('scroll', () => {
+                if (tokenTypeMenu && tokenTypeMenu.style.display !== 'none') {
+                    hideTokenTypeMenu();
+                }
             });
 
             // Collapse/expand buttons
@@ -1735,6 +1786,65 @@
                 render();
                 
 
+            }
+        }
+
+        // Show token type selection menu
+        function showTokenTypeMenu(button) {
+            const tokenTypeMenu = document.getElementById('dtmc-token-type-menu');
+            if (tokenTypeMenu && button) {
+                // Get button position
+                const buttonRect = button.getBoundingClientRect();
+                const sidebar = document.getElementById('dtmc-sidebar');
+                const sidebarRect = sidebar.getBoundingClientRect();
+                
+                // Calculate position relative to the button
+                const menuX = buttonRect.left;
+                const menuY = buttonRect.bottom + 8; // 8px gap below button
+                
+                // Ensure menu stays within viewport
+                const menuWidth = 250; // max-width from CSS
+                const menuHeight = 300; // estimated height
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                let finalX = menuX;
+                let finalY = menuY;
+                
+                // Adjust if menu would go off right edge
+                if (finalX + menuWidth > viewportWidth) {
+                    finalX = viewportWidth - menuWidth - 10;
+                }
+                
+                // Adjust if menu would go off bottom edge
+                if (finalY + menuHeight > viewportHeight) {
+                    finalY = buttonRect.top - menuHeight - 8; // Show above button instead
+                }
+                
+                // Position the menu
+                tokenTypeMenu.style.left = finalX + 'px';
+                tokenTypeMenu.style.top = finalY + 'px';
+                tokenTypeMenu.style.display = 'block';
+                
+                // Position the arrow to point to the button
+                const arrowOffset = Math.min(20, Math.max(10, buttonRect.left - finalX + 10));
+                tokenTypeMenu.style.setProperty('--arrow-offset', arrowOffset + 'px');
+                
+                // Add a small delay to ensure the animation works
+                setTimeout(() => {
+                    tokenTypeMenu.style.opacity = '1';
+                }, 10);
+            }
+        }
+
+        // Hide token type selection menu
+        function hideTokenTypeMenu() {
+            const tokenTypeMenu = document.getElementById('dtmc-token-type-menu');
+            if (tokenTypeMenu) {
+                tokenTypeMenu.style.opacity = '0';
+                setTimeout(() => {
+                    tokenTypeMenu.style.display = 'none';
+                }, 200);
             }
         }
 
@@ -5983,5 +6093,6 @@
     </script>
 </body>
 </html>
+
 
 
