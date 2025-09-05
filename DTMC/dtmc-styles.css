@@ -648,7 +648,6 @@ body {
 
 .dtmc-token-name {
   color: var(--dtmc-neutral-100);
-  font-weight: var(--dtmc-font-weight-semibold);
   margin-bottom: var(--dtmc-spacing-xs);
   font-size: .75rem;
 }
@@ -2241,7 +2240,7 @@ display: flex;
 .dtmc-token-group-header {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 4px 6px;
   background: var(--dtmc-neutral-700);
   border-bottom: 1px solid var(--dtmc-neutral-600);
   cursor: pointer;
@@ -2254,14 +2253,15 @@ display: flex;
 
 /* Token Group Toggle Button */
 .dtmc-token-group-toggle {
-  background: none;
-  border: none;
-  color: var(--dtmc-neutral-300);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  margin-right: 8px;
+	background: none;
+	border: none;
+	color: var(--dtmc-neutral-300);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+	margin-right: 8px;
+	display: flex;
 }
 
 .dtmc-token-group-toggle:hover {
@@ -2276,10 +2276,9 @@ display: flex;
 
 /* Token Group Name */
 .dtmc-token-group-name {
-  font-weight: 500;
-  color: var(--dtmc-neutral-100);
+  color: var(--dtmc-neutral-200);
   flex: 1;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 /* Token Group Count */
@@ -2315,6 +2314,10 @@ display: flex;
 .dtmc-token-group-actions button:hover {
   background: var(--dtmc-neutral-600);
   color: var(--dtmc-neutral-100);
+}
+
+.dtmc-token-group-actions button span{
+  font-size: 14px;
 }
 
 /* Token Group Content */
