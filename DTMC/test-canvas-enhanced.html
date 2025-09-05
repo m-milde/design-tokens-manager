@@ -1460,19 +1460,6 @@
                     </div>
                 </div>
                 <div class="dtmc-token-group-content ${isCollapsed ? 'collapsed' : ''}">
-                    ${group.tokens.map(token => {
-                        const tokenElement = createTokenElement(token, layer);
-                        
-                        // Check if this token is selected and add the selected class
-                        const isSelected = selectedSidebarTokens.some(t => 
-                            t.token.name === token.name && t.layer === layer
-                        );
-                        if (isSelected) {
-                            tokenElement.classList.add('selected');
-                        }
-                        
-                        return tokenElement.outerHTML;
-                    }).join('')}
                 </div>
             `;
             
@@ -1484,6 +1471,25 @@
             toggleBtn.addEventListener('click', () => toggleTokenGroup(group.name, layer));
             renameBtn.addEventListener('click', () => renameTokenGroup(group.name, layer));
             ungroupBtn.addEventListener('click', () => ungroupTokens(group.name, layer));
+            
+            // Add token elements to the group content
+            const groupContent = groupDiv.querySelector('.dtmc-token-group-content');
+            group.tokens.forEach(token => {
+                const tokenElement = createTokenElement(token, layer);
+                
+                // Check if this token is selected and add the selected class
+                const isSelected = selectedSidebarTokens.some(t => 
+                    t.token.name === token.name && t.layer === layer
+                );
+                if (isSelected) {
+                    tokenElement.classList.add('selected');
+                }
+                
+                groupContent.appendChild(tokenElement);
+            });
+            
+            // Add drag and drop support to group content for reordering
+            setupGroupContentDragDrop(groupContent, layer);
             
             return groupDiv;
         }
@@ -1615,6 +1621,93 @@
                     return closest;
                 }
             }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // Setup drag and drop for group content areas
+        function setupGroupContentDragDrop(groupContent, layer) {
+            // Add dragover event
+            groupContent.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                
+                // Check if we have a dragged token and it's a reorder operation
+                if (draggedToken && draggedToken.isReorder && draggedToken.layer === layer) {
+                    e.dataTransfer.dropEffect = 'move';
+                    
+                    // Add visual feedback for drop zones
+                    const afterElement = getDragAfterElement(groupContent, e.clientY);
+                    const dragging = document.querySelector('.dragging');
+                    
+                    if (afterElement == null) {
+                        groupContent.appendChild(dragging);
+                    } else {
+                        groupContent.insertBefore(dragging, afterElement);
+                    }
+                }
+            });
+            
+            // Add dragenter event
+            groupContent.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                
+                // Check if this is a reorder operation
+                if (draggedToken && draggedToken.isReorder && draggedToken.layer === layer) {
+                    groupContent.classList.add('drag-over');
+                }
+            });
+            
+            // Add dragleave event
+            groupContent.addEventListener('dragleave', () => {
+                groupContent.classList.remove('drag-over');
+            });
+            
+            // Add drop event
+            groupContent.addEventListener('drop', (e) => {
+                e.preventDefault();
+                groupContent.classList.remove('drag-over');
+                
+                // Check if this is a reorder operation
+                if (draggedToken && draggedToken.isReorder && draggedToken.layer === layer) {
+                    const afterElement = getDragAfterElement(groupContent, e.clientY);
+                    const dragging = document.querySelector('.dragging');
+                    
+                    if (afterElement == null) {
+                        groupContent.appendChild(dragging);
+                    } else {
+                        groupContent.insertBefore(dragging, afterElement);
+                    }
+                    
+                    // Update the token order in the data structure
+                    updateTokenOrderInGroup(groupContent, layer);
+                }
+            });
+        }
+
+        // Update token order in group after drag and drop
+        function updateTokenOrderInGroup(groupContent, layer) {
+            const tokenElements = groupContent.querySelectorAll('.dtmc-token-item');
+            const newOrder = Array.from(tokenElements).map(el => ({
+                name: el.dataset.tokenName,
+                value: el.dataset.tokenValue,
+                type: el.dataset.tokenType
+            }));
+            
+            // Find the group that contains these tokens
+            Object.keys(tokenGroups[layer]).forEach(groupName => {
+                const group = tokenGroups[layer][groupName];
+                if (group.tokens.length === newOrder.length) {
+                    // Check if all tokens match (simple check)
+                    const groupTokenNames = group.tokens.map(t => t.name).sort();
+                    const newOrderNames = newOrder.map(t => t.name).sort();
+                    
+                    if (JSON.stringify(groupTokenNames) === JSON.stringify(newOrderNames)) {
+                        // Update the group tokens with new order
+                        group.tokens = newOrder.map(tokenData => {
+                            const originalToken = group.tokens.find(t => t.name === tokenData.name);
+                            return originalToken || tokenData;
+                        });
+                    }
+                }
+            });
         }
 
         // Function to reorder tokens within the same layer

@@ -2326,11 +2326,24 @@ display: flex;
   transition: all 0.3s ease;
   max-height: 1000px;
   overflow: hidden;
+  min-height: 20px; /* Ensure there's always a drop zone */
 }
 
 .dtmc-token-group-content.collapsed {
   max-height: 0;
   padding: 0 8px;
+  overflow: hidden;
+  display: none;
+}
+
+.dtmc-token-group-content.collapsed .dtmc-token-item {
+  display: none;
+}
+
+.dtmc-token-group-content.drag-over {
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed var(--dtmc-primary-500);
+  border-radius: var(--dtmc-radius-md);
 }
 
 /* Create Group Button */
