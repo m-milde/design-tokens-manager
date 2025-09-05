@@ -2370,7 +2370,7 @@ display: flex;
 }
 
 .dtmc-create-group-btn:hover {
-  background: var(--dtmc-primary-700);
+  background: var(--dtmc-neutral-700);
   transform: translateY(-1px);
 }
 
@@ -2380,23 +2380,8 @@ display: flex;
 
 /* Selected Token Styling */
 .dtmc-token-item.selected {
-  border: 2px solid #3b82f6 !important;
-  background: var(--dtmc-neutral-800) !important;
-  box-shadow: 0 0 0 1px #3b82f6 !important;
+  border: 2px solid var(--dtmc-neutral-400) !important;
   position: relative;
-}
-
-.dtmc-token-item.selected::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border: 2px solid #3b82f6;
-  border-radius: 8px;
-  pointer-events: none;
-  z-index: 1;
 }
 
 .dtmc-token-item.selected .dtmc-token-name {
